@@ -7,25 +7,39 @@ import { connect, useDispatch } from "react-redux";
 import { fetchAllDoctorSchedule } from "../../../../store/actions";
 import Select from "react-select";
 
-const BookingBar = ({ loading, assignedCenters, centers }) => {
+const BookingBar = ({ loading, assignedCenters, navbarCenters, centers }) => {
   const dispatch = useDispatch();
   const [query, setQuery] = useState("");
   const [centerFilter, setCenterFilter] = useState("ALL");
 
-  // Only centers actually assigned to the logged-in user
+  // Centers picked in the navbar filter, limited to what the user is really
+  // assigned (navbar "Select All" can include extra centers).
+  const effectiveCenters = useMemo(() => {
+    const assigned = assignedCenters || [];
+    if (!navbarCenters) return assigned;
+    return navbarCenters.filter((id) => assigned.includes(id));
+  }, [assignedCenters, navbarCenters]);
+
   const centerOptions = useMemo(() => {
     const options = (centers || [])
-      .filter((c) => (assignedCenters || []).includes(c._id))
+      .filter((c) => effectiveCenters.includes(c._id))
       .map((c) => ({ value: c._id, label: c.title || "Unknown Center" }));
     return options.length > 1
       ? [{ value: "ALL", label: "All Centers" }, ...options]
       : options;
-  }, [centers, assignedCenters]);
+  }, [centers, effectiveCenters]);
+
+  // Reset the local filter if the navbar selection no longer includes it
+  useEffect(() => {
+    if (centerFilter !== "ALL" && !effectiveCenters.includes(centerFilter)) {
+      setCenterFilter("ALL");
+    }
+  }, [effectiveCenters, centerFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       const selected =
-        centerFilter === "ALL" ? assignedCenters || [] : [centerFilter];
+        centerFilter === "ALL" ? effectiveCenters : [centerFilter];
       dispatch(
         fetchAllDoctorSchedule({
           name: query,
@@ -34,7 +48,7 @@ const BookingBar = ({ loading, assignedCenters, centers }) => {
       );
     }, 1000);
     return () => clearTimeout(timer);
-  }, [dispatch, query, assignedCenters, centerFilter]);
+  }, [dispatch, query, effectiveCenters, centerFilter]);
 
   return (
     <React.Fragment>
@@ -105,12 +119,14 @@ const BookingBar = ({ loading, assignedCenters, centers }) => {
 const mapStateToProps = (state) => ({
   loading: state.Setting.loading,
   assignedCenters: state.User?.user?.centerAccess,
+  navbarCenters: state.User?.centerAccess,
   centers: state.Center.data,
 });
 
 BookingBar.prototype = {
   loading: PropTypes.bool,
   assignedCenters: PropTypes.array,
+  navbarCenters: PropTypes.array,
   centers: PropTypes.array,
 };
 
