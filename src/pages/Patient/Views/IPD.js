@@ -566,14 +566,14 @@ const IPDComponent = ({ patient, toggleModal, setChartType, user }) => {
                     recorded" reminders for this admission; score alerts still
                     fire. The reason is collected in a dialog, as for
                     Baseline. */}
-                <div className="d-flex align-items-center gap-1 w-100">
+                {/* <div className="d-flex align-items-center gap-1 w-100">
                   <PsychologicalTestsControl
                     addmission={addmission}
                     onRequestChange={(admissionId, nextStatus) =>
                       setPsychTestTarget({ admissionId, nextStatus })
                     }
                   />
-                </div>
+                </div> */}
               </div>
 
               <SetAdmissionTypeModal
