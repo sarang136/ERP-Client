@@ -297,6 +297,7 @@ const DetailAdmission = ({
   isGeneratingRef.current = isGenerating;
   const uploadedAudioRef = useRef(null);
   uploadedAudioRef.current = uploadedAudio;
+  const audioRestoredRef = useRef(false);
   const socketRef = useRef(null);
   const validationValuesRef = useRef(null);
 
@@ -310,6 +311,7 @@ const DetailAdmission = ({
 
   const draftKey = getDetailAdmissionDraftKey(patient?._id);
   const legacyDraftKey = `detailAdmissionDraft_${patient?._id || "new"}`;
+  const audioDraftKey = `detail_admission_audio_${patient?._id || "new"}`;
 
   const savedDraft = useMemo(() => {
     if (isEdit || draftCleared || isDraftClearedRef.current) return null;
@@ -326,8 +328,33 @@ const DetailAdmission = ({
 
   const savedDraftWithoutType = useMemo(() => {
     if (!savedDraft) return null;
-    const { patientType: _pt, ...rest } = savedDraft;
-    return rest;
+    const { patientType: savedType, ...rest } = savedDraft;
+    const lower = (savedType || "").toLowerCase().trim();
+    let inferredType = "";
+    try {
+      if (lower === "addiction") {
+        const af =
+          typeof rest.addictionFields === "string"
+            ? JSON.parse(rest.addictionFields)
+            : rest.addictionFields || {};
+        if (af?.patternOfUse?.primarySubstanceOfConcern) inferredType = "addiction";
+      } else if (lower === "psychiatric") {
+        const pf =
+          typeof rest.psychiatricFields === "string"
+            ? JSON.parse(rest.psychiatricFields)
+            : rest.psychiatricFields || {};
+        if (pf?.historyOfPresentIllness?.modeOfOnset) inferredType = "psychiatric";
+      } else if (lower === "geriatric") {
+        const gf =
+          typeof rest.geriatricFields === "string"
+            ? JSON.parse(rest.geriatricFields)
+            : rest.geriatricFields || {};
+        if (gf?.historyOfPresentIllness?.modeOfOnset) inferredType = "geriatric";
+      }
+    } catch {
+      // ignore
+    }
+    return inferredType ? { ...rest, patientType: inferredType } : rest;
   }, [savedDraft]);
 
   const validation = useFormik({
@@ -1097,9 +1124,11 @@ const DetailAdmission = ({
       } else if (type === "GENERAL") {
         dispatch(addGeneralDetailAdmission(formData));
         localStorage.removeItem(draftKey);
+        localStorage.removeItem(audioDraftKey);
       } else {
         dispatch(addDetailAdmission(formData));
         localStorage.removeItem(draftKey);
+        localStorage.removeItem(audioDraftKey);
       }
     },
   });
@@ -1529,11 +1558,6 @@ const DetailAdmission = ({
     });
 
     socket.on("detailHistoryAiDone", (data) => {
-      console.log("detailHistoryAiDone received", {
-        incomingSessionId: data?.sessionId,
-        currentSessionIdRef: sessionIdRef.current,
-        match: data?.sessionId === sessionIdRef.current,
-      });
       if (data?.sessionId !== sessionIdRef.current) return;
       try {
         if (data.data) {
@@ -1545,6 +1569,7 @@ const DetailAdmission = ({
           "Detail History successfully auto-filled! Please review across tabs before saving.",
         );
       } catch (err) {
+        // eslint-disable-next-line no-console
         console.error("detailHistoryAiDone handler failed:", err);
         toast.error(
           "AI auto-fill completed but applying the results failed. Please check the browser console and try again.",
@@ -1652,6 +1677,7 @@ const DetailAdmission = ({
     try {
       localStorage.removeItem(draftKey);
       localStorage.removeItem(legacyDraftKey);
+      localStorage.removeItem(audioDraftKey);
     } catch {
       // ignore
     }
@@ -1685,6 +1711,7 @@ const DetailAdmission = ({
     try {
       localStorage.removeItem(draftKey);
       localStorage.removeItem(legacyDraftKey);
+      localStorage.removeItem(audioDraftKey);
     } catch {
       // ignore
     }
@@ -1742,6 +1769,38 @@ const DetailAdmission = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [validation.values]);
+
+  useEffect(() => {
+    if (!audioRestoredRef.current) return;
+    if (isEdit || isDraftClearedRef.current) return;
+    try {
+      if (uploadedAudio?.url) {
+        localStorage.setItem(audioDraftKey, JSON.stringify(uploadedAudio));
+      } else {
+        localStorage.removeItem(audioDraftKey);
+      }
+    } catch {
+      // ignore
+    }
+  }, [uploadedAudio, audioDraftKey, isEdit]);
+
+  useEffect(() => {
+    if (isEdit) {
+      audioRestoredRef.current = true;
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(audioDraftKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.url) setUploadedAudio(parsed);
+      }
+    } catch {
+      // ignore
+    }
+    audioRestoredRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <React.Fragment>

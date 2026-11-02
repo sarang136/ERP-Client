@@ -14,7 +14,15 @@ const AuthProtected = (props) => {
       setAuthorization(token);
     } else if (!userProfile && loading && !token) {
       dispatch(logoutUser());
-      localStorage.clear();
+      Object.keys(localStorage).forEach((key) => {
+        if (
+          !key.startsWith("detail_admission_draft_") &&
+          !key.startsWith("detail_admission_audio_") &&
+          !key.startsWith("detailAdmissionDraft_")
+        ) {
+          localStorage.removeItem(key);
+        }
+      });
       sessionStorage.clear();
     }
   }, [token, userProfile, loading, dispatch]);

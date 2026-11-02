@@ -329,9 +329,12 @@ export const logoutUser = createAsyncThunk(
   "auth/logoutUser",
   async (token, { rejectWithValue }) => {
     const clearAuthData = () => {
-      // localStorage.clear();
       Object.keys(localStorage).forEach((key) => {
-        if (!key.startsWith("detailAdmissionDraft_")) {
+        if (
+          !key.startsWith("detail_admission_draft_") &&
+          !key.startsWith("detail_admission_audio_") &&
+          !key.startsWith("detailAdmissionDraft_")
+        ) {
           localStorage.removeItem(key);
         }
       });

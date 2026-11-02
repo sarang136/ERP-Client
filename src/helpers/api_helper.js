@@ -27,15 +27,24 @@ if (token) {
   delete axios.defaults.headers.common["Authorization"];
 }
 
+const isDraftKey = (key) =>
+  key.startsWith("detail_admission_draft_") ||
+  key.startsWith("detail_admission_audio_") ||
+  key.startsWith("detailAdmissionDraft_");
+
 function handleLogout() {
   try {
-    localStorage.clear();
+    Object.keys(localStorage).forEach((key) => {
+      if (!isDraftKey(key)) localStorage.removeItem(key);
+    });
     Cookies.remove("jajantarammamantaram");
     Cookies.remove("token");
     Cookies.remove("XSRF-TOKEN");
     history.replace("/login");
   } catch (err) {
-    localStorage.clear();
+    Object.keys(localStorage).forEach((key) => {
+      if (!isDraftKey(key)) localStorage.removeItem(key);
+    });
     Cookies.remove("jajantarammamantaram");
     Cookies.remove("token");
     Cookies.remove("XSRF-TOKEN");
