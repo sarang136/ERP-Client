@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { Button, Form, FormGroup, Input, Label, Spinner } from "reactstrap";
 import Select from "react-select";
-import { editTPM, getPositions, postTPM } from "../../../../helpers/backend_helper";
+import { editTPM, getCompanies, getPositions, postTPM } from "../../../../helpers/backend_helper";
 import { format } from "date-fns";
 import { newEmploymentOptions } from "../../../../Components/constants/HR";
 
@@ -31,6 +31,9 @@ const validationSchema = Yup.object().shape({
     department: Yup.string()
         .required("Department is required")
         .matches(objectIdRegex, "Invalid department"),
+    company: Yup.string()
+        .required("Company is required")
+        .matches(objectIdRegex, "Invalid company"),
     vendor: Yup.string()
         .trim()
         .required("Vendor is required"),
@@ -57,6 +60,25 @@ const TPMForm = ({ initialData, onSuccess, view, onCancel, hasCreatePermission }
 
     const [positionOptions, setPositionOptions] = useState([]);
     const [departmentOptions, setDepartmentOptions] = useState([]);
+    const [companyOptions, setCompanyOptions] = useState([]);
+
+    useEffect(() => {
+        const loadCompanies = async () => {
+            try {
+                const res = await getCompanies({ includeInactive: false });
+                setCompanyOptions(
+                    (res?.data || []).map((c) => ({ label: c.name, value: c._id })),
+                );
+            } catch (error) {
+                if (!handleAuthError(error)) {
+                    toast.error("Failed to fetch company");
+                }
+            }
+        };
+
+        loadCompanies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         const loadDesignations = async () => {
@@ -131,6 +153,7 @@ const TPMForm = ({ initialData, onSuccess, view, onCancel, hasCreatePermission }
             designation: initialData?.designation?._id || "",
             position: initialData?.position?._id || "",
             department: initialData?.department?._id || "",
+            company: initialData?.company?._id || "",
             vendor: initialData?.vendor || "",
             newEmploymentType: initialData?.newEmploymentType || "",
             startDate: initialData?.startDate
@@ -305,6 +328,32 @@ const TPMForm = ({ initialData, onSuccess, view, onCancel, hasCreatePermission }
                 {form.touched.department && form.errors.department && (
                     <div className="text-danger small mt-1">
                         {form.errors.department}
+                    </div>
+                )}
+            </FormGroup>
+
+            {/* COMPANY */}
+            <FormGroup>
+                <Label htmlFor="company">Company <span className="text-danger">*</span></Label>
+                <Select
+                    inputId="company"
+                    placeholder="Select Company"
+                    isClearable
+                    options={companyOptions}
+                    value={
+                        companyOptions.find(
+                            opt => opt.value === form.values.company
+                        ) || null
+                    }
+                    onChange={(option) =>
+                        form.setFieldValue("company", option ? option.value : "")
+                    }
+                    onBlur={() => form.setFieldTouched("company", true)}
+                />
+
+                {form.touched.company && form.errors.company && (
+                    <div className="text-danger small mt-1">
+                        {form.errors.company}
                     </div>
                 )}
             </FormGroup>

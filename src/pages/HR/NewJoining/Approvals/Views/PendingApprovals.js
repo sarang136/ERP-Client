@@ -888,6 +888,7 @@ const PendingApprovals = ({
         setNote={setReason}
         eCode={eCode}
         setECode={setECode}
+        ecodePrefix={selectedEmployee?.company?.ecodePrefix}
       />
       <PreviewFile
         title={previewTitle}

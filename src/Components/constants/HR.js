@@ -296,3 +296,7 @@ export const activeFinanceOptions = [
     { value: "ACTIVE", label: "Active" },
     { value: "INACTIVE", label: "InActive" },
 ];
+
+export const ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS = [
+    "6ae6250ec8919de4108f01ce", // Sareyaan
+];

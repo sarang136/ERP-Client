@@ -3486,6 +3486,39 @@ export const getDesignations = (params = {}) => {
   });
 };
 
+export const getCompanies = (params = {}) => {
+  return api.get(url.COMPANY, {
+    params,
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+  });
+};
+
+export const createCompany = (data) => {
+  return api.create(url.COMPANY, data, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+  });
+};
+
+export const updateCompany = (id, data) => {
+  return api.put(`${url.COMPANY}/${id}`, data, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+  });
+};
+
+export const deleteCompany = (id) => {
+  return api.delete(`${url.COMPANY}/${id}`, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+  });
+};
+
 export const postHiring = (data) => {
   return api.create(url.HIRING, data, {
     headers: {

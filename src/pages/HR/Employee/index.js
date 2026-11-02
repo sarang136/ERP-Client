@@ -20,6 +20,7 @@ import {
   getDepartments,
   getPositions,
   getEmployeeDetailsById,
+  getCompanies,
 } from "../../../helpers/backend_helper";
 import { usePermissions } from "../../../Components/Hooks/useRoles";
 import { useCenterOptions } from "../../../Components/Hooks/useCenterOptions";
@@ -61,6 +62,7 @@ const Employee = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
   const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [companyOptions, setCompanyOptions] = useState([]);
 
   const [selectedEmploymentStatus, setSelectedEmploymentStatus] = useState([]);
 
@@ -72,6 +74,7 @@ const Employee = () => {
   const [selectedEmploymentType, setSelectedEmploymentType] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState([]);
   const [selectedPosition, setSelectedPosition] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState([]);
   const [selectedNewEmploymentType, setSelectedNewEmploymentType] = useState(
     [],
   );
@@ -127,9 +130,10 @@ const Employee = () => {
   useEffect(() => {
     const fetchDropdowns = async () => {
       try {
-        const [deptRes, posRes] = await Promise.all([
+        const [deptRes, posRes, companyRes] = await Promise.all([
           getDepartments(),
           getPositions(),
+          getCompanies({ includeInactive: true }),
         ]);
 
         setDepartmentOptions(
@@ -155,6 +159,12 @@ const Employee = () => {
         );
 
         setPositionOptions(mappedPositions);
+
+        setCompanyOptions(
+          (companyRes?.data || [])
+            .map((c) => ({ label: c.name, value: c._id }))
+            .sort((a, b) => (a.label || "").localeCompare(b.label || "")),
+        );
 
         dispatch(fetchDesignations({ status: ["PENDING", "APPROVED"] }));
       } catch (error) {
@@ -207,6 +217,9 @@ const Employee = () => {
               .map((s) => s.value)
               .join(","),
           }),
+          ...(selectedCompany.length > 0 && {
+            company: selectedCompany.map((c) => c.value).join(","),
+          }),
         }),
       ).unwrap();
     } catch (error) {
@@ -235,6 +248,7 @@ const Employee = () => {
     selectedPosition,
     selectedNewEmploymentType,
     selectedEmploymentStatus,
+    selectedCompany,
   ]);
 
   const handleDelete = async () => {
@@ -327,6 +341,9 @@ const Employee = () => {
             .map((s) => s.value)
             .join(","),
         }),
+        ...(selectedCompany.length > 0 && {
+          company: selectedCompany.map((c) => c.value).join(","),
+        }),
       });
 
       const blob = new Blob([response.data], {
@@ -388,6 +405,12 @@ const Employee = () => {
       name: <div>Designation</div>,
       selector: (row) =>
         capitalizeWords(row?.designation?.name?.replace(/_/g, " ") || "-"),
+      wrap: true,
+      minWidth: "120px",
+    },
+    {
+      name: <div>Company</div>,
+      selector: (row) => row?.company?.name || "-",
       wrap: true,
       minWidth: "120px",
     },
@@ -963,7 +986,21 @@ const Employee = () => {
               isClearable
             />
           </div>
-          <div className="col-md-9 d-flex justify-content-end gap-2 align-items-center">
+          <div className="col-md-3">
+            <Select
+              value={selectedCompany}
+              onChange={(options) => {
+                setSelectedCompany(options || []);
+                setPage(1);
+              }}
+              options={companyOptions}
+              placeholder="Filter by Company"
+              classNamePrefix="react-select"
+              isMulti
+              isClearable
+            />
+          </div>
+          <div className="col-md-6 d-flex justify-content-end gap-2 align-items-center">
             <RefreshButton
               loading={loading}
               onRefresh={fetchMasterEmployeeList}

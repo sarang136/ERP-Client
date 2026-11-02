@@ -17,7 +17,7 @@ import { usePermissions } from '../../../Components/Hooks/useRoles';
 import { useCenterOptions } from '../../../Components/Hooks/useCenterOptions';
 import { salaryColumns } from '../../HRMS/components/Table/Columns/salary';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { exportPayrollsXLSX, generatePayroll, getPayrollGenerationStatus, getPayrolls, payrollBulkAction } from '../../../helpers/backend_helper';
+import { exportPayrollsXLSX, generatePayroll, getCompanies, getPayrollGenerationStatus, getPayrolls, payrollBulkAction } from '../../../helpers/backend_helper';
 import { approvalStatusOptions, legends } from '../../../Components/constants/HR';
 import ApproveModal from '../components/ApproveModal';
 import RefreshButton from '../../../Components/Common/RefreshButton';
@@ -84,6 +84,8 @@ const Salary = () => {
     const [limit, setLimit] = useState(10);
     const [selectedMonth, setSelectedMonth] = useState(new Date());
     const [approvalStatus, setApprovalStatus] = useState("PENDING");
+    const [companyOptions, setCompanyOptions] = useState([]);
+    const [selectedCompany, setSelectedCompany] = useState("ALL");
     const [copyId, setCopyId] = useState(null);
     const [regenerateLoading, setRegenerateLoading] = useState(false);
     const [regenerationMeta, setRegenerationMeta] = useState({
@@ -140,7 +142,31 @@ const Salary = () => {
         }
     }, [selectedCenter, centerAccess]);
 
+    useEffect(() => {
+        const fetchCompanyOptions = async () => {
+            try {
+                const res = await getCompanies({ includeInactive: true });
+                setCompanyOptions([
+                    { label: "All Companies", value: "ALL" },
+                    ...(res?.data || [])
+                        .map((c) => ({ label: c.name, value: c._id }))
+                        .sort((a, b) => (a.label || "").localeCompare(b.label || "")),
+                ]);
+            } catch (error) {
+                if (!handleAuthError(error)) {
+                    toast.error(error.message || "Failed to fetch companies");
+                }
+            }
+        };
+
+        fetchCompanyOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const selectedApprovalStatusOption = approvalStatusOptions.find(opt => opt.value === approvalStatus);
+    const selectedCompanyOption =
+        companyOptions.find((opt) => opt.value === selectedCompany) ||
+        companyOptions[0];
 
     const centers =
         selectedCenter === "ALL"
@@ -159,7 +185,8 @@ const Salary = () => {
                 startDate: startOfMonth(selectedMonth),
                 endDate: endOfMonth(selectedMonth),
                 ...(approvalStatus !== "ALL" && { approvalStatus }),
-                ...debouncedSearch.trim() !== "" && { search: debouncedSearch }
+                ...debouncedSearch.trim() !== "" && { search: debouncedSearch },
+                ...(selectedCompany !== "ALL" && { company: selectedCompany }),
             })).unwrap();
         } catch (error) {
             if (!handleAuthError(error)) {
@@ -190,6 +217,7 @@ const Salary = () => {
         approvalStatus,
         debouncedSearch,
         centerAccess,
+        selectedCompany,
     ]);
 
     useEffect(() => {
@@ -200,6 +228,7 @@ const Salary = () => {
         approvalStatus,
         limit,
         debouncedSearch,
+        selectedCompany,
     ]);
 
     useEffect(() => {
@@ -302,7 +331,8 @@ const Salary = () => {
                 startDate: startOfMonth(selectedMonth),
                 endDate: endOfMonth(selectedMonth),
                 ...(approvalStatus !== "ALL" && { approvalStatus }),
-                ...debouncedSearch.trim() !== "" && { search: debouncedSearch }
+                ...debouncedSearch.trim() !== "" && { search: debouncedSearch },
+                ...(selectedCompany !== "ALL" && { company: selectedCompany }),
             });
 
             const blob = new Blob([response.data], {
@@ -433,7 +463,7 @@ const Salary = () => {
                     <div className="mb-3 d-none d-md-block">
                         {/* Desktop */}
                         <div className="d-flex gap-3 align-items-center mb-2">
-                            <div style={{ width: "200px" }}>
+                            <div style={{ width: "240px" }}>
                                 <Select
                                     value={selectedCenterOption}
                                     onChange={(opt) => setSelectedCenter(opt.value)}
@@ -442,7 +472,7 @@ const Salary = () => {
                                 />
                             </div>
 
-                            <div style={{ width: "170px" }}>
+                            <div style={{ width: "210px" }}>
                                 <Select
                                     value={selectedApprovalStatusOption}
                                     onChange={(opt) => setApprovalStatus(opt.value)}
@@ -451,8 +481,17 @@ const Salary = () => {
                                 />
                             </div>
 
+                            <div style={{ width: "220px" }}>
+                                <Select
+                                    value={selectedCompanyOption}
+                                    onChange={(opt) => setSelectedCompany(opt.value)}
+                                    options={companyOptions}
+                                    placeholder="Filter by Company"
+                                    classNamePrefix="react-select"
+                                />
+                            </div>
 
-                            <div style={{ minWidth: "220px" }}>
+                            <div style={{ minWidth: "260px" }}>
                                 <Input
                                     type="text"
                                     placeholder="Search by name, ECode..."
@@ -461,7 +500,7 @@ const Salary = () => {
                                 />
                             </div>
 
-                            <div style={{ minWidth: "150px" }}>
+                            <div style={{ minWidth: "180px" }}>
                                 <div className="position-relative month-picker">
                                     <Calendar
                                         size={14}
@@ -558,6 +597,14 @@ const Salary = () => {
                             value={selectedApprovalStatusOption}
                             onChange={(opt) => setApprovalStatus(opt.value)}
                             options={approvalStatusOptions}
+                            classNamePrefix="react-select"
+                        />
+
+                        <Select
+                            value={selectedCompanyOption}
+                            onChange={(opt) => setSelectedCompany(opt.value)}
+                            options={companyOptions}
+                            placeholder="Filter by Company"
                             classNamePrefix="react-select"
                         />
 

@@ -688,6 +688,8 @@ export const TRANSFER_EMPLOYEE_TRANSFER_LOCATION_ACTION =
 
 export const DESIGNATION = "/hr/designation";
 
+export const COMPANY = "/hr/company";
+
 export const HIRING = "/hr/hiring";
 export const HIRING_ACTION = "/hr/hiring/action";
 export const GET_ALL_EMPLOYEE = "/hr/hiring/get/employees";

@@ -50,7 +50,8 @@ const ApproveModal = ({
   loading,
   designation,
   remarks,
-  setRemarks
+  setRemarks,
+  ecodePrefix,
 }) => {
   const [approvedBy, setApprovedBy] = useState("");
   const [eCodeLoader, setECodeLoader] = useState(false);
@@ -64,7 +65,7 @@ const ApproveModal = ({
     setECodeLoader(true);
     try {
       const response = await getEmployeeId({
-        ...(mode === "TPM" && { prefix: "TC" }),
+        ...(ecodePrefix && { prefix: ecodePrefix }),
       });
       setECode(response.payload.value);
     } catch (error) {
@@ -84,7 +85,7 @@ const ApproveModal = ({
       generateEmployeeId();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actionType, mode]);
+  }, [actionType, mode, ecodePrefix]);
 
   useEffect(() => {
     if (
