@@ -75,6 +75,13 @@ export const useRecordingSession = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (uploadedAudio?.url && !audioPreviewUrl) {
+      setAudioPreviewUrl(uploadedAudio.url);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadedAudio?.url]);
+
   const teardownAudioGraph = () => {
     stopVisualizerLoop();
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {

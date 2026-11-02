@@ -71,7 +71,15 @@ const ChangePasswordForm = ({ isOpen, toggle }) => {
         toast.success("Password changed successfully");
 
         dispatch(logoutUser(token));
-        localStorage.clear();
+        Object.keys(localStorage).forEach((key) => {
+          if (
+            !key.startsWith("detail_admission_draft_") &&
+            !key.startsWith("detail_admission_audio_") &&
+            !key.startsWith("detailAdmissionDraft_")
+          ) {
+            localStorage.removeItem(key);
+          }
+        });
         sessionStorage.clear();
 
         resetForm();
