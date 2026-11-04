@@ -60,7 +60,7 @@ export const permissionList = [
       { name: "PATIENTSHISTORY", label: "Paitents History" },
       { name: "PATIENTSBILLING", label: "Paitents Bill" },
       { name: "PATIENTCHARTS", label: "Paitents Chart" },
-      { name: "ADDMISSIONSUMMARY", label: "Addmission Summary" },
+      { name: "ADDMISSIONSUMMARY", label: "Admission Summary" },
       { name: "INVOICEHISTORY", label: "Billing/Invoice Summary" },
     ],
   },

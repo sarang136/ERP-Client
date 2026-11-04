@@ -1767,7 +1767,7 @@ const dischargeSummaryFields = [
     md: 6,
   },
   {
-    label: "Mse at addmission",
+    label: "Mse at admission",
     name: "mseAddmission",
     fields: [
       {
@@ -2181,7 +2181,7 @@ const expirySummaryFields = [
     md: 6,
   },
   {
-    label: "Mse at addmission",
+    label: "Mse at admission",
     name: "mseAddmission",
     fields: [
       {
