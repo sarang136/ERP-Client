@@ -678,6 +678,21 @@ export const permissionList = [
     ],
   },
   {
+    key: "MARKETING_AGENT",
+    label: "AI Marketing Agent",
+    subModules: [
+      { name: "ENQUIRIES", label: "Enquiry Call Queue" },
+      { name: "CONTENT", label: "Content Review" },
+      { name: "PLANS", label: "Weekly Plans" },
+      { name: "SIGNALS", label: "Signals and Search" },
+      { name: "PUBLISHING", label: "Publishing" },
+      { name: "ADS", label: "Ads and Budgets" },
+      { name: "INSIGHTS", label: "Insights and Reports" },
+      { name: "BRAND", label: "Brand Brain" },
+      { name: "CLINICAL_APPROVAL", label: "Clinical Approval (psychiatrist)" },
+    ],
+  },
+  {
     key: "MASTERDATA",
     label: "Vendor Management",
     subModules: [

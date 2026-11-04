@@ -51,6 +51,7 @@ const TrainingNotifications = React.lazy(() => import("../pages/Trainings/Pages/
 const Utilities = React.lazy(() => import("../pages/Utilities"));
 const AlertPage = React.lazy(() => import("../pages/Alerts"));
 const Marketing = React.lazy(() => import("../pages/Marketing"));
+const MarketingAgent = React.lazy(() => import("../pages/MarketingAgent"));
 const DoctorVisits = React.lazy(() => import("../pages/DoctorVisits/DoctorVisits"));
 const MasterData = React.lazy(() => import("../pages/MasterData"));
 const CenterDashboard = React.lazy(() => import("../pages/CenterDashboard"));
@@ -88,6 +89,7 @@ const allElements = [
   { element: Utilities, label: "Utilities" },
   { element: AlertPage, label: "Alert" },
   { element: Marketing, label: "Marketing" },
+  { element: MarketingAgent, label: "AI Marketing Agent" },
   { element: MasterData, label: "Vendor Management" },
   { element: CenterDashboard, label: "Center Dashboard" },
   { element: MISMaster, label: "MIS Master" },
@@ -132,6 +134,7 @@ const authProtectedRoutes = [
   { path: "/trainings/*", component: Trainings },
   { path: "/utilities/*", component: Utilities },
   { path: "/marketing/*", component: Marketing },
+  { path: "/marketing-agent/*", component: MarketingAgent },
   { path: "/vendor-management/*", component: MasterData },
   { path: "/doctor-visits", component: DoctorVisits },
   { path: "/center-dashboard", component: CenterDashboard },

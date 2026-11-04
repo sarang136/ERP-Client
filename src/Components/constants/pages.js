@@ -397,6 +397,13 @@ const pages = [
     icon: "bx bx-map-pin",
   },
   {
+    id: "marketingAgent",
+    label: "AI Marketing Agent",
+    name: "AI Marketing Agent",
+    link: "/marketing-agent",
+    icon: "bx bx-bot",
+  },
+  {
     id: "recordings",
     label: "Recordings",
     name: "Recordings",

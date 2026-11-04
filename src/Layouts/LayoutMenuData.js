@@ -49,6 +49,7 @@ const Navdata = () => {
       "compliance",
       "issues",
       "marketing",
+      "marketingAgent",
       "recordings",
       // "hrms",
       "webcamstats",
