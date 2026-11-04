@@ -21,6 +21,7 @@ import RenderWhen from "../Components/Common/RenderWhen";
 import { useDebounce } from "../Components/Hooks/useDebounce";
 import PatientPlaceholder from "../Components/Common/PatientPlaceholder";
 import SimpleBar from "simplebar-react";
+import { VISITING_CONSULTANT_ROLE } from "../Components/constants/patient";
 
 const Header = ({
   onChangeLayoutMode,
@@ -33,6 +34,9 @@ const Header = ({
   user,
 }) => {
   const dispatch = useDispatch();
+  // A Visiting Consultant only works from My Patients, so the patient search
+  // is off for them — desktop and mobile.
+  const noPatientSearch = user?.role === VISITING_CONSULTANT_ROLE;
   const [value, setValue] = useState("");
   // Debounce the query so the search API fires once the user pauses typing
   // instead of on every keystroke.
@@ -148,9 +152,9 @@ const Header = ({
   useEffect(() => {
     // Require at least 2 characters: a single-letter query matches almost
     // every patient and is never a useful search.
-    if (debouncedValue.length >= 2)
+    if (!noPatientSearch && debouncedValue.length >= 2)
       dispatch(searchPatient({ name: debouncedValue, centerAccess }));
-  }, [debouncedValue, dispatch, centerAccess]);
+  }, [debouncedValue, dispatch, centerAccess, noPatientSearch]);
 
   return (
     <React.Fragment>
@@ -191,14 +195,16 @@ const Header = ({
                 </span>
               </button>
 
-              <SearchOption />
+              {!noPatientSearch && <SearchOption />}
             </div>
 
             <div className="d-flex align-items-center">
               <Dropdown
                 isOpen={search}
                 toggle={toogleSearch}
-                className="d-md-none topbar-head-dropdown header-item"
+                // Hidden, not removed, for a Visiting Consultant: the effect
+                // above looks up #mb-search-options on mount.
+                className={`${noPatientSearch ? "d-none" : "d-md-none"} topbar-head-dropdown header-item`}
               >
                 <DropdownToggle
                   type="button"

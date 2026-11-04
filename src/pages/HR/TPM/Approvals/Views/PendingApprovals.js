@@ -228,6 +228,12 @@ const PendingApprovals = ({ activeTab }) => {
             minWidth: "120px"
         },
         {
+            name: <div>Company</div>,
+            selector: row => row?.company?.name || "-",
+            wrap: true,
+            minWidth: "120px"
+        },
+        {
             name: <div>Vendor</div>,
             selector: (row) => capitalizeWords(row?.vendor) || "",
             wrap: true,
@@ -524,6 +530,7 @@ const PendingApprovals = ({ activeTab }) => {
                 setNote={setNote}
                 eCode={eCode}
                 setECode={setECode}
+                ecodePrefix={selectedRecord?.company?.TPMEcodePrefix}
             />
         </>
     )

@@ -139,7 +139,7 @@ function calculatePT(grossSalary, state, gender) {
 }
 
 export const calculatePayroll = (values) => {
-    const PF_WAGE_CAP = 15000;
+    const PF_WAGE_CAP = 25000;
 
     const gross = Number(values.grossSalary || 0);
     const basic = Number(values.basicAmount || 0);

@@ -10,6 +10,7 @@ import {
 import PositionsOverviewCard from "./components/PositionsOverviewCard";
 import AddPositionsCard from "./components/AddPositionsCard";
 import DepartmentsCard from "./components/DepartmentsCard";
+import CompaniesCard from "./components/CompaniesCard";
 import { usePermissions } from "../../../Components/Hooks/useRoles";
 import { useNavigate } from "react-router-dom";
 
@@ -235,6 +236,12 @@ const HrConfigurations = () => {
             setPositionSearch={setPositionSearch}
             hasWrite={hasWrite}
           />
+        </Col>
+      </Row>
+
+      <Row className="mt-4">
+        <Col xs={12}>
+          <CompaniesCard hasWrite={hasWrite} hasDelete={hasDelete} />
         </Col>
       </Row>
     </div>

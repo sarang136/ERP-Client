@@ -70,7 +70,7 @@ const ExpirySummary = ({ data }) => {
           </Col>
         )}
         {/* START MSE AT ADDMISSION */}
-        <SummaryMse mse={data?.mseAddmission} title={"MSE at Addmission"} />
+        <SummaryMse mse={data?.mseAddmission} title={"MSE at Admission"} />
         {/* END MSE AT ADDMISSION */}
         {data?.pastHistory && (
           <Col xs={12}>

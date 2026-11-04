@@ -166,7 +166,7 @@ const Offcanvas = ({
                   <h5 className="mb-1">
                     {patientDocumentsCount?.totalAddmissions}
                   </h5>
-                  <p className="text-muted fs-11 mb-0">Total Addmissions</p>
+                  <p className="text-muted fs-11 mb-0">Total Admissions</p>
                 </div>
               </Col>
             </RenderWhen>

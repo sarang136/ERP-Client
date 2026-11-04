@@ -31,6 +31,7 @@ const initialState = {
   nurses: null,
   rmos: null,
   msws: null,
+  visitingConsultants: null,
   doctorLoading: false,
   centerAccess: null,
   userCenters: null,
@@ -329,9 +330,12 @@ export const logoutUser = createAsyncThunk(
   "auth/logoutUser",
   async (token, { rejectWithValue }) => {
     const clearAuthData = () => {
-      // localStorage.clear();
       Object.keys(localStorage).forEach((key) => {
-        if (!key.startsWith("detailAdmissionDraft_")) {
+        if (
+          !key.startsWith("detail_admission_draft_") &&
+          !key.startsWith("detail_admission_audio_") &&
+          !key.startsWith("detailAdmissionDraft_")
+        ) {
           localStorage.removeItem(key);
         }
       });
@@ -538,6 +542,7 @@ const userSlice = createSlice({
         state.nurses = payload.nurses;
         state.rmos = payload.rmos;
         state.msws = payload.msws;
+        state.visitingConsultants = payload.visitingConsultants;
       })
       .addCase(fetchDoctors.rejected, (state, action) => {
         state.doctorLoading = false;

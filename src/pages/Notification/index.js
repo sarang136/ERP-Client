@@ -172,7 +172,7 @@ const Notification = ({ bill, userCenters, loading }) => {
                               xs={6}
                               className="border-end border-end-dashed"
                             >
-                              <p className="text-muted mb-0">Addmission Date</p>{" "}
+                              <p className="text-muted mb-0">Admission Date</p>{" "}
                               <h5 className="mb-1">
                                 {item?.addmission
                                   ? format(

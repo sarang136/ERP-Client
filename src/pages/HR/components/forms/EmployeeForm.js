@@ -29,6 +29,7 @@ import {
   createDepartment,
   editEmployee,
   getAllUsers,
+  getCompanies,
   getDepartments,
   getEmployeeDocsConfiguration,
   getEmployeeDocumentsByEmployeeId,
@@ -59,6 +60,7 @@ import {
   isPfApplicable,
   categoryOptions,
   salutationOptions,
+  ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS,
 } from "../../../../Components/constants/HR";
 import {
   calculatePayroll,
@@ -98,7 +100,8 @@ const RELAXED_EMPLOYEE_FORM_USERS = [
   "68f8f38cbfb5c1f785102465",
   "696e176dea1a23b429717267",
   "6874c5a2788d8c2bb3c8e724",
-  "6a1fc53e9375ba0ce835157d"
+  "6a1fc53e9375ba0ce835157d",
+  "689041f59f5a062f9f0581c1"
 ];
 
 // Tab restructuring is UI-only: these arrays only decide (a) tab labels/order
@@ -217,6 +220,7 @@ const relaxedOverrides = {
   employmentType: Yup.string().notRequired(),
   firstLocation: Yup.string().notRequired(),
   designation: Yup.string().notRequired(),
+  company: Yup.string().notRequired(),
   payrollType: Yup.string().notRequired(),
   gender: Yup.string().notRequired(),
   pfApplicable: Yup.boolean().notRequired(),
@@ -273,8 +277,12 @@ const validationSchema = (mode, isEdit, relaxed = false) => {
   return relaxed ? schema.shape(relaxedOverrides) : schema;
 };
 
-const baseValidationSchema = (mode, isEdit) =>
-  Yup.object({
+const baseValidationSchema = (mode, isEdit) => {
+  const isUltraSimplifiedFinance = (employmentType, company) =>
+    isSimplifiedFinanceType(employmentType) ||
+    ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS.includes(company);
+
+  return Yup.object({
     name: Yup.string().required("Employee name is required"),
     eCode: isEdit
       ? Yup.string().notRequired()
@@ -286,6 +294,7 @@ const baseValidationSchema = (mode, isEdit) =>
     firstLocation: Yup.string().required("First location is required"),
     currentLocation: Yup.string().required("Current location is required"),
     designation: Yup.string().required("Designation is required"),
+    company: Yup.string().required("Company is required"),
     payrollType: Yup.string().required("Payroll type is required"),
     joinningDate: Yup.string()
       .required("Date of joining is required")
@@ -368,23 +377,25 @@ const baseValidationSchema = (mode, isEdit) =>
       otherwise: (s) => s.required("Aadhaar file is required"),
     }),
     offerLetterOld: Yup.string().required("Offer letter is required"),
-    employeeGroups: Yup.string().when("employmentType", {
-      is: (v) => isSimplifiedFinanceType(v),
+    employeeGroups: Yup.string().when(["employmentType", "company"], {
+      is: (v, company) => isUltraSimplifiedFinance(v, company),
       then: (s) => s.notRequired(),
       otherwise: (s) => s.required("Employee Group is required"),
     }),
     account: Yup.string().notRequired(),
     minimumWages: Yup.number().min(0).notRequired(),
     // Simplified finance fields (only required for the simplified employee types)
-    paymentType: Yup.string().when("employmentType", {
-      is: (v) => isSimplifiedFinanceType(v),
+    paymentType: Yup.string().when(["employmentType", "company"], {
+      is: (v, company) =>
+        isSimplifiedFinanceType(v) &&
+        !ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS.includes(company),
       then: (s) => s.required("Payment Type is required"),
       otherwise: (s) => s.notRequired(),
     }),
     annualInHandSalary: Yup.number()
       .min(0)
-      .when("employmentType", {
-        is: (v) => isSimplifiedFinanceType(v),
+      .when(["employmentType", "company"], {
+        is: (v, company) => isUltraSimplifiedFinance(v, company),
         then: (s) =>
           s
             .moreThan(0, "In Hand Salary must be greater than 0")
@@ -403,8 +414,8 @@ const baseValidationSchema = (mode, isEdit) =>
       }),
     annualCTC: Yup.number()
       .min(0)
-      .when("employmentType", {
-        is: (v) => isSimplifiedFinanceType(v),
+      .when(["employmentType", "company"], {
+        is: (v, company) => isUltraSimplifiedFinance(v, company),
         then: (s) =>
           s
             .moreThan(0, "Annual CTC must be greater than 0")
@@ -414,8 +425,8 @@ const baseValidationSchema = (mode, isEdit) =>
     annualInsurance: Yup.number().min(0).notRequired(),
     grossSalary: Yup.number()
       .min(0)
-      .when("employmentType", {
-        is: (v) => isSimplifiedFinanceType(v),
+      .when(["employmentType", "company"], {
+        is: (v, company) => isUltraSimplifiedFinance(v, company),
         then: (s) => s.notRequired(),
         otherwise: (s) =>
           s
@@ -447,24 +458,24 @@ const baseValidationSchema = (mode, isEdit) =>
       }),
     basicAmount: Yup.number()
       .min(0)
-      .when("employmentType", {
-        is: (v) => isSimplifiedFinanceType(v),
+      .when(["employmentType", "company"], {
+        is: (v, company) => isUltraSimplifiedFinance(v, company),
         then: (s) => s.notRequired(),
         otherwise: (s) => s.required("Basic Amount is required"),
       }),
     basicPercentage: Yup.number().min(0).max(100).notRequired(),
     HRAAmount: Yup.number()
       .min(0)
-      .when("employmentType", {
-        is: (v) => isSimplifiedFinanceType(v),
+      .when(["employmentType", "company"], {
+        is: (v, company) => isUltraSimplifiedFinance(v, company),
         then: (s) => s.notRequired(),
         otherwise: (s) => s.required("HRA is required"),
       }),
     HRAPercentage: Yup.number().min(0).max(100).notRequired(),
     statutoryBonus: Yup.number()
       .min(0)
-      .when("employmentType", {
-        is: (v) => isSimplifiedFinanceType(v),
+      .when(["employmentType", "company"], {
+        is: (v, company) => isUltraSimplifiedFinance(v, company),
         then: (s) => s.notRequired(),
         otherwise: (s) => s.required("Statutory Bonus is required"),
       }),
@@ -482,15 +493,15 @@ const baseValidationSchema = (mode, isEdit) =>
     pfAmount: Yup.number().min(0).notRequired(),
     SPLAllowance: Yup.number()
       .min(0)
-      .when("employmentType", {
-        is: (v) => isSimplifiedFinanceType(v),
+      .when(["employmentType", "company"], {
+        is: (v, company) => isUltraSimplifiedFinance(v, company),
         then: (s) => s.notRequired(),
         otherwise: (s) => s.required("SPL Allowance is required"),
       }),
     conveyanceAllowance: Yup.number()
       .min(0)
-      .when("employmentType", {
-        is: (v) => isSimplifiedFinanceType(v),
+      .when(["employmentType", "company"], {
+        is: (v, company) => isUltraSimplifiedFinance(v, company),
         then: (s) => s.notRequired(),
         otherwise: (s) => s.required("Conveyance Allowance is required"),
       }),
@@ -560,6 +571,7 @@ const baseValidationSchema = (mode, isEdit) =>
       otherwise: (s) => s.notRequired(),
     }),
   });
+};
 
 const getInitialValues = (initialData, mode) => ({
   name: initialData?.name || "",
@@ -568,6 +580,7 @@ const getInitialValues = (initialData, mode) => ({
 
   department: initialData?.department?._id || "",
   designation: initialData?.designation?._id || "",
+  company: initialData?.company?._id || "",
 
   firstLocation: initialData?.firstLocation?._id || "",
   transferredFrom: initialData?.transferredFrom?._id || "",
@@ -749,6 +762,7 @@ const EmployeeForm = ({
   const [previewFile, setPreviewFile] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [companyOptions, setCompanyOptions] = useState([]);
   // const [department, setDepartment] = useState("");
   const [positionOptions, setPositionOptions] = useState([]);
   const [, setManual] = useState({
@@ -987,14 +1001,21 @@ const EmployeeForm = ({
         formData.delete("annualInsurance");
         formData.delete("paymentType");
 
-        const isSimplified = isSimplifiedFinanceType(values.employmentType);
+        const isSimplified =
+          isSimplifiedFinanceType(values.employmentType) ||
+          ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS.includes(values.company);
         formData.set("financeMode", isSimplified ? "SIMPLIFIED" : "FULL");
 
         if (isSimplified) {
           // Send the three yearly figures; the server splits them into monthly.
+          // Ultra-simplified-finance companies never deduct insurance — In
+          // Hand always equals CTC.
           formData.set("inHandSalary", values.annualInHandSalary || 0);
           formData.set("totalCostToCompany", values.annualCTC || 0);
-          formData.set("insurance", values.annualInsurance || 0);
+          formData.set(
+            "insurance",
+            ultraSimplifiedFinance ? 0 : values.annualInsurance || 0,
+          );
           formData.set("paymentType", values.paymentType || "MONTHLY");
           // Drop the full-breakup fields the simplified flow doesn't use.
           [
@@ -1016,8 +1037,10 @@ const EmployeeForm = ({
             "debitStatementNarration",
           ].forEach((key) => formData.delete(key));
           // Consultants carry a TDS rate — re-add it after the cleanup above so
-          // the server can deduct it from CTC to derive the stored In Hand Salary.
-          if (consultant) {
+          // the server can deduct it from CTC to derive the stored In Hand
+          // Salary. Ultra-simplified-finance companies never deduct TDS,
+          // regardless of employmentType.
+          if (consultant && !ultraSimplifiedFinance) {
             formData.set("TDSRate", values.TDSRate || 0);
           }
         }
@@ -1074,13 +1097,27 @@ const EmployeeForm = ({
   });
 
   const draftAppliedRef = useRef(false);
+  const draftECodePendingRef = useRef(false);
   useEffect(() => {
     if (draftEnabled && savedDraft && !draftAppliedRef.current) {
       draftAppliedRef.current = true;
       setValues({ ...values, ...savedDraft }, false);
+      if (!initialData?._id && mode !== "NEW_JOINING" && savedDraft.company) {
+        draftECodePendingRef.current = true;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftEnabled, savedDraft]);
+
+  useEffect(() => {
+    if (draftECodePendingRef.current && companyOptions.length && values.company) {
+      draftECodePendingRef.current = false;
+      generateEmployeeId(
+        companyOptions.find((opt) => opt.value === values.company)?.ecodePrefix,
+      );
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyOptions, values.company]);
 
   // Contractual / consultant / intern / apprentice / consultant-session use the
   // simplified finance section (In Hand Salary, Annual CTC, Payment Type) and
@@ -1092,6 +1129,11 @@ const EmployeeForm = ({
   // Consultants enter a TDS rate; TDS is deducted from CTC and In Hand becomes
   // CTC − TDS (auto-computed, read-only).
   const consultant = isConsultantFinanceType(values.employmentType);
+  // Some companies use an even smaller finance section: just Annual CTC +
+  // In Hand (In Hand = CTC, no TDS/insurance/payment type).
+  const ultraSimplifiedFinance = ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS.includes(
+    values.company,
+  );
 
   const isNonAadhaar = values.category === "NON_AADHAAR";
   const consultantTdsAmount = Math.round(
@@ -1108,15 +1150,19 @@ const EmployeeForm = ({
   // applies to consultants (consultantTdsAmount is 0 for every other simplified
   // type), so this single formula covers both cases.
   useEffect(() => {
-    const insurance = Number(values.annualInsurance) || 0;
+    const insurance = ultraSimplifiedFinance
+      ? 0
+      : Number(values.annualInsurance) || 0;
     const inHand = Math.max(
       0,
-      (Number(values.annualCTC) || 0) - consultantTdsAmount - insurance,
+      (Number(values.annualCTC) || 0) -
+        (ultraSimplifiedFinance ? 0 : consultantTdsAmount) -
+        insurance,
     );
     if (Number(values.annualInHandSalary) !== inHand) {
       setFieldValue("annualInHandSalary", inHand, false);
     }
-  }, [consultantTdsAmount, values.annualCTC, values.annualInsurance]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ultraSimplifiedFinance, consultantTdsAmount, values.annualCTC, values.annualInsurance]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const touchFileFields = () => {
     setTouched(
@@ -1331,10 +1377,10 @@ const EmployeeForm = ({
   //   }
   // };
 
-  const generateEmployeeId = async () => {
+  const generateEmployeeId = async (prefix) => {
     setECodeLoader(true);
     try {
-      const response = await getEmployeeId();
+      const response = await getEmployeeId(prefix ? { prefix } : {});
       form.setFieldValue("eCode", response.payload.value);
     } catch (error) {
       if (!handleAuthError) {
@@ -1346,8 +1392,10 @@ const EmployeeForm = ({
   };
 
   useEffect(() => {
-    if (!initialData?._id && mode !== "NEW_JOINING") {
-      generateEmployeeId();
+    if (!initialData?._id && mode !== "NEW_JOINING" && values.company) {
+      generateEmployeeId(
+        companyOptions.find((opt) => opt.value === values.company)?.ecodePrefix,
+      );
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, mode]);
@@ -1383,6 +1431,28 @@ const EmployeeForm = ({
 
   useEffect(() => {
     fetchDepartment();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const fetchCompany = async () => {
+    try {
+      const response = await getCompanies({ includeInactive: false });
+      setCompanyOptions(
+        (response?.data || []).map((c) => ({
+          label: c.name,
+          value: c._id,
+          ecodePrefix: c.ecodePrefix,
+        })),
+      );
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error("Failed to fetch company");
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchCompany();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1849,6 +1919,35 @@ const EmployeeForm = ({
             />
 
             {errorText("designation")}
+          </Col>
+
+          {/* COMPANY */}
+          <Col md={6}>
+            <Label htmlFor="company">
+              Company <span className="text-danger">*</span>
+            </Label>
+            <Select
+              inputId="company"
+              placeholder="Select company"
+              isClearable
+              options={companyOptions}
+              value={
+                companyOptions.find((opt) => opt.value === values.company) ||
+                null
+              }
+              onChange={(option) => {
+                form.setFieldValue("company", option ? option.value : "");
+                if (!initialData?._id && mode !== "NEW_JOINING") {
+                  if (option) {
+                    generateEmployeeId(option.ecodePrefix);
+                  } else {
+                    form.setFieldValue("eCode", "");
+                  }
+                }
+              }}
+              onBlur={() => setFieldTouched("company", true)}
+            />
+            {errorText("company")}
           </Col>
           {/* EMPLOYEE TYPE */}
           <Col md={6}>
@@ -3085,7 +3184,213 @@ const EmployeeForm = ({
         </Col>
 
         <Row className="g-3 mx-2">
-          {simplified && (
+          {ultraSimplifiedFinance && (
+            <>
+              {/* ANNUAL CTC */}
+              <Col md={6}>
+                <Label htmlFor="annualCTC">
+                  Annual CTC <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="annualCTC"
+                  type="number"
+                  name="annualCTC"
+                  min={0}
+                  value={values.annualCTC}
+                  onChange={handleChange}
+                  onBlur={() => setFieldTouched("annualCTC", true)}
+                  invalid={touched.annualCTC && !!errors.annualCTC}
+                />
+                {errorText("annualCTC")}
+                <div className="text-muted small mt-1">
+                  Monthly ≈ ₹
+                  {Math.round(
+                    (Number(values.annualCTC) || 0) / 12,
+                  ).toLocaleString("en-IN")}
+                </div>
+              </Col>
+
+              {/* IN HAND SALARY (= CTC, auto) */}
+              <Col md={6}>
+                <Label htmlFor="annualInHandSalary">
+                  In Hand Salary (Yearly){" "}
+                  <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="annualInHandSalary"
+                  type="number"
+                  name="annualInHandSalary"
+                  min={0}
+                  value={values.annualInHandSalary}
+                  disabled
+                  onChange={handleChange}
+                  onBlur={() => setFieldTouched("annualInHandSalary", true)}
+                  invalid={
+                    touched.annualInHandSalary && !!errors.annualInHandSalary
+                  }
+                />
+                {errorText("annualInHandSalary")}
+                <div className="text-muted small mt-1">
+                  Monthly ≈ ₹
+                  {Math.round(
+                    (Number(values.annualInHandSalary) || 0) / 12,
+                  ).toLocaleString("en-IN")}
+                </div>
+                <div className="text-muted small">
+                  Auto-calculated as Annual CTC.
+                </div>
+              </Col>
+
+              {/* IS IT AN INCREMENT? — only when editing an existing employee */}
+              {mode === "MASTER" && isEdit && (
+                <Col md={6}>
+                  <Label htmlFor="isIncrement">Is it an increment?</Label>
+                  <Select
+                    inputId="isIncrement"
+                    options={[
+                      { label: "No", value: "NO" },
+                      { label: "Yes", value: "YES" },
+                    ]}
+                    value={{
+                      label: values.isIncrement === "YES" ? "Yes" : "No",
+                      value: values.isIncrement,
+                    }}
+                    onChange={(opt) =>
+                      setFieldValue("isIncrement", opt ? opt.value : "NO")
+                    }
+                  />
+                </Col>
+              )}
+
+              {mode === "MASTER" && isEdit && values.isIncrement === "YES" && (
+                <Col md={6}>
+                  <Label htmlFor="incrementIssued">
+                    Increment Issued Date <span className="text-danger">*</span>
+                  </Label>
+                  <Flatpickr
+                    className={`form-control ${errors.incrementIssued ? "is-invalid" : ""}`}
+                    id="incrementIssued"
+                    name="incrementIssued"
+                    value={values.incrementIssued}
+                    onChange={([date]) => {
+                      setFieldValue(
+                        "incrementIssued",
+                        date ? format(date, "yyyy-MM-dd") : "",
+                      );
+                    }}
+                    options={{ dateFormat: "Y-m-d" }}
+                  />
+                  {errorText("incrementIssued")}
+                </Col>
+              )}
+
+              {/* INCREMENT APPLICABLE DATE */}
+              {mode === "MASTER" && isEdit && values.isIncrement === "YES" && (
+                <Col md={6}>
+                  <Label htmlFor="incrementApplicable">
+                    Increment Applicable Date{" "}
+                    <span className="text-danger">*</span>
+                  </Label>
+                  <Flatpickr
+                    className={`form-control ${errors.incrementApplicable ? "is-invalid" : ""}`}
+                    id="incrementApplicable"
+                    name="incrementApplicable"
+                    value={values.incrementApplicable}
+                    onChange={([date]) => {
+                      setFieldValue(
+                        "incrementApplicable",
+                        date ? format(date, "yyyy-MM-dd") : "",
+                      );
+                    }}
+                    options={{ dateFormat: "Y-m-d" }}
+                  />
+                  {errorText("incrementApplicable")}
+                </Col>
+              )}
+
+              {/* INCREMENT LETTER FILE */}
+              {mode === "MASTER" && isEdit && values.isIncrement === "YES" && (
+                <Col md={6}>
+                  <Label>Increment Letter</Label>
+
+                  <input
+                    type="file"
+                    hidden
+                    ref={incrementLetterRef}
+                    accept="image/*,application/pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      await handleFileUpload({
+                        file,
+                        path: "EMPLOYEE_INCREMENT_LETTER",
+                        urlField: "incrementLetterOld",
+                        fileField: "incrementLetterFile",
+                      });
+                    }}
+                  />
+
+                  {values.incrementLetterOld ? (
+                    <div className="d-flex gap-2 mt-2">
+                      <Button
+                        size="sm"
+                        color="info"
+                        onClick={() =>
+                          handleFilePreview(
+                            {
+                              url: values.incrementLetterOld,
+                              originalName: "IncrementLetter",
+                            },
+                            "incrementLetterOld",
+                          )
+                        }
+                        disabled={uploading.incrementLetterFile}
+                      >
+                        {getFileActionLabel(
+                          {
+                            url: values.incrementLetterOld,
+                            originalName: "IncrementLetter",
+                          },
+                          "incrementLetterOld",
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => incrementLetterRef.current.click()}
+                        disabled={uploading.incrementLetterFile}
+                      >
+                        {uploading.incrementLetterFile ? (
+                          <>
+                            <Spinner size="sm" className="me-1" /> Uploading
+                          </>
+                        ) : (
+                          "Upload New File"
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="d-block">
+                      <Button
+                        size="sm"
+                        onClick={() => incrementLetterRef.current.click()}
+                        disabled={uploading.incrementLetterFile}
+                      >
+                        {uploading.incrementLetterFile ? (
+                          <>
+                            <Spinner size="sm" className="me-1" /> Uploading
+                          </>
+                        ) : (
+                          "Upload File"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </Col>
+              )}
+            </>
+          )}
+          {!ultraSimplifiedFinance && simplified && (
             <>
               {/* ANNUAL CTC */}
               <Col md={6}>
@@ -3232,7 +3537,7 @@ const EmployeeForm = ({
             </>
           )}
 
-          {!simplified && (
+          {!ultraSimplifiedFinance && !simplified && (
             <>
               {/* EMPLOYEE GROUPS */}
               <Col md={6}>
@@ -4201,6 +4506,35 @@ const EmployeeForm = ({
             />
 
             {errorText("designation")}
+          </Col>
+
+          {/* COMPANY */}
+          <Col md={6}>
+            <Label htmlFor="company">
+              Company <span className="text-danger">*</span>
+            </Label>
+            <Select
+              inputId="company"
+              placeholder="Select company"
+              isClearable
+              options={companyOptions}
+              value={
+                companyOptions.find((opt) => opt.value === values.company) ||
+                null
+              }
+              onChange={(option) => {
+                form.setFieldValue("company", option ? option.value : "");
+                if (!initialData?._id && mode !== "NEW_JOINING") {
+                  if (option) {
+                    generateEmployeeId(option.ecodePrefix);
+                  } else {
+                    form.setFieldValue("eCode", "");
+                  }
+                }
+              }}
+              onBlur={() => setFieldTouched("company", true)}
+            />
+            {errorText("company")}
           </Col>
           {/* EMPLOYEE TYPE */}
           <Col md={6}>
@@ -5307,7 +5641,213 @@ const EmployeeForm = ({
         </Col>
 
         <Row className="g-3 mx-2">
-          {simplified && (
+          {ultraSimplifiedFinance && (
+            <>
+              {/* ANNUAL CTC */}
+              <Col md={6}>
+                <Label htmlFor="annualCTC">
+                  Annual CTC <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="annualCTC"
+                  type="number"
+                  name="annualCTC"
+                  min={0}
+                  value={values.annualCTC}
+                  onChange={handleChange}
+                  onBlur={() => setFieldTouched("annualCTC", true)}
+                  invalid={touched.annualCTC && !!errors.annualCTC}
+                />
+                {errorText("annualCTC")}
+                <div className="text-muted small mt-1">
+                  Monthly ≈ ₹
+                  {Math.round(
+                    (Number(values.annualCTC) || 0) / 12,
+                  ).toLocaleString("en-IN")}
+                </div>
+              </Col>
+
+              {/* IN HAND SALARY (= CTC, auto) */}
+              <Col md={6}>
+                <Label htmlFor="annualInHandSalary">
+                  In Hand Salary (Yearly){" "}
+                  <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="annualInHandSalary"
+                  type="number"
+                  name="annualInHandSalary"
+                  min={0}
+                  value={values.annualInHandSalary}
+                  disabled
+                  onChange={handleChange}
+                  onBlur={() => setFieldTouched("annualInHandSalary", true)}
+                  invalid={
+                    touched.annualInHandSalary && !!errors.annualInHandSalary
+                  }
+                />
+                {errorText("annualInHandSalary")}
+                <div className="text-muted small mt-1">
+                  Monthly ≈ ₹
+                  {Math.round(
+                    (Number(values.annualInHandSalary) || 0) / 12,
+                  ).toLocaleString("en-IN")}
+                </div>
+                <div className="text-muted small">
+                  Auto-calculated as Annual CTC.
+                </div>
+              </Col>
+
+              {/* IS IT AN INCREMENT? — only when editing an existing employee */}
+              {mode === "MASTER" && isEdit && (
+                <Col md={6}>
+                  <Label htmlFor="isIncrement">Is it an increment?</Label>
+                  <Select
+                    inputId="isIncrement"
+                    options={[
+                      { label: "No", value: "NO" },
+                      { label: "Yes", value: "YES" },
+                    ]}
+                    value={{
+                      label: values.isIncrement === "YES" ? "Yes" : "No",
+                      value: values.isIncrement,
+                    }}
+                    onChange={(opt) =>
+                      setFieldValue("isIncrement", opt ? opt.value : "NO")
+                    }
+                  />
+                </Col>
+              )}
+
+              {mode === "MASTER" && isEdit && values.isIncrement === "YES" && (
+                <Col md={6}>
+                  <Label htmlFor="incrementIssued">
+                    Increment Issued Date <span className="text-danger">*</span>
+                  </Label>
+                  <Flatpickr
+                    className={`form-control ${errors.incrementIssued ? "is-invalid" : ""}`}
+                    id="incrementIssued"
+                    name="incrementIssued"
+                    value={values.incrementIssued}
+                    onChange={([date]) => {
+                      setFieldValue(
+                        "incrementIssued",
+                        date ? format(date, "yyyy-MM-dd") : "",
+                      );
+                    }}
+                    options={{ dateFormat: "Y-m-d" }}
+                  />
+                  {errorText("incrementIssued")}
+                </Col>
+              )}
+
+              {/* INCREMENT APPLICABLE DATE */}
+              {mode === "MASTER" && isEdit && values.isIncrement === "YES" && (
+                <Col md={6}>
+                  <Label htmlFor="incrementApplicable">
+                    Increment Applicable Date{" "}
+                    <span className="text-danger">*</span>
+                  </Label>
+                  <Flatpickr
+                    className={`form-control ${errors.incrementApplicable ? "is-invalid" : ""}`}
+                    id="incrementApplicable"
+                    name="incrementApplicable"
+                    value={values.incrementApplicable}
+                    onChange={([date]) => {
+                      setFieldValue(
+                        "incrementApplicable",
+                        date ? format(date, "yyyy-MM-dd") : "",
+                      );
+                    }}
+                    options={{ dateFormat: "Y-m-d" }}
+                  />
+                  {errorText("incrementApplicable")}
+                </Col>
+              )}
+
+              {/* INCREMENT LETTER FILE */}
+              {mode === "MASTER" && isEdit && values.isIncrement === "YES" && (
+                <Col md={6}>
+                  <Label>Increment Letter</Label>
+
+                  <input
+                    type="file"
+                    hidden
+                    ref={incrementLetterRef}
+                    accept="image/*,application/pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      await handleFileUpload({
+                        file,
+                        path: "EMPLOYEE_INCREMENT_LETTER",
+                        urlField: "incrementLetterOld",
+                        fileField: "incrementLetterFile",
+                      });
+                    }}
+                  />
+
+                  {values.incrementLetterOld ? (
+                    <div className="d-flex gap-2 mt-2">
+                      <Button
+                        size="sm"
+                        color="info"
+                        onClick={() =>
+                          handleFilePreview(
+                            {
+                              url: values.incrementLetterOld,
+                              originalName: "IncrementLetter",
+                            },
+                            "incrementLetterOld",
+                          )
+                        }
+                        disabled={uploading.incrementLetterFile}
+                      >
+                        {getFileActionLabel(
+                          {
+                            url: values.incrementLetterOld,
+                            originalName: "IncrementLetter",
+                          },
+                          "incrementLetterOld",
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => incrementLetterRef.current.click()}
+                        disabled={uploading.incrementLetterFile}
+                      >
+                        {uploading.incrementLetterFile ? (
+                          <>
+                            <Spinner size="sm" className="me-1" /> Uploading
+                          </>
+                        ) : (
+                          "Upload New File"
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="d-block">
+                      <Button
+                        size="sm"
+                        onClick={() => incrementLetterRef.current.click()}
+                        disabled={uploading.incrementLetterFile}
+                      >
+                        {uploading.incrementLetterFile ? (
+                          <>
+                            <Spinner size="sm" className="me-1" /> Uploading
+                          </>
+                        ) : (
+                          "Upload File"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </Col>
+              )}
+            </>
+          )}
+          {!ultraSimplifiedFinance && simplified && (
             <>
               {/* ANNUAL CTC */}
               <Col md={6}>
@@ -5454,7 +5994,7 @@ const EmployeeForm = ({
             </>
           )}
 
-          {!simplified && (
+          {!ultraSimplifiedFinance && !simplified && (
             <>
               {/* EMPLOYEE GROUPS */}
               <Col md={6}>

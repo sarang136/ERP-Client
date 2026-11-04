@@ -3486,6 +3486,39 @@ export const getDesignations = (params = {}) => {
   });
 };
 
+export const getCompanies = (params = {}) => {
+  return api.get(url.COMPANY, {
+    params,
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+  });
+};
+
+export const createCompany = (data) => {
+  return api.create(url.COMPANY, data, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+  });
+};
+
+export const updateCompany = (id, data) => {
+  return api.put(`${url.COMPANY}/${id}`, data, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+  });
+};
+
+export const deleteCompany = (id) => {
+  return api.delete(`${url.COMPANY}/${id}`, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+  });
+};
+
 export const postHiring = (data) => {
   return api.create(url.HIRING, data, {
     headers: {
@@ -3699,9 +3732,10 @@ export const downloadAttendanceTemplate = () => {
   });
 };
 
-export const getAttendanceMetrics = (params = {}) => {
+export const getAttendanceMetrics = (params = {}, signal) => {
   return api.get(url.ATTENDANCE_METRICS, {
     params,
+    signal,
     headers: {
       "X-No-Cookie-Token": "true",
     },
@@ -3951,9 +3985,10 @@ export const actionOnCancellationRequest = ({ cancellationId, status }) => {
   );
 };
 
-export const getAllLeaves = (params = {}) => {
+export const getAllLeaves = (params = {}, signal) => {
   return axios.get(url.GET_LEAVES, {
     params,
+    signal,
     headers: {
       "X-No-Cookie-Token": "true",
     },
@@ -4283,18 +4318,20 @@ export const getEmployeeLeaves = (employeeId, params = {}) => {
   });
 };
 
-export const getAllEmployeeLeaveBalance = (params = {}) => {
+export const getAllEmployeeLeaveBalance = (params = {}, signal) => {
   return api.get(url.GET_ALL_EMPLOYEE_LEAVE_BALANCE, {
     params,
+    signal,
     headers: {
       "X-No-Cookie-Token": "true",
     },
   });
 };
 
-export const getReporteesLeaveBalance = (params = {}) => {
+export const getReporteesLeaveBalance = (params = {}, signal) => {
   return api.get(url.GET_REPORTEES_LEAVE_BALANCE, {
     params,
+    signal,
     headers: {
       "X-No-Cookie-Token": "true",
     },

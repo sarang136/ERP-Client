@@ -25,7 +25,12 @@ import AddPatient from "../../Components/Patient/AddPatient";
 import Offcanvas from "./Offcanvas";
 import SwitchCenter from "./Modals/SwitchCenter";
 import DeleteModal from "../../Components/Common/DeleteModal";
-import { ADMIT_PATIENTS, ALL_PATIENTS } from "../../Components/constants/patient";
+import {
+  ADMIT_PATIENTS,
+  ALL_PATIENTS,
+  MY_PATIENTS,
+  VISITING_CONSULTANT_ROLE,
+} from "../../Components/constants/patient";
 
 const Patient = ({ centerAccess, patients, user }) => {
   const dispatch = useDispatch();
@@ -35,7 +40,11 @@ const Patient = ({ centerAccess, patients, user }) => {
   });
 
   //PATIENT TYPES
-  const [customActiveTab, setcustomActiveTab] = useState(ALL_PATIENTS);
+  const [selectedTab, setcustomActiveTab] = useState(ALL_PATIENTS);
+  // A Visiting Consultant is pinned to My Patients. Derived rather than set in
+  // state, so the list never loads All Patients first while the user loads.
+  const myPatientsOnly = user?.role === VISITING_CONSULTANT_ROLE;
+  const customActiveTab = myPatientsOnly ? MY_PATIENTS : selectedTab;
   const toggleCustom = (tab) => {
     if (customActiveTab !== tab) {
       setcustomActiveTab(tab);
@@ -98,6 +107,7 @@ const Patient = ({ centerAccess, patients, user }) => {
               <Sidebar
                 customActiveTab={customActiveTab}
                 toggleCustom={toggleCustom}
+                myPatientsOnly={myPatientsOnly}
                 gender={gender}
                 setGender={setGender}
                 staff={staff}

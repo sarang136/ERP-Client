@@ -20,6 +20,7 @@ import {
   isSimplifiedFinanceType,
   isConsultantFinanceType,
   isPfApplicable,
+  ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS,
 } from "../../../../Components/constants/HR";
 import {
   calculatePayroll,
@@ -159,7 +160,7 @@ const getFinanceInitialValues = (initialData) => ({
       : annualFieldValue(initialData?.financeDetails, "insurance"),
 });
 
-const validationSchema = (isEdit, step, simplified, consultant) => {
+const validationSchema = (isEdit, step, simplified, consultant, ultraSimplifiedFinance) => {
   if (step === 1 && !isEdit) {
     return Yup.object().shape({
       employeeId: Yup.string().required("Employee is required"),
@@ -172,11 +173,15 @@ const validationSchema = (isEdit, step, simplified, consultant) => {
     return Yup.object().shape({
       changeType: Yup.string().optional(),
       note: Yup.string().optional(),
-      paymentType: Yup.string().required("Payment Type is required"),
-      // Consultants carry a TDS rate; In Hand is derived (CTC − TDS).
-      TDSRate: consultant
-        ? buildNumberSchema("TDS Rate", { max: 100 })
-        : Yup.number().notRequired(),
+      paymentType: ultraSimplifiedFinance
+        ? Yup.string().notRequired()
+        : Yup.string().required("Payment Type is required"),
+      // Consultants carry a TDS rate; In Hand is derived (CTC − TDS). Ultra-
+      // simplified-finance companies never deduct TDS, regardless of type.
+      TDSRate:
+        consultant && !ultraSimplifiedFinance
+          ? buildNumberSchema("TDS Rate", { max: 100 })
+          : Yup.number().notRequired(),
       annualInHandSalary: buildNumberSchema("In Hand Salary").test(
         "inhand-not-above-ctc",
         "In Hand Salary cannot be greater than Annual CTC",
@@ -188,7 +193,9 @@ const validationSchema = (isEdit, step, simplified, consultant) => {
         }
       ),
       annualCTC: buildNumberSchema("Annual CTC"),
-      annualInsurance: buildNumberSchema("Insurance"),
+      annualInsurance: ultraSimplifiedFinance
+        ? Yup.number().notRequired()
+        : buildNumberSchema("Insurance"),
     });
   }
 
@@ -241,14 +248,19 @@ const FinanceForm = ({ initialData, onSuccess, onCancel, mode }) => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
   const employeeForType = isEdit ? initialData?.employee : selectedEmployee?.raw;
-  const simplified = isSimplifiedFinanceType(employeeForType?.employmentType);
   const consultant = isConsultantFinanceType(employeeForType?.employmentType);
+  const ultraSimplifiedFinance = ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS.includes(
+    employeeForType?.company,
+  );
+  const simplified =
+    isSimplifiedFinanceType(employeeForType?.employmentType) ||
+    ultraSimplifiedFinance;
 
   const form = useFormik({
     enableReinitialize: true,
     validateOnMount: true,
     initialValues: getFinanceInitialValues(isEdit ? initialData : null),
-    validationSchema: validationSchema(isEdit, step, simplified, consultant),
+    validationSchema: validationSchema(isEdit, step, simplified, consultant, ultraSimplifiedFinance),
     onSubmit: async (values) => {
       if (step === 1 && !isEdit) {
         setStep(2);
@@ -262,13 +274,17 @@ const FinanceForm = ({ initialData, onSuccess, onCancel, mode }) => {
             paymentType: values.paymentType || "MONTHLY",
             inHandSalary: Number(values.annualInHandSalary) || 0,
             totalCostToCompany: Number(values.annualCTC) || 0,
-            insurance: Number(values.annualInsurance) || 0,
+            // Ultra-simplified-finance companies never deduct insurance.
+            insurance: ultraSimplifiedFinance
+              ? 0
+              : Number(values.annualInsurance) || 0,
             salaryUnit: "ANNUAL",
           };
 
           // Consultants carry a TDS rate — the server deducts it from CTC to
-          // derive the stored In Hand Salary.
-          if (consultant) {
+          // derive the stored In Hand Salary. Ultra-simplified-finance
+          // companies never deduct TDS, regardless of employmentType.
+          if (consultant && !ultraSimplifiedFinance) {
             simplifiedPayload.TDSRate = Number(values.TDSRate) || 0;
           }
 
@@ -355,16 +371,20 @@ const FinanceForm = ({ initialData, onSuccess, onCancel, mode }) => {
   // applies to consultants (consultantTdsAmount is 0 for every other simplified
   // type), so this single formula covers both cases.
   useEffect(() => {
-    const insurance = Number(form.values.annualInsurance) || 0;
+    const insurance = ultraSimplifiedFinance
+      ? 0
+      : Number(form.values.annualInsurance) || 0;
     const inHand = Math.max(
       0,
-      (Number(form.values.annualCTC) || 0) - consultantTdsAmount - insurance
+      (Number(form.values.annualCTC) || 0) -
+        (ultraSimplifiedFinance ? 0 : consultantTdsAmount) -
+        insurance
     );
     if (Number(form.values.annualInHandSalary) !== inHand) {
       form.setFieldValue("annualInHandSalary", inHand, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consultantTdsAmount, form.values.annualCTC, form.values.annualInsurance]);
+  }, [ultraSimplifiedFinance, consultantTdsAmount, form.values.annualCTC, form.values.annualInsurance]);
 
   const payrollInitializedRef = useRef(false);
 
@@ -809,7 +829,66 @@ const FinanceForm = ({ initialData, onSuccess, onCancel, mode }) => {
       </Col>
 
       <Row className="g-3 mx-2">
-        {simplified && (
+        {ultraSimplifiedFinance && (
+          <>
+            {/* ANNUAL CTC */}
+            <Col md={6}>
+              <Label htmlFor="annualCTC">
+                Annual CTC <span className="text-danger">*</span>
+              </Label>
+              <Input
+                id="annualCTC"
+                name="annualCTC"
+                type="number"
+                min={0}
+                value={form.values.annualCTC}
+                onChange={handleNumericFieldChange}
+                onBlur={form.handleBlur}
+                invalid={form.touched.annualCTC && !!form.errors.annualCTC}
+              />
+              {errorText("annualCTC")}
+              <div className="text-muted small mt-1">
+                Monthly ≈ ₹
+                {Math.round(
+                  (Number(form.values.annualCTC) || 0) / 12,
+                ).toLocaleString("en-IN")}
+              </div>
+            </Col>
+
+            {/* IN HAND SALARY (= CTC, auto) */}
+            <Col md={6}>
+              <Label htmlFor="annualInHandSalary">
+                In Hand Salary (Yearly) <span className="text-danger">*</span>
+              </Label>
+              <Input
+                id="annualInHandSalary"
+                name="annualInHandSalary"
+                type="number"
+                min={0}
+                value={form.values.annualInHandSalary}
+                disabled
+                onChange={handleNumericFieldChange}
+                onBlur={form.handleBlur}
+                invalid={
+                  form.touched.annualInHandSalary &&
+                  !!form.errors.annualInHandSalary
+                }
+              />
+              {errorText("annualInHandSalary")}
+              <div className="text-muted small mt-1">
+                Monthly ≈ ₹
+                {Math.round(
+                  (Number(form.values.annualInHandSalary) || 0) / 12,
+                ).toLocaleString("en-IN")}
+              </div>
+              <div className="text-muted small">
+                Auto-calculated as Annual CTC.
+              </div>
+            </Col>
+          </>
+        )}
+
+        {!ultraSimplifiedFinance && simplified && (
           <>
             {/* ANNUAL CTC */}
             <Col md={6}>

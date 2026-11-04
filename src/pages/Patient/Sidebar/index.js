@@ -24,6 +24,7 @@ const Sidebar = ({
   patient,
   customActiveTab,
   toggleCustom,
+  myPatientsOnly,
   centerAccess,
   gender,
   setGender,
@@ -150,6 +151,7 @@ const Sidebar = ({
             <Tabs
               customActiveTab={customActiveTab}
               toggleCustom={toggleCustom}
+              myPatientsOnly={myPatientsOnly}
               gender={gender}
               setGender={setGender}
               staff={staff}
@@ -307,6 +309,7 @@ Sidebar.propTypes = {
   patients: PropTypes.array,
   patient: PropTypes.object,
   centerAccess: PropTypes.array.isRequired,
+  myPatientsOnly: PropTypes.bool,
   gender: PropTypes.string,
   setGender: PropTypes.func,
   staff: PropTypes.object,

@@ -226,7 +226,7 @@ const MseAtAddmission = ({ data, styles }) => {
 
   return (
     <View style={{ ...styles.marginBottom, marginTop: 15 }}>
-      <Text style={styles.fontSize13}>MSE at Addmission</Text>
+      <Text style={styles.fontSize13}>MSE at Admission</Text>
       {MSE_FIELDS.map(({ key, label }) =>
         mse[key] ? (
           <View key={key} style={{ marginBottom: 20, paddingLeft: 5 }}>

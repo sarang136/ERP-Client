@@ -357,20 +357,20 @@ const IPDComponent = ({ patient, toggleModal, setChartType, user }) => {
                     <option value="All">All</option>
                     {records
                       .filter((r) => {
-                        if (user?.role === "NURSE") {
-                          return ![
-                            PRESCRIPTION,
-                            COUNSELLING_NOTE,
-                            DETAIL_ADMISSION,
-                          ].includes(r.category);
-                        }
-                        if (
-                          ["MSW", "PSW"].includes(user?.role)
-                        ) {
-                          return ![PRESCRIPTION, VITAL_SIGN].includes(
-                            r.category,
-                          );
-                        }
+                        // if (user?.role === "NURSE") {
+                        //   return ![
+                        //     PRESCRIPTION,
+                        //     COUNSELLING_NOTE,
+                        //     DETAIL_ADMISSION,
+                        //   ].includes(r.category);
+                        // }
+                        // if (
+                        //   ["MSW", "PSW"].includes(user?.role)
+                        // ) {
+                        //   return ![PRESCRIPTION, VITAL_SIGN].includes(
+                        //     r.category,
+                        //   );
+                        // }
                         return true;
                       })
                       .sort((a, b) => a.name.localeCompare(b.name))
@@ -566,14 +566,14 @@ const IPDComponent = ({ patient, toggleModal, setChartType, user }) => {
                     recorded" reminders for this admission; score alerts still
                     fire. The reason is collected in a dialog, as for
                     Baseline. */}
-                <div className="d-flex align-items-center gap-1 w-100">
+                {/* <div className="d-flex align-items-center gap-1 w-100">
                   <PsychologicalTestsControl
                     addmission={addmission}
                     onRequestChange={(admissionId, nextStatus) =>
                       setPsychTestTarget({ admissionId, nextStatus })
                     }
                   />
-                </div>
+                </div> */}
               </div>
 
               <SetAdmissionTypeModal

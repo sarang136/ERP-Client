@@ -61,7 +61,7 @@ const DischargeSummary = ({ data }) => {
           </Col>
         )}
         {/* START MSE AT ADDMISSION */}
-        <SummaryMse mse={data?.mseAddmission} title={"MSE at Addmission"} />
+        <SummaryMse mse={data?.mseAddmission} title={"MSE at Admission"} />
         {/* START MSE AT ADDMISSION */}
         {data?.pastHistory && (
           <Col xs={12}>

@@ -38,7 +38,9 @@ const employerDeductionStyle = {
 
 
 const isSimplifiedEmployee = (row) =>
-    (row?.employee?.employmentType || "").trim().toUpperCase() !== "FULL_TIME";
+    (row?.employee?.employmentType || "").trim().toUpperCase() !== "FULL_TIME" ||
+    row?.salarySnapshot?.isSimplified === true;
+
 
 export const salaryColumns = ({ searchText, copyId, onCopy, onOpen, onApprove, onReject, hasEditPermission, approvalStatusFilter, hasManuallyProcessedForMonth }) => [
     {
@@ -266,6 +268,17 @@ export const salaryColumns = ({ searchText, copyId, onCopy, onOpen, onApprove, o
         selector: row => formatCurrency(row?.earned?.consultantFee),
         wrap: true,
         center: true,
+        style: earnedCellStyle,
+    },
+    {
+        name: <div>Base Compensation</div>,
+        selector: row =>
+            row?.earned?.baseCompensation != null
+                ? formatCurrency(row.earned.baseCompensation)
+                : "-",
+        wrap: true,
+        center: true,
+        minWidth: "150px",
         style: earnedCellStyle,
     },
     {

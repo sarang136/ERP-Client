@@ -40,9 +40,12 @@ const ProfileDropdown = ({ user }) => {
     try {
       // if (!token) return;
       await dispatch(logoutUser(token)).unwrap();
-      // localStorage.clear();
       Object.keys(localStorage).forEach((key) => {
-        if (!key.startsWith("detailAdmissionDraft_")) {
+        if (
+          !key.startsWith("detail_admission_draft_") &&
+          !key.startsWith("detail_admission_audio_") &&
+          !key.startsWith("detailAdmissionDraft_")
+        ) {
           localStorage.removeItem(key);
         }
       });

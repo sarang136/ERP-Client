@@ -6,13 +6,13 @@ import {
   getVerificationJobs,
   createAssetScan,
   uploadAssetScanImage,
-  downloadAssetScanTemplate,
-  uploadAssetScans,
+  // downloadAssetScanTemplate,
+  // uploadAssetScans,
 } from "../../../../helpers/backend_helper";
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
 import { usePermissions } from "../../../../Components/Hooks/useRoles.js";
 import CategoryLevelSelect, { EMPTY_CATEGORY } from "../shared/CategoryLevelSelect";
-import ExcelUploadPanel from "../shared/ExcelUploadPanel";
+// import ExcelUploadPanel from "../shared/ExcelUploadPanel";
 import PhotoPicker from "../shared/PhotoPicker";
 import { errText, useBusy } from "../shared/assetUi";
 import "../../UnitOfMeasurement/uom.scss";

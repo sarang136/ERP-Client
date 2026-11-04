@@ -36,7 +36,8 @@ const initialState = {
   designationLoading: false,
   myPayslips: { data: [], pagination: null, loading: false },
   employeePayslips: { data: [], pagination: null, loading: false },
-  reporteesLeaveBalance: { data: [], pagination: {}, loading: false },
+  reporteesLeaveBalance: { data: [], pagination: {}, loading: false, requestId: null },
+  leaveBalanceRequestId: null,
 };
 
 export const getMasterEmployees = createAsyncThunk(
@@ -257,9 +258,9 @@ export const fetchFinance = createAsyncThunk(
 
 export const fetchAllEmployeeLeaveBalance = createAsyncThunk(
   "hr/getAllEmployeeLeaveBalance",
-  async (data, { rejectWithValue }) => {
+  async (data, { rejectWithValue, signal }) => {
     try {
-      const response = await getAllEmployeeLeaveBalance(data);
+      const response = await getAllEmployeeLeaveBalance(data, signal);
       return response;
     } catch (error) {
       return rejectWithValue(error);
@@ -269,9 +270,9 @@ export const fetchAllEmployeeLeaveBalance = createAsyncThunk(
 
 export const fetchReporteesLeaveBalance = createAsyncThunk(
   "hr/getReporteesLeaveBalance",
-  async (data, { rejectWithValue }) => {
+  async (data, { rejectWithValue, signal }) => {
     try {
-      const response = await getReporteesLeaveBalance(data);
+      const response = await getReporteesLeaveBalance(data, signal);
       return response;
     } catch (error) {
       return rejectWithValue(error);
@@ -330,6 +331,19 @@ export const fetchMyPayslips = createAsyncThunk(
 export const hrSlice = createSlice({
   name: "HR",
   initialState,
+  reducers: {
+    removePayrollRecords: (state, { payload }) => {
+      const ids = new Set(Array.isArray(payload) ? payload : [payload]);
+      const removedCount = state.data.filter((item) => ids.has(item._id)).length;
+      state.data = state.data.filter((item) => !ids.has(item._id));
+      if (state.pagination) {
+        state.pagination.totalDocs = Math.max(
+          (state.pagination.totalDocs || 0) - removedCount,
+          0
+        );
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(getMasterEmployees.pending, (state) => {
@@ -516,10 +530,13 @@ export const hrSlice = createSlice({
     builder.addCase(actionPayroll.fulfilled, (state, { payload }) => {
       const index = state.data.findIndex((item) => item._id === payload._id);
       if (index !== -1) {
-        state.data[index] = {
-          ...state.data[index],
-          ...payload,
-        };
+        state.data.splice(index, 1);
+        if (state.pagination) {
+          state.pagination.totalDocs = Math.max(
+            (state.pagination.totalDocs || 0) - 1,
+            0
+          );
+        }
       }
     });
 
@@ -546,15 +563,18 @@ export const hrSlice = createSlice({
       .addCase(fetchEmployeePayslips.rejected, (state) => {
         state.employeePayslips.loading = false;
       })
-      .addCase(fetchReporteesLeaveBalance.pending, (state) => {
+      .addCase(fetchReporteesLeaveBalance.pending, (state, { meta }) => {
         state.reporteesLeaveBalance.loading = true;
+        state.reporteesLeaveBalance.requestId = meta.requestId;
       })
-      .addCase(fetchReporteesLeaveBalance.fulfilled, (state, { payload }) => {
+      .addCase(fetchReporteesLeaveBalance.fulfilled, (state, { payload, meta }) => {
+        if (meta.requestId !== state.reporteesLeaveBalance.requestId) return;
         state.reporteesLeaveBalance.loading = false;
         state.reporteesLeaveBalance.data = payload.data;
         state.reporteesLeaveBalance.pagination = payload.pagination;
       })
-      .addCase(fetchReporteesLeaveBalance.rejected, (state) => {
+      .addCase(fetchReporteesLeaveBalance.rejected, (state, { meta }) => {
+        if (meta.requestId !== state.reporteesLeaveBalance.requestId) return;
         state.reporteesLeaveBalance.loading = false;
       });
 
@@ -598,15 +618,18 @@ export const hrSlice = createSlice({
       });
 
     builder
-      .addCase(fetchAllEmployeeLeaveBalance.pending, (state) => {
+      .addCase(fetchAllEmployeeLeaveBalance.pending, (state, { meta }) => {
         state.loading = true;
+        state.leaveBalanceRequestId = meta.requestId;
       })
-      .addCase(fetchAllEmployeeLeaveBalance.fulfilled, (state, { payload }) => {
+      .addCase(fetchAllEmployeeLeaveBalance.fulfilled, (state, { payload, meta }) => {
+        if (meta.requestId !== state.leaveBalanceRequestId) return;
         state.loading = false;
         state.data = payload.data;
         state.pagination = payload.pagination;
       })
-      .addCase(fetchAllEmployeeLeaveBalance.rejected, (state) => {
+      .addCase(fetchAllEmployeeLeaveBalance.rejected, (state, { meta }) => {
+        if (meta.requestId !== state.leaveBalanceRequestId) return;
         state.loading = false;
       });
 
@@ -644,5 +667,7 @@ export const hrSlice = createSlice({
       });
   },
 });
+
+export const { removePayrollRecords } = hrSlice.actions;
 
 export default hrSlice.reducer;
