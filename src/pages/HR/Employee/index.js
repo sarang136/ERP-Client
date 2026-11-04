@@ -412,7 +412,7 @@ const Employee = () => {
       name: <div>Company</div>,
       selector: (row) => row?.company?.name || "-",
       wrap: true,
-      minWidth: "120px",
+      minWidth: "220px",
     },
     {
       name: <div>Position</div>,
