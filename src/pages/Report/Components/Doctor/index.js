@@ -28,7 +28,7 @@ const generalHeaders = [
   { label: "Age", key: "age" },
   { label: "Guardian", key: "guardianName" },
   // { label: "Guardian Number", key: "guardianPhoneNumber" },
-  { label: "Addmission Date", key: "addmissionDate" },
+  { label: "Admission Date", key: "addmissionDate" },
 ];
 
 const Doctor = ({ centers, centerAccess }) => {

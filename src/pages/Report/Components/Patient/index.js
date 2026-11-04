@@ -424,7 +424,7 @@ const Patient = ({ centerAccess }) => {
     { label: "Age", key: "age" },
     { label: "Guardian", key: "guardianName" },
     // { label: "Guardian Number", key: "guardianPhoneNumber" },
-    { label: "Addmission Date", key: "addmissionDate" },
+    { label: "Admission Date", key: "addmissionDate" },
     { label: "Discharge Date", key: "dischargeDate" },
   ];
 
@@ -442,7 +442,7 @@ const Patient = ({ centerAccess }) => {
     { label: "Guardian", key: "guardianName" },
     // { label: "Guardian Number", key: "guardianPhoneNumber" },
     { label: "IPD File No", key: "ipdFileNumber" },
-    { label: "Addmission Date", key: "addmissionDate" },
+    { label: "Admission Date", key: "addmissionDate" },
     { label: "Bill Cycle Date", key: "billCycleDate" },
   ];
 
@@ -460,7 +460,7 @@ const Patient = ({ centerAccess }) => {
     { label: "Guardian", key: "guardianName" },
     // { label: "Guardian Number", key: "guardianPhoneNumber" },
     { label: "IPD File No", key: "ipdFileNumber" },
-    { label: "Addmission Date", key: "addmissionDate" },
+    { label: "Admission Date", key: "addmissionDate" },
     { label: "Discharge Date", key: "dischargeDate" },
   ];
 

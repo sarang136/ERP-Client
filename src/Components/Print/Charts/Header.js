@@ -232,7 +232,7 @@ const Header = ({ chart, center, patient, doctor, admission }) => {
           <Text>
             {admission?.addmissionDate && (
               <>
-                Date of Addmission:{" "}
+                Date of Admission:{" "}
                 {format(new Date(admission?.addmissionDate), "d MMM y")}
               </>
             )}

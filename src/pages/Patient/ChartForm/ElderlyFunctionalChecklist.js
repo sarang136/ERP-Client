@@ -133,7 +133,7 @@ const ElderlyFunctionalChecklist = ({
     validationSchema: Yup.object({
       patient: Yup.string().required("Patient is required"),
       center: Yup.string().required("Center is required"),
-      addmission: Yup.string().required("Addmission is required"),
+      addmission: Yup.string().required("Admission is required"),
       chart: Yup.string().required("Chart is required"),
       ...elderlyChecklistYupShape,
     }),
