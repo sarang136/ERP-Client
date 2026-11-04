@@ -50,7 +50,7 @@ import {
 // import { getAdditionalDetails } from "../../helpers/backend_helper";
 // import RenderWhen from "../../Components/Common/RenderWhen";
 
-// "NA" on Nurse / RMO / MSW: nobody assigned. Saving it unassigns the current
+// "NA" on Nurse / RMO / MSW / Visiting Consultant: nobody assigned. Saving it unassigns the current
 // person; the server stores the field as null.
 const STAFF_NA_OPTION = { value: "NA", label: "NA" };
 
@@ -63,6 +63,7 @@ const PatientTopbar = ({
   nurses,
   rmos,
   msws,
+  visitingConsultants,
   deletePatient,
   loading,
   nurseLoading,
@@ -83,6 +84,8 @@ const PatientTopbar = ({
   const [selectedNurse, setSelectedNurse] = useState(null);
   const [selectedRmo, setSelectedRmo] = useState(null);
   const [selectedMsw, setSelectedMsw] = useState(null);
+  const [selectedVisitingConsultant, setSelectedVisitingConsultant] =
+    useState(null);
   const [notesModal, setNotesModal] = useState(false);
   const [nurseModal, setNurseModal] = useState(false);
   // const [additionalDiagnosis, setAdditionalDiagnosis] = useState(null);
@@ -160,7 +163,7 @@ const PatientTopbar = ({
         label: admission.psychologist.name || "",
       });
     }
-    // Unlike doctor/psychologist, nurse, RMO and MSW can be empty — that shows as
+    // Unlike doctor/psychologist, nurse, RMO, MSW and visiting consultant can be empty — that shows as
     // NA, and is always reset so a previous patient's selection never carries
     // over into this modal.
     setSelectedNurse(
@@ -178,6 +181,14 @@ const PatientTopbar = ({
         ? { value: admission.msw._id || "", label: admission.msw.name || "" }
         : STAFF_NA_OPTION,
     );
+    setSelectedVisitingConsultant(
+      admission?.visitingConsultant
+        ? {
+            value: admission.visitingConsultant._id || "",
+            label: admission.visitingConsultant.name || "",
+          }
+        : STAFF_NA_OPTION,
+    );
     setIsEditModalOpen(true);
   };
 
@@ -186,7 +197,8 @@ const PatientTopbar = ({
     selectedPsychologist ||
     selectedNurse ||
     selectedRmo ||
-    selectedMsw;
+    selectedMsw ||
+    selectedVisitingConsultant;
 
   const handleSave = async () => {
     if (!hasAnySelection) {
@@ -203,6 +215,7 @@ const PatientTopbar = ({
         nurseId: selectedNurse?.value,
         rmoId: selectedRmo?.value,
         mswId: selectedMsw?.value,
+        visitingConsultantId: selectedVisitingConsultant?.value,
       }),
     );
   };
@@ -644,6 +657,26 @@ const PatientTopbar = ({
                   </UncontrolledTooltip>
                 </li>
 
+                <li
+                  id="patient-visiting-consultant"
+                  className="list-inline-item m-0 ms-4 d-none d-md-inline"
+                  onClick={handleEditClick}
+                  style={{ cursor: "pointer" }}
+                >
+                  <i className="ri-user-star-line align-middle me-1 fs-18"></i>
+                  <span
+                    className={
+                      admission?.visitingConsultant?.name ? "" : "text-muted"
+                    }
+                  >
+                    {admission?.visitingConsultant?.name ||
+                      "Add Visiting Consultant"}
+                  </span>
+                  <UncontrolledTooltip target={"patient-visiting-consultant"}>
+                    Click to edit Visiting Consultant
+                  </UncontrolledTooltip>
+                </li>
+
                 <li className="list-inline-item m-0">
                   <Dropdown isOpen={search_Menu} toggle={toggleSearch}>
                     <DropdownToggle
@@ -860,6 +893,22 @@ const PatientTopbar = ({
                   isLoading={!nurses}
                 />
               </Col>
+              <Col md={12} className="mb-3">
+                <Label>Visiting Consultant</Label>
+                <Select
+                  value={selectedVisitingConsultant}
+                  onChange={setSelectedVisitingConsultant}
+                  options={[
+                    ...(visitingConsultants || []).map((vc) => ({
+                      value: vc._id,
+                      label: vc.name,
+                    })),
+                    STAFF_NA_OPTION,
+                  ]}
+                  placeholder="Select visiting consultant"
+                  isLoading={!visitingConsultants}
+                />
+              </Col>
             </Row>
             <div className="text-end mt-3">
               <Button
@@ -906,6 +955,7 @@ const mapStateToProps = (state) => ({
   nurses: state.User?.nurses,
   rmos: state.User?.rmos,
   msws: state.User?.msws,
+  visitingConsultants: state.User?.visitingConsultants,
   admissions: state.Chart.data,
   loading: state.Patient.admissionLoading,
   nurseLoading: state.Patient.nurseLoading,
