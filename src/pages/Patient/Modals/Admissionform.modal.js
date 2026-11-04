@@ -162,6 +162,7 @@ const AdmissionFormModal = ({
                 <option value="INDEPENDENT_ADMISSION">
                   Independent Admission
                 </option>
+                <option value="MINOR_ADMISSION">Minor Admission</option>
                 <option value="SUPPORTIVE_ADMISSION">
                   Supportive Admission
                 </option>
@@ -180,7 +181,6 @@ const AdmissionFormModal = ({
               >
                 <option value="">Select Adultation</option>
                 <option value="ADULT">Adult (18+)</option>
-                <option value="MINOR">Minor (below 18)</option>
               </Input>
             </div>
           )}

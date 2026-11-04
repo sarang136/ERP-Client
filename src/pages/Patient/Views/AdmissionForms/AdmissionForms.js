@@ -383,14 +383,24 @@ const AddmissionForms = ({ patient, admissions: allAddmissions }) => {
       // Add structured form data (filled in the Create New Form modal);
       // conditional fields are gated on their admission type so a stale value
       // from a previously selected type never gets stored.
-      if (admissiontype) formData.append("admissionType", admissiontype);
-      if (admissiontype === "INDEPENDENT_ADMISSION" && adultationype)
-        formData.append("adultationType", adultationype);
-      if (admissiontype === "SUPPORTIVE_ADMISSION" && supporttype)
+      const effectiveAdmissionType =
+        admissiontype === "MINOR_ADMISSION"
+          ? "INDEPENDENT_ADMISSION"
+          : admissiontype;
+      const effectiveAdultationType =
+        admissiontype === "MINOR_ADMISSION" ? "MINOR" : adultationype;
+      if (effectiveAdmissionType)
+        formData.append("admissionType", effectiveAdmissionType);
+      if (
+        effectiveAdmissionType === "INDEPENDENT_ADMISSION" &&
+        effectiveAdultationType
+      )
+        formData.append("adultationType", effectiveAdultationType);
+      if (effectiveAdmissionType === "SUPPORTIVE_ADMISSION" && supporttype)
         formData.append("supportType", supporttype);
-      if (admissiontype === "EMERGENCY_ADMISSION" && emergencyType)
+      if (effectiveAdmissionType === "EMERGENCY_ADMISSION" && emergencyType)
         formData.append("emergencyType", emergencyType);
-      if (admissiontype === "EMERGENCY_ADMISSION" && emergencyRestraint)
+      if (effectiveAdmissionType === "EMERGENCY_ADMISSION" && emergencyRestraint)
         formData.append("emergencyRestraint", emergencyRestraint);
 
       // Through the slice, not a bare axios call: the response carries the
@@ -820,12 +830,22 @@ const AddmissionForms = ({ patient, admissions: allAddmissions }) => {
       }
 
       // Add structured form data (filled in the Create New Form modal)
-      if (admissiontype) formData.append("dischargeType", admissiontype);
-      if (admissiontype === "INDEPENDENT_ADMISSION" && adultationype)
-        formData.append("adultationType", adultationype);
-      if (admissiontype === "SUPPORTIVE_ADMISSION" && supporttype)
+      const effectiveDischargeType =
+        admissiontype === "MINOR_DISCHARGE"
+          ? "INDEPENDENT_ADMISSION"
+          : admissiontype;
+      const effectiveAdultationType =
+        admissiontype === "MINOR_DISCHARGE" ? "MINOR" : adultationype;
+      if (effectiveDischargeType)
+        formData.append("dischargeType", effectiveDischargeType);
+      if (
+        effectiveDischargeType === "INDEPENDENT_ADMISSION" &&
+        effectiveAdultationType
+      )
+        formData.append("adultationType", effectiveAdultationType);
+      if (effectiveDischargeType === "SUPPORTIVE_ADMISSION" && supporttype)
         formData.append("supportType", supporttype);
-      if (admissiontype === "EMERGENCY_DISCHARGE" && emergencyDischargeType)
+      if (effectiveDischargeType === "EMERGENCY_DISCHARGE" && emergencyDischargeType)
         formData.append("emergencyDischargeType", emergencyDischargeType);
       // ---------------------------
       // SELECT API BASED ON CONDITION
@@ -2221,17 +2241,16 @@ const AddmissionForms = ({ patient, admissions: allAddmissions }) => {
                   </div>
                 )}
               {/* for minor */}
-              {admissiontype === "INDEPENDENT_ADMISSION" &&
-                adultationype === "MINOR" && (
-                  <div ref={minorRef}>
-                    <IndependentAdmMinor
-                      register={register}
-                      chartData={chartData}
-                      patient={patient}
-                      details={details}
-                    />
-                  </div>
-                )}
+              {admissiontype === "MINOR_ADMISSION" && (
+                <div ref={minorRef}>
+                  <IndependentAdmMinor
+                    register={register}
+                    chartData={chartData}
+                    patient={patient}
+                    details={details}
+                  />
+                </div>
+              )}
               {/* support form */}
               {admissiontype === "SUPPORTIVE_ADMISSION" &&
                 supporttype === "UPTO30DAYS" && (
@@ -2478,16 +2497,15 @@ const AddmissionForms = ({ patient, admissions: allAddmissions }) => {
                   </div>
                 )}
               {/* for minor */}{" "}
-              {admissiontype === "INDEPENDENT_ADMISSION" &&
-                adultationype === "MINOR" && (
-                  <div ref={dischargeRefMinor}>
-                    <DischargeIndependentMinor
-                      register={register}
-                      admissions={admissions[0]}
-                      patient={patient}
-                    />
-                  </div>
-                )}
+              {admissiontype === "MINOR_DISCHARGE" && (
+                <div ref={dischargeRefMinor}>
+                  <DischargeIndependentMinor
+                    register={register}
+                    admissions={admissions[0]}
+                    patient={patient}
+                  />
+                </div>
+              )}
               {/* Undertaking Discharge */}{" "}
               {admissiontype === "DISCHARGE_UNDERTAKING" && (
                 <div ref={dischargeRefUndertaking}>
