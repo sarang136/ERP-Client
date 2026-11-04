@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { changeLeaveStatusByHR, directCancellation, getAllLeaves } from '../../../helpers/backend_helper';
 import { toast } from 'react-toastify';
 import { CardBody, Nav, NavItem, NavLink } from 'reactstrap';
@@ -39,7 +39,13 @@ const AllLeaveHistory = () => {
   const hasDelete = hasPermission("HR", "ALL_LEAVE_HISTORY", "DELETE");
 
 
+  const pendingRequestRef = useRef(null);
+
   const loadAllLeaves = async () => {
+    pendingRequestRef.current?.abort();
+    const controller = new AbortController();
+    pendingRequestRef.current = controller;
+
     setLoading(true);
     try {
       let centers = [];
@@ -59,16 +65,19 @@ const AllLeaveHistory = () => {
         search: debouncedSearch,
         centers
 
-      })
+      }, controller.signal)
       setDoc(response?.data)
       setPagination({
         ...response?.pagination,
         totalDocs: response?.pagination?.totalRecords,
       });
     } catch (error) {
+      if (error.name === "AbortError" || error.code === "ERR_CANCELED") return;
       toast.error(error);
     } finally {
-      setLoading(false);
+      if (pendingRequestRef.current === controller) {
+        setLoading(false);
+      }
     }
   }
 

@@ -11,7 +11,7 @@ import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect";
 import "flatpickr/dist/themes/material_blue.css";
 import "flatpickr/dist/plugins/monthSelect/style.css";
 import { toast } from 'react-toastify'; 
-import { actionPayroll, editPayrollRemarks, fetchPayrolls } from '../../../store/features/HR/hrSlice';
+import { actionPayroll, editPayrollRemarks, fetchPayrolls, removePayrollRecords } from '../../../store/features/HR/hrSlice';
 import DataTableComponent from '../../../Components/Common/DataTable';
 import { usePermissions } from '../../../Components/Hooks/useRoles';
 import { useCenterOptions } from '../../../Components/Hooks/useCenterOptions';
@@ -99,6 +99,7 @@ const Salary = () => {
     const [selectedPayrollId, setSelectedPayrollId] = useState("");
     const [actionType, setActionType] = useState("APPROVE");
     const [isBulk, setIsBulk] = useState(false);
+    const [bulkPayrollIds, setBulkPayrollIds] = useState([]);
     const [note, setNote] = useState("");
     const [paymentType, setPaymentType] = useState("");
     const [eCode, setECode] = useState("");
@@ -266,6 +267,8 @@ const Salary = () => {
                 centers,
                 startDate: startOfMonth(selectedMonth),
                 endDate: endOfMonth(selectedMonth),
+                ...(selectedCompany !== "ALL" && { company: selectedCompany }),
+                ...(debouncedSearch.trim() !== "" && { search: debouncedSearch }),
             });
 
             const jobId = response?.jobId;
@@ -297,7 +300,10 @@ const Salary = () => {
                     note: formData.note
                 });
                 toast.success(res?.data?.message || `${actionType === "APPROVE" ? "Approved" : "Rejected"} successfully`);
-                fetchEmployeePayrolls();
+                if (bulkPayrollIds.length) {
+                    dispatch(removePayrollRecords(bulkPayrollIds));
+                    setBulkPayrollIds([]);
+                }
             } else if (actionType === "UPDATE_REMARKS") {
                 const res = await dispatch(
                     editPayrollRemarks({ id: selectedPayrollId, remarks: formData.remarks })
@@ -374,10 +380,12 @@ const Salary = () => {
         setNote("");
         if (!bulk && ids.length === 1) {
             setSelectedPayrollId(ids[0]);
+            setBulkPayrollIds([]);
             const item = data.find(i => i._id === ids[0]);
             setRemarks(item?.remarks || "");
         } else {
             setSelectedPayrollId("");
+            setBulkPayrollIds(ids);
             setRemarks("");
         }
         setModalOpen(true);

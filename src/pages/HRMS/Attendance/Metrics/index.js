@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Button, CardBody, Input, Spinner } from "reactstrap";
@@ -74,22 +74,30 @@ const AttendanceMetrics = () => {
 
   const centers = selectedCenter === "ALL" ? centerAccess : [selectedCenter];
 
+  const pendingRequestRef = useRef(null);
+
   const fetchEmployeeAttendanceMetrics = async () => {
+    pendingRequestRef.current?.abort();
+
+    const request = dispatch(
+      fetchAttendanceMetrics({
+        page,
+        limit,
+        search,
+        centers,
+        startDate: reportDate.start,
+        endDate: reportDate.end,
+        sortBy,
+        ...(debouncedSearch.trim() !== "" && { search: debouncedSearch }),
+        status: selectedStatus || undefined,
+      }),
+    );
+    pendingRequestRef.current = request;
+
     try {
-      await dispatch(
-        fetchAttendanceMetrics({
-          page,
-          limit,
-          search,
-          centers,
-          startDate: reportDate.start,
-          endDate: reportDate.end,
-          sortBy,
-          ...(debouncedSearch.trim() !== "" && { search: debouncedSearch }),
-          status: selectedStatus || undefined,
-        }),
-      ).unwrap();
+      await request.unwrap();
     } catch (error) {
+      if (error.name === "AbortError") return;
       if (!handleAuthError(error)) {
         toast.error(error.message || "Failed to fetch attendance");
       }

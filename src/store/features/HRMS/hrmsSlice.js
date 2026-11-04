@@ -7,6 +7,7 @@ const initialState = {
     lastImportTime: null,
     loading: false,
     pagination: {},
+    metricsRequestId: null,
     attendanceLogsEmployee: {},
     attendanceSummary: {
         data: null,
@@ -28,9 +29,9 @@ export const fetchAttendance = createAsyncThunk("hrms/getAttendance", async (dat
     }
 });
 
-export const fetchAttendanceMetrics = createAsyncThunk("hrms/getAttendanceMetrics", async (data, { rejectWithValue }) => {
+export const fetchAttendanceMetrics = createAsyncThunk("hrms/getAttendanceMetrics", async (data, { rejectWithValue, signal }) => {
     try {
-        const response = await getAttendanceMetrics(data);
+        const response = await getAttendanceMetrics(data, signal);
         return response;
     } catch (error) {
         return rejectWithValue(error);
@@ -94,15 +95,18 @@ export const hrmsSlice = createSlice({
             });
 
         builder
-            .addCase(fetchAttendanceMetrics.pending, (state) => {
+            .addCase(fetchAttendanceMetrics.pending, (state, { meta }) => {
                 state.loading = true;
+                state.metricsRequestId = meta.requestId;
             })
-            .addCase(fetchAttendanceMetrics.fulfilled, (state, { payload }) => {
+            .addCase(fetchAttendanceMetrics.fulfilled, (state, { payload, meta }) => {
+                if (meta.requestId !== state.metricsRequestId) return;
                 state.loading = false;
                 state.data = payload.data;
                 state.pagination = payload.pagination
             })
-            .addCase(fetchAttendanceMetrics.rejected, (state) => {
+            .addCase(fetchAttendanceMetrics.rejected, (state, { meta }) => {
+                if (meta.requestId !== state.metricsRequestId) return;
                 state.loading = false
             });
 

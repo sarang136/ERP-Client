@@ -1,6 +1,7 @@
 import React from "react";
 import { Document, Page, StyleSheet, Text, View, Svg, Path } from "@react-pdf/renderer";
 import { normalizeUnderscores } from "./normalizeUnderscore";
+import { ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS } from "../Components/constants/HR";
 
 // react-pdf's <Image> can't rasterize SVG, so the Jagruti logo is drawn with
 // native <Svg>/<Path>. Fills are inlined here since react-pdf ignores the
@@ -560,10 +561,13 @@ const SimplifiedPayslip = ({ row, cfg }) => {
     gross - incentives - arrear - reimbursement - variablePay - otherEarnings - elEncashment,
     0
   );
+
   const fee =
-    cfg.useStoredFee && num(row?.consultantFee) > 0
-      ? num(row.consultantFee)
-      : derivedFee;
+    row?.baseCompensation != null
+      ? num(row.baseCompensation)
+      : cfg.useStoredFee && num(row?.consultantFee) > 0
+        ? num(row.consultantFee)
+        : derivedFee;
 
   const earningsRows = [
     { label: cfg.feeLabel, value: fee },
@@ -669,6 +673,14 @@ const InternPayslip = ({ row }) => <SimplifiedPayslip row={row} cfg={INTERN_CFG}
 // ─── Format selection by employment type ─────────────────────────────────────
 
 const PayslipPdf = ({ row }) => {
+  // ultraSimplifiedFinance companies (e.g. Sareyaan) force every employee's
+  // finance onto the simplified CTC + In Hand model regardless of
+  // employmentType, so their payslip always uses the Intern-style simplified
+  // layout too — the FULL_TIME/full-breakup layout would just render zeros.
+  if (ULTRA_SIMPLIFIED_FINANCE_COMPANY_IDS.includes(row?.company)) {
+    return <InternPayslip row={row} />;
+  }
+
   switch ((row?.employmentType || "").trim().toUpperCase()) {
     case "CONSULTANT":
       return <ConsultantPayslip row={row} />;

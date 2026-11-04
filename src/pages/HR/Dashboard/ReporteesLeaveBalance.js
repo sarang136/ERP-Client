@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { CardBody, Input } from "reactstrap";
@@ -70,25 +70,33 @@ const ReporteesLeaveBalance = () => {
         return () => clearTimeout(handler);
     }, [search]);
 
-    const loadReporteesLeaveBalance = async () => {
-        try {
-            const centers =
-                selectedCenter === "ALL"
-                    ? user?.centerAccess
-                    : !user?.centerAccess.length
-                        ? []
-                        : [selectedCenter];
+    const pendingRequestRef = useRef(null);
 
-            await dispatch(
-                fetchReporteesLeaveBalance({
-                    page,
-                    limit,
-                    year,
-                    centers,
-                    ...(search.trim() !== "" && { search: debouncedSearch }),
-                }),
-            ).unwrap();
+    const loadReporteesLeaveBalance = async () => {
+        pendingRequestRef.current?.abort();
+
+        const centers =
+            selectedCenter === "ALL"
+                ? user?.centerAccess
+                : !user?.centerAccess.length
+                    ? []
+                    : [selectedCenter];
+
+        const request = dispatch(
+            fetchReporteesLeaveBalance({
+                page,
+                limit,
+                year,
+                centers,
+                ...(search.trim() !== "" && { search: debouncedSearch }),
+            }),
+        );
+        pendingRequestRef.current = request;
+
+        try {
+            await request.unwrap();
         } catch (error) {
+            if (error.name === "AbortError") return;
             if (!handleAuthError(error)) {
                 toast.error(error.message || "Failed to fetch reportees leave balance");
             }
