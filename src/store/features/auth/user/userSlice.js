@@ -31,6 +31,7 @@ const initialState = {
   nurses: null,
   rmos: null,
   msws: null,
+  visitingConsultants: null,
   doctorLoading: false,
   centerAccess: null,
   userCenters: null,
@@ -541,6 +542,7 @@ const userSlice = createSlice({
         state.nurses = payload.nurses;
         state.rmos = payload.rmos;
         state.msws = payload.msws;
+        state.visitingConsultants = payload.visitingConsultants;
       })
       .addCase(fetchDoctors.rejected, (state, action) => {
         state.doctorLoading = false;

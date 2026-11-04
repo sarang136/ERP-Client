@@ -25,6 +25,7 @@ const genderTargetId = (key) => `gender-filter-${key.toLowerCase()}`;
 const Tabs = ({
   customActiveTab,
   toggleCustom,
+  myPatientsOnly,
   gender,
   setGender,
   staff,
@@ -38,88 +39,93 @@ const Tabs = ({
           tabs
           className="nav nav-tabs nav-tabs-custom nav-success nav-justified flex-nowrap mb-2"
         >
-          <NavItem>
-            <NavLink
-              style={{ cursor: "pointer" }}
-              className={classnames("px-2", {
-                active: customActiveTab === ALL_PATIENTS,
-              })}
-              onClick={() => {
-                toggleCustom(ALL_PATIENTS);
-              }}
-              id="all-patients"
-            >
-              <i className="ri-team-fill fs-6"></i>
-            </NavLink>
-            <UncontrolledTooltip placement="bottom" target="all-patients">
-              All Patients
-            </UncontrolledTooltip>
-          </NavItem>
-          <NavItem>
-            <NavLink
-              style={{ cursor: "pointer" }}
-              className={classnames("px-2", {
-                active: customActiveTab === ADMIT_PATIENTS,
-              })}
-              onClick={() => {
-                toggleCustom(ADMIT_PATIENTS);
-              }}
-              id="admit-patients"
-            >
-              <i className="ri-user-location-fill fs-6"></i>
-            </NavLink>
-            <UncontrolledTooltip placement="bottom" target="admit-patients">
-              Admit Patients
-            </UncontrolledTooltip>
-          </NavItem>
-          <NavItem>
-            <NavLink
-              style={{ cursor: "pointer" }}
-              className={classnames("px-2", {
-                active: customActiveTab === DISCHARGE_PATIENTS,
-              })}
-              onClick={() => {
-                toggleCustom(DISCHARGE_PATIENTS);
-              }}
-              id="discharge-patients"
-            >
-              <i className="ri-user-follow-fill fs-6"></i>
-            </NavLink>
-            <UncontrolledTooltip placement="bottom" target="discharge-patients">
-              Discharged Patients
-            </UncontrolledTooltip>
-          </NavItem>
-          <NavItem>
-            <NavLink
-              style={{ cursor: "pointer" }}
-              className={classnames("px-2", {
-                active: customActiveTab === OPD_PATIENTS,
-              })}
-              onClick={() => {
-                toggleCustom(OPD_PATIENTS);
-              }}
-              id="opd-patients"
-            >
-              {/* No id here — "opd-patients" is already on the NavLink above,
-                  and a duplicate would make the tooltip target ambiguous. */}
-              <span className="fs-6">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
+          {/* A Visiting Consultant gets the My Patients tab only. */}
+          {!myPatientsOnly && (
+            <>
+              <NavItem>
+                <NavLink
+                  style={{ cursor: "pointer" }}
+                  className={classnames("px-2", {
+                    active: customActiveTab === ALL_PATIENTS,
+                  })}
+                  onClick={() => {
+                    toggleCustom(ALL_PATIENTS);
+                  }}
+                  id="all-patients"
                 >
-                  <path
-                    fill="currentColor"
-                    d="M8 3v2H6v4a4 4 0 0 0 8 0V5h-2V3h3a1 1 0 0 1 1 1v5a6.002 6.002 0 0 1-5 5.917V16.5a3.5 3.5 0 0 0 6.775 1.238a3 3 0 1 1 2.05.148A5.502 5.502 0 0 1 8.999 16.5v-1.583A6.002 6.002 0 0 1 4 9V4a1 1 0 0 1 1-1h3Zm11 11a1 1 0 1 0 0 2a1 1 0 0 0 0-2Z"
-                  />
-                </svg>
-              </span>
-            </NavLink>
-            <UncontrolledTooltip placement="bottom" target="opd-patients">
-              OPD Patients
-            </UncontrolledTooltip>
-          </NavItem>
+                  <i className="ri-team-fill fs-6"></i>
+                </NavLink>
+                <UncontrolledTooltip placement="bottom" target="all-patients">
+                  All Patients
+                </UncontrolledTooltip>
+              </NavItem>
+              <NavItem>
+                <NavLink
+                  style={{ cursor: "pointer" }}
+                  className={classnames("px-2", {
+                    active: customActiveTab === ADMIT_PATIENTS,
+                  })}
+                  onClick={() => {
+                    toggleCustom(ADMIT_PATIENTS);
+                  }}
+                  id="admit-patients"
+                >
+                  <i className="ri-user-location-fill fs-6"></i>
+                </NavLink>
+                <UncontrolledTooltip placement="bottom" target="admit-patients">
+                  Admit Patients
+                </UncontrolledTooltip>
+              </NavItem>
+              <NavItem>
+                <NavLink
+                  style={{ cursor: "pointer" }}
+                  className={classnames("px-2", {
+                    active: customActiveTab === DISCHARGE_PATIENTS,
+                  })}
+                  onClick={() => {
+                    toggleCustom(DISCHARGE_PATIENTS);
+                  }}
+                  id="discharge-patients"
+                >
+                  <i className="ri-user-follow-fill fs-6"></i>
+                </NavLink>
+                <UncontrolledTooltip placement="bottom" target="discharge-patients">
+                  Discharged Patients
+                </UncontrolledTooltip>
+              </NavItem>
+              <NavItem>
+                <NavLink
+                  style={{ cursor: "pointer" }}
+                  className={classnames("px-2", {
+                    active: customActiveTab === OPD_PATIENTS,
+                  })}
+                  onClick={() => {
+                    toggleCustom(OPD_PATIENTS);
+                  }}
+                  id="opd-patients"
+                >
+                  {/* No id here — "opd-patients" is already on the NavLink above,
+                      and a duplicate would make the tooltip target ambiguous. */}
+                  <span className="fs-6">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M8 3v2H6v4a4 4 0 0 0 8 0V5h-2V3h3a1 1 0 0 1 1 1v5a6.002 6.002 0 0 1-5 5.917V16.5a3.5 3.5 0 0 0 6.775 1.238a3 3 0 1 1 2.05.148A5.502 5.502 0 0 1 8.999 16.5v-1.583A6.002 6.002 0 0 1 4 9V4a1 1 0 0 1 1-1h3Zm11 11a1 1 0 1 0 0 2a1 1 0 0 0 0-2Z"
+                      />
+                    </svg>
+                  </span>
+                </NavLink>
+                <UncontrolledTooltip placement="bottom" target="opd-patients">
+                  OPD Patients
+                </UncontrolledTooltip>
+              </NavItem>
+            </>
+          )}
           <NavItem>
             <NavLink
               style={{ cursor: "pointer" }}
@@ -195,6 +201,7 @@ const Tabs = ({
 Tabs.propTypes = {
   customActiveTab: PropTypes.string,
   toggleCustom: PropTypes.func,
+  myPatientsOnly: PropTypes.bool,
   gender: PropTypes.string,
   setGender: PropTypes.func,
   staff: PropTypes.object,

@@ -2665,6 +2665,10 @@ const DISCHARGE_PATIENTS = "DISCHARGE_PATIENTS";
 const OPD_PATIENTS = "OPD_PATIENTS";
 export const MY_PATIENTS = "MY_PATIENTS";
 
+// Role `value` from Settings → User Roles. A Visiting Consultant sees only the
+// My Patients tab on the patient page and has no top-bar patient search.
+export const VISITING_CONSULTANT_ROLE = "VISITING_CONSULTANT";
+
 // Gender sub-filter shown under the sidebar tabs. Icon-only to match the tab row
 // above it, with the label surfaced as a tooltip.
 //
