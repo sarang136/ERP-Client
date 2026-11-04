@@ -50,7 +50,7 @@ import {
   REFERRAL_SOURCES_REQUIRING_REF,
 } from "../../../Components/constants/referralSources";
 
-// "NA" on Nurse / RMO / MSW: nobody assigned. The server stores the field as null
+// "NA" on Nurse / RMO / MSW / Visiting Consultant: nobody assigned. The server stores the field as null
 // (and closes the previous person's assignment on an edit).
 const STAFF_NA = "NA";
 const STAFF_NA_OPTION = { _id: STAFF_NA, name: "NA" };
@@ -77,13 +77,14 @@ const AdmitPatient = ({
   nurses,
   rmos,
   msws,
+  visitingConsultants,
   chartAdmissions,
   doctorLoading,
   referrals,
   referralsLoading,
 }) => {
   const dispatch = useDispatch();
-  // Nurse, RMO and MSW ride on the chart's admissions. "Edit Admission" is also
+  // Nurse, RMO, MSW and Visiting Consultant ride on the chart's admissions. "Edit Admission" is also
   // opened from Billing, whose admission rows don't carry them, so fall back to
   // the chart's copy of the same admission rather than showing them blank.
   const chartAdmission = data?._id
@@ -92,6 +93,8 @@ const AdmitPatient = ({
   const assignedNurse = data?.nurse || chartAdmission?.nurse;
   const assignedRmo = data?.rmo || chartAdmission?.rmo;
   const assignedMsw = data?.msw || chartAdmission?.msw;
+  const assignedVisitingConsultant =
+    data?.visitingConsultant || chartAdmission?.visitingConsultant;
   const [step, setStep] = useState(1);
   const [isOtherReferral, setIsOtherReferral] = useState(false);
   const [selectedReferral, setSelectedReferral] = useState(null);
@@ -151,6 +154,7 @@ const AdmitPatient = ({
       nurse: assignedNurse?._id || STAFF_NA,
       rmo: assignedRmo?._id || STAFF_NA,
       msw: assignedMsw?._id || STAFF_NA,
+      visitingConsultant: assignedVisitingConsultant?._id || STAFF_NA,
       provisional_diagnosis: [],
       Ipdnum: data ? data.Ipdnum : "",
       ward: data ? data.ward || "" : "",
@@ -541,6 +545,13 @@ const AdmitPatient = ({
       name: "nurse",
       type: "select",
       options: [...(nurses || []), STAFF_NA_OPTION],
+      optional: true,
+    },
+    {
+      label: "Visiting Consultant",
+      name: "visitingConsultant",
+      type: "select",
+      options: [...(visitingConsultants || []), STAFF_NA_OPTION],
       optional: true,
     },
   ];
@@ -1382,6 +1393,7 @@ const mapStateToProps = (state) => ({
   nurses: state.User.nurses,
   rmos: state.User.rmos,
   msws: state.User.msws,
+  visitingConsultants: state.User.visitingConsultants,
   chartAdmissions: state.Chart.data,
   referrals: state.Referral.data,
   referralsLoading: state.Referral.loading,
