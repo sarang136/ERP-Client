@@ -125,6 +125,7 @@ const DischargeFormModal = ({
                 <option value="INDEPENDENT_ADMISSION">
                   Independent Discharge
                 </option>
+                <option value="MINOR_DISCHARGE">Minor Discharge</option>
                 <option value="SUPPORTIVE_ADMISSION">Supportive Discharge</option>
               </Input>
             </div>
@@ -143,7 +144,6 @@ const DischargeFormModal = ({
                   Adult (18+)
                 </option>
                 {/* <option value="ADULT">Adult (18+)</option> */}
-                <option value="MINOR">Minor (below 18)</option>
               </Input>
             </div>
           )}
