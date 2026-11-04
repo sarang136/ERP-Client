@@ -357,20 +357,20 @@ const IPDComponent = ({ patient, toggleModal, setChartType, user }) => {
                     <option value="All">All</option>
                     {records
                       .filter((r) => {
-                        if (user?.role === "NURSE") {
-                          return ![
-                            PRESCRIPTION,
-                            COUNSELLING_NOTE,
-                            DETAIL_ADMISSION,
-                          ].includes(r.category);
-                        }
-                        if (
-                          ["MSW", "PSW"].includes(user?.role)
-                        ) {
-                          return ![PRESCRIPTION, VITAL_SIGN].includes(
-                            r.category,
-                          );
-                        }
+                        // if (user?.role === "NURSE") {
+                        //   return ![
+                        //     PRESCRIPTION,
+                        //     COUNSELLING_NOTE,
+                        //     DETAIL_ADMISSION,
+                        //   ].includes(r.category);
+                        // }
+                        // if (
+                        //   ["MSW", "PSW"].includes(user?.role)
+                        // ) {
+                        //   return ![PRESCRIPTION, VITAL_SIGN].includes(
+                        //     r.category,
+                        //   );
+                        // }
                         return true;
                       })
                       .sort((a, b) => a.name.localeCompare(b.name))
