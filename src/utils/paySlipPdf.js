@@ -562,8 +562,9 @@ const SimplifiedPayslip = ({ row, cfg }) => {
     0
   );
 
+
   const fee =
-    row?.baseCompensation != null
+    num(row?.baseCompensation) > 0
       ? num(row.baseCompensation)
       : cfg.useStoredFee && num(row?.consultantFee) > 0
         ? num(row.consultantFee)
