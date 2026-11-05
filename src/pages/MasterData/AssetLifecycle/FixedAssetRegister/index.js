@@ -98,7 +98,7 @@ const FixedAssetRegister = () => {
   const [assignFilter, setAssignFilter] = useState("ALL"); // ALL | assigned | in_stock
 
   // More filters (done by the server)
-  const EMPTY_FILTERS = { centerId: "", categoryL1: "", status: "" };
+  const EMPTY_FILTERS = { centerId: "", categoryL1: "", status: "", fromDate: "", toDate: "" };
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const debouncedFilters = useDebounce(filters, 400);
   const debouncedSearch = useDebounce(search, 400);
@@ -373,6 +373,8 @@ const FixedAssetRegister = () => {
       search: debouncedSearch,
       centerId: df.centerId || undefined,
       categoryL1: df.categoryL1 || undefined,
+      fromDate: df.fromDate || undefined,
+      toDate: df.toDate || undefined,
       assignedTo: holder?._id || undefined,
       // a chosen employee already means "assigned", and must not be widened to "anyone assigned"
       assignment: viewMode === "byEmployee" && !holder ? "assigned" : undefined,
@@ -584,7 +586,11 @@ const FixedAssetRegister = () => {
       downloadExcel(
         rows,
         byEmployee ? "Who has what" : "Fixed assets",
-        `${byEmployee ? "who-has-what" : "fixed-assets-register"}_${today}.xlsx`,
+        `${byEmployee ? "who-has-what" : "fixed-assets-register"}${
+          filters.fromDate || filters.toDate
+            ? `_${filters.fromDate || "start"}_to_${filters.toDate || "today"}`
+            : ""
+        }_${today}.xlsx`,
       );
       toast.success(`Exported ${rows.length} row${rows.length === 1 ? "" : "s"} to Excel`);
     } catch {
@@ -840,6 +846,39 @@ const FixedAssetRegister = () => {
             </option>
           ))}
         </Input>
+        <div
+          className="d-flex align-items-center flex-nowrap gap-1"
+          style={{ flexShrink: 0 }}
+        >
+          <span
+            className="text-muted text-nowrap"
+            style={{ fontSize: 12 }}
+            title="Filters on the purchase date. If an asset has no purchase date, the date it was added to the register is used."
+          >
+            Purchased / added
+          </span>
+          <Input
+            type="date"
+            bsSize="md"
+            style={{ width: 140, minWidth: 140, padding: "0.375rem 0.4rem" }}
+            value={filters.fromDate}
+            max={filters.toDate || undefined}
+            onChange={setFilter("fromDate")}
+            aria-label="Purchase date from"
+          />
+          <span className="text-muted text-nowrap" style={{ fontSize: 12 }}>
+            to
+          </span>
+          <Input
+            type="date"
+            bsSize="md"
+            style={{ width: 140, minWidth: 140, padding: "0.375rem 0.4rem" }}
+            value={filters.toDate}
+            min={filters.fromDate || undefined}
+            onChange={setFilter("toDate")}
+            aria-label="Purchase date to"
+          />
+        </div>
         {viewMode === "list" && (
         <div style={{ position: "relative", width: 230 }}>
           {holder ? (

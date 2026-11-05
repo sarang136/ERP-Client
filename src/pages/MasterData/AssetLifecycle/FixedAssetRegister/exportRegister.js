@@ -21,6 +21,7 @@ export const registerRows = (assets, statusLabel) =>
     "Assigned Since": dmy(a.assignedAt),
     "Purchase Cost": money(a.purchaseCost),
     "Purchase Date": dmy(a.purchaseDate),
+    "Added On": dmy(a.createdAt),
     Remarks: a.remarks || "",
   }));
 

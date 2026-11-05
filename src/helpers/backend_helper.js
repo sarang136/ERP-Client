@@ -6180,6 +6180,21 @@ export const createPR = (data) => {
     headers: { "X-No-Cookie-Token": "true" },
   });
 };
+export const addPRAttachment = (id, file) => {
+  const data = new FormData();
+  data.append("attachment", file);
+  return axios.post(`${url.PR_BASE}/${id}/attachment`, data, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+export const removePRAttachment = (id, attachmentId) => {
+  return axios.delete(`${url.PR_BASE}/${id}/attachment/${attachmentId}`, {
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+};
 export const updatePR = (id, data) => {
   return axios.put(`${url.PR_BASE}/${id}`, data, {
     headers: { "X-No-Cookie-Token": "true" },
@@ -6902,8 +6917,9 @@ export const fitAssetTag = (id, data) =>
     headers: { "X-No-Cookie-Token": "true" },
   });
 
-export const getProcurementDashboard = () =>
+export const getProcurementDashboard = (params = {}) =>
   axios.get("/master/po-dashboard", {
+    params,
     headers: { "X-No-Cookie-Token": "true" },
   });
 export const setPODelayReason = (id, data) =>
