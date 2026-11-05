@@ -209,6 +209,12 @@ const ApprovalHistory = ({ activeTab, hasUserPermission, roles }) => {
       minWidth: "100px",
     },
     {
+      name: <div>Company</div>,
+      selector: (row) => row?.company?.name || "-",
+      wrap: true,
+      minWidth: "200px",
+    },
+    {
       name: <div>Position</div>,
       selector: (row) => row?.position?.name || "-",
       wrap: true,
