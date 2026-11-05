@@ -584,6 +584,7 @@ const SimplifiedPayslip = ({ row, cfg }) => {
     TDSAmount: num(row?.TDSAmount),
     advanceSalary: num(row?.advanceSalary),
     PTArrears: num(row?.PTArrears) + num(adjustments.ptArrear),
+    pfArrear: num(row?.pfArrear),
     voluntaryPF: num(row?.voluntaryPF) + num(adjustments.voluntaryPF),
     otherDeductions: num(row?.otherDeductions) + num(adjustments.otherDeduction),
     insurance: num(row?.insurance),
@@ -645,6 +646,7 @@ const CONSULTANT_CFG = {
     ["TDS", "TDSAmount"],
     ["Advance Recovery", "advanceSalary"],
     ["PT Arrear", "PTArrears"],
+    ["PF Arrear", "pfArrear"],
     ["Voluntary PF", "voluntaryPF"],
     ["Other Recovery", "otherDeductions"],
     ["Insurance", "insurance"],
@@ -661,6 +663,7 @@ const INTERN_CFG = {
   deductionFields: [
     ["Advance Recovery", "advanceSalary"],
     ["PT Arrear", "PTArrears"],
+    ["PF Arrear", "pfArrear"],
     ["Voluntary PF", "voluntaryPF"],
     ["Other Recoveries", "otherDeductions"],
     ["Insurance", "insurance"],
