@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import DataTable from "react-data-table-component";
-import { Button, Input } from "reactstrap";
+import { Button, Input, Modal, ModalBody } from "reactstrap";
 import { toast } from "react-toastify";
 import { getGRNs } from "../../../../helpers/backend_helper";
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
@@ -48,6 +48,7 @@ const GRNList = ({ onAdd }) => {
   const [grns, setGrns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [previewFile, setPreviewFile] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +118,23 @@ const GRNList = ({ onAdd }) => {
       },
     },
     {
+      name: "Attachment",
+      width: "130px",
+      cell: (row) =>
+        row.attachment?.url ? (
+          <Button
+            size="sm"
+            color="light"
+            title={row.attachment.originalName}
+            onClick={() => setPreviewFile(row.attachment)}
+          >
+            <i className="bx bx-show me-1"></i> View
+          </Button>
+        ) : (
+          <span className="uom-cell-muted">—</span>
+        ),
+    },
+    {
       name: "Received By",
       minWidth: "180px",
       cell: (row) => (
@@ -169,6 +187,43 @@ const GRNList = ({ onAdd }) => {
           }
         />
       </div>
+
+      <Modal isOpen={!!previewFile} toggle={() => setPreviewFile(null)} centered size="xl">
+        <ModalBody className="p-3">
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <div className="fw-semibold text-truncate" style={{ maxWidth: "70%" }}>
+              {previewFile?.originalName || "Attachment"}
+            </div>
+            <div className="d-flex gap-2">
+              <a
+                className="btn btn-light btn-sm"
+                href={previewFile?.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <i className="bx bx-link-external me-1"></i> Open in new tab
+              </a>
+              <Button size="sm" color="light" onClick={() => setPreviewFile(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+          {previewFile &&
+            (/\.(png|jpe?g|gif|webp)$/i.test(previewFile.originalName || previewFile.url) ? (
+              <img
+                src={previewFile.url}
+                alt="GRN attachment"
+                style={{ maxWidth: "100%", maxHeight: "75vh", display: "block", margin: "0 auto" }}
+              />
+            ) : (
+              <iframe
+                title="GRN attachment preview"
+                src={previewFile.url}
+                style={{ width: "100%", height: "75vh", border: 0 }}
+              />
+            ))}
+        </ModalBody>
+      </Modal>
     </div>
   );
 };

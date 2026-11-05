@@ -6367,7 +6367,10 @@ export const getDIsForGRN = () => {
 };
 export const createGRN = (data) => {
   return axios.post(url.GRN_BASE, data, {
-    headers: { "X-No-Cookie-Token": "true" },
+    headers: {
+      "X-No-Cookie-Token": "true",
+      "Content-Type": "multipart/form-data",
+    },
   });
 };
 export const getGRNs = (params = {}) => {
