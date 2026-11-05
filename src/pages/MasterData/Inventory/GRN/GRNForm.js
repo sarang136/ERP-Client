@@ -9,6 +9,7 @@ const GRNForm = ({ di, onSaved, onCancel }) => {
   const handleAuthError = useAuthError();
   const [submitting, setSubmitting] = useState(false);
   const [remarks, setRemarks] = useState("");
+  const [file, setFile] = useState(null);
 
   const [lines, setLines] = useState(
     di.lines.map((li) => ({
@@ -33,18 +34,26 @@ const GRNForm = ({ di, onSaved, onCancel }) => {
     const invalidLine = lines.find((li) => Number(li.receivedQty) < 0);
     if (invalidLine) return toast.error("Received quantity cannot be negative");
 
+    if (!file) return toast.error("GRN attachment is required");
+
     setSubmitting(true);
     try {
-      await createGRN({
-        poId: di._id,
-        remarks,
-        lineItems: lines.map((li) => ({
-          itemName: li.itemName,
-          orderedQty: li.orderedQty,
-          receivedQty: Number(li.receivedQty),
-          remarks: li.remarks,
-        })),
-      });
+      const formData = new FormData();
+      formData.append("poId", di._id);
+      formData.append("remarks", remarks);
+      formData.append(
+        "lineItems",
+        JSON.stringify(
+          lines.map((li) => ({
+            itemName: li.itemName,
+            orderedQty: li.orderedQty,
+            receivedQty: Number(li.receivedQty),
+            remarks: li.remarks,
+          })),
+        ),
+      );
+      formData.append("attachment", file);
+      await createGRN(formData);
       toast.success("Goods Receipt Note created successfully");
       onSaved();
     } catch (error) {
@@ -121,6 +130,21 @@ const GRNForm = ({ di, onSaved, onCancel }) => {
               </Row>
             </div>
           ))}
+
+          <Row>
+            <Col md={6} className="mb-4">
+              <Label>
+                Attachment (Challan / Receipt copy){" "}
+                <span className="text-danger">*</span>
+              </Label>
+              <Input
+                type="file"
+                accept=".pdf,image/*"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+              <div className="text-muted small mt-1">PDF or image</div>
+            </Col>
+          </Row>
 
           <Row>
             <Col md={12} className="mb-4">

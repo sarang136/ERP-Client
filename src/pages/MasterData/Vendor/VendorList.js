@@ -918,6 +918,7 @@ const VendorList = ({ onAdd, onEdit }) => {
                       {[
                         ["gst_certificate", "GST Certificate"],
                         ["pan_card", "PAN Card Copy"],
+                        ["aadhaar_card", "Aadhaar Card"],
                         ["msme_certificate", "MSME Certificate"],
                         ["cancelled_cheque", "Cancelled Cheque"],
                         ["agreement_copy", "Agreement Copy"],
