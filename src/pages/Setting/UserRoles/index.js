@@ -7,6 +7,11 @@
  * against it); only the label can change. Inactive roles drop out of the user
  * form but users already on them keep them. A role can only be deleted when no
  * user has it.
+ *
+ * Each role also says whether its users record a professional registration
+ * (compliance T32): Not needed / Optional / Required, and for which profession.
+ * Optional or Required shows the Professional Registration section on the user
+ * form; Required refuses to save a user without one for that profession.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -37,6 +42,16 @@ import {
   getJobRoles,
   postJobRole,
 } from "../../../helpers/backend_helper";
+import {
+  PROFESSION_LABELS,
+  PROFESSION_OPTIONS,
+  REGISTRATION_REQUIREMENT,
+  REGISTRATION_REQUIREMENT_OPTIONS,
+} from "../../../Components/constants/professionalRegistration";
+
+const { NOT_NEEDED, REQUIRED } = REGISTRATION_REQUIREMENT;
+const requirementLabel = (value) =>
+  REGISTRATION_REQUIREMENT_OPTIONS.find((o) => o.value === value)?.label;
 
 // Same rule as the server (roleValueFromName): shown as a preview only.
 const roleValue = (name) =>
@@ -60,9 +75,11 @@ const UserRoles = () => {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  // { role: null } = add, { role } = rename
+  // { role: null } = add, { role } = edit
   const [form, setForm] = useState(null);
   const [name, setName] = useState("");
+  const [registration, setRegistration] = useState(NOT_NEEDED);
+  const [profession, setProfession] = useState("");
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [toDelete, setToDelete] = useState(null);
@@ -85,18 +102,25 @@ const UserRoles = () => {
   const openForm = (role = null) => {
     setForm({ role });
     setName(role?.name || "");
+    setRegistration(role?.registration || NOT_NEEDED);
+    setProfession(role?.profession || "");
   };
 
   const save = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
+    const data = {
+      name: name.trim(),
+      registration,
+      profession: registration === NOT_NEEDED ? null : profession,
+    };
     try {
       if (form.role) {
-        await editJobRole(form.role._id, { name: name.trim() });
-        toast.success("Role renamed");
+        await editJobRole(form.role._id, data);
+        toast.success("Role updated");
       } else {
-        await postJobRole({ name: name.trim() });
+        await postJobRole(data);
         toast.success("Role added");
       }
       setForm(null);
@@ -162,6 +186,7 @@ const UserRoles = () => {
   const newValue = roleValue(name);
   const duplicate =
     !form?.role && newValue && roles.some((r) => r.value === newValue);
+  const needsProfession = registration !== NOT_NEEDED && !profession;
 
   return (
     <Container fluid className="p-4">
@@ -197,6 +222,7 @@ const UserRoles = () => {
                 <tr>
                   <th>Name</th>
                   <th>Value</th>
+                  <th>Professional registration</th>
                   <th className="text-center">Users</th>
                   <th className="text-center">Active</th>
                   {(canWrite || canDelete) && <th className="text-end">Actions</th>}
@@ -215,6 +241,22 @@ const UserRoles = () => {
                     </td>
                     <td>
                       <code>{role.value}</code>
+                    </td>
+                    <td>
+                      {role.registration && role.registration !== NOT_NEEDED ? (
+                        <span
+                          className={`badge ${
+                            role.registration === REQUIRED
+                              ? "bg-soft-danger text-danger"
+                              : "bg-soft-info text-info"
+                          }`}
+                        >
+                          {requirementLabel(role.registration)} ·{" "}
+                          {PROFESSION_LABELS[role.profession] || role.profession}
+                        </span>
+                      ) : (
+                        <span className="text-muted">Not needed</span>
+                      )}
                     </td>
                     <td className="text-center">{role.userCount}</td>
                     <td className="text-center">
@@ -238,7 +280,7 @@ const UserRoles = () => {
                             className="me-2"
                             onClick={() => openForm(role)}
                           >
-                            <i className="ri-pencil-line align-bottom"></i> Rename
+                            <i className="ri-pencil-line align-bottom"></i> Edit
                           </Button>
                         )}
                         {canDelete && (
@@ -263,7 +305,7 @@ const UserRoles = () => {
                 ))}
                 {!shown.length && (
                   <tr>
-                    <td colSpan={5} className="text-center text-muted py-4">
+                    <td colSpan={6} className="text-center text-muted py-4">
                       {roles.length ? "No roles match your search" : "No roles yet"}
                     </td>
                   </tr>
@@ -277,7 +319,7 @@ const UserRoles = () => {
       <Modal isOpen={!!form} toggle={() => setForm(null)} centered>
         <Form onSubmit={save}>
           <ModalHeader toggle={() => setForm(null)}>
-            {form?.role ? "Rename Role" : "Add Role"}
+            {form?.role ? "Edit Role" : "Add Role"}
           </ModalHeader>
           <ModalBody>
             <Label htmlFor="user-role-name">
@@ -305,6 +347,52 @@ const UserRoles = () => {
                 </>
               )}
             </div>
+
+            <Label htmlFor="user-role-registration" className="mt-3">
+              Professional registration
+            </Label>
+            <Input
+              id="user-role-registration"
+              type="select"
+              value={registration}
+              onChange={(e) => setRegistration(e.target.value)}
+            >
+              {REGISTRATION_REQUIREMENT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Input>
+            <div className="form-text">
+              {registration === NOT_NEEDED
+                ? "No registration section on the user form."
+                : registration === REQUIRED
+                  ? "A user on this role can't be saved without a registration for this profession."
+                  : "The user form shows the registration section; filling it is optional."}
+            </div>
+
+            {registration !== NOT_NEEDED && (
+              <>
+                <Label htmlFor="user-role-profession" className="mt-3">
+                  Profession <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  id="user-role-profession"
+                  type="select"
+                  value={profession}
+                  invalid={needsProfession}
+                  onChange={(e) => setProfession(e.target.value)}
+                >
+                  <option value="">Select profession</option>
+                  {PROFESSION_OPTIONS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </Input>
+                <FormFeedback>Select the profession</FormFeedback>
+              </>
+            )}
           </ModalBody>
           <ModalFooter>
             <Button color="light" onClick={() => setForm(null)}>
@@ -313,7 +401,7 @@ const UserRoles = () => {
             <Button
               color="primary"
               type="submit"
-              disabled={saving || !newValue || duplicate}
+              disabled={saving || !newValue || duplicate || needsProfession}
             >
               {saving ? <Spinner size="sm" /> : "Save"}
             </Button>
