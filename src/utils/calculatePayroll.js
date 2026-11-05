@@ -35,8 +35,8 @@ const MONTH_LABELS = {
     7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec",
 };
 
-
-export const resolveLWFState = (currentLocation) => {
+export const resolveLWFState = (currentLocation, payrollStateOverride) => {
+    if (payrollStateOverride) return payrollStateOverride;
     if (!currentLocation || typeof currentLocation !== "object") return "";
     if (currentLocation.title === "Head-Office") return "Maharashtra";
     return detectState(currentLocation.address) || "";
@@ -208,9 +208,13 @@ export const calculatePayroll = (values) => {
     // }
 
     // rule till 17.08.2026 (Tamil Nadu slab-based, halved into a monthly figure)
-    const ptState = currentLocation.title === "Head-Office"
-        ? "Maharashtra"
-        : (detectState(currentLocation.address) || "");
+    // `payrollState` (Employee.payrollState) overrides location-derived detection
+    // when HR has explicitly set it — mirrors resolveLWFState's precedence.
+    const ptState = values.payrollState
+        ? values.payrollState
+        : currentLocation.title === "Head-Office"
+            ? "Maharashtra"
+            : (detectState(currentLocation.address) || "");
 
     const gender = values.gender?.toUpperCase();
     // const rawPT = calculatePT(gross, ptState, gender);
