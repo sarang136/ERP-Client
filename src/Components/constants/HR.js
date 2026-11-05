@@ -1,3 +1,5 @@
+import { indianStatesAndUTs } from "../../utils/detectState";
+
 // export const designationOptions = [
 //     { value: "YOGA_TEACHER", label: "Yoga Teacher" },
 //     { value: "WEB_DEVELOPER", label: "Web Developer" },
@@ -47,6 +49,11 @@ export const payrollOptions = [
     { value: "OFF_ROLL", label: "Off Roll" },
     { value: "ON_ROLL", label: "On Roll" },
 ];
+
+export const payrollStateOptions = indianStatesAndUTs.map((state) => ({
+    value: state,
+    label: state,
+}));
 
 export const statusOptions = [
     { value: "ACTIVE", label: "Active" },

@@ -50,6 +50,7 @@ import {
   employeeGroupOptions,
   employmentOptions,
   payrollOptions,
+  payrollStateOptions,
   statusOptions,
   employmentStatus,
   newEmploymentOptions,
@@ -226,6 +227,7 @@ const relaxedOverrides = {
   pfApplicable: Yup.boolean().notRequired(),
   father: Yup.string().notRequired(),
   state: Yup.string().notRequired(),
+  payrollState: Yup.string().notRequired(),
   bankName: Yup.string().notRequired(),
   accountNo: Yup.string().notRequired(),
   IFSCCode: Yup.string().notRequired(),
@@ -346,6 +348,7 @@ const baseValidationSchema = (mode, isEdit) => {
             .oneOf(["ACTIVE", "FNF_CLOSED", "RESIGNED"])
             .required("Status is required"),
     state: Yup.string().required("State is required"),
+    payrollState: Yup.string().notRequired(),
     bankName: Yup.string().required("Bank name is required"),
     accountNo: Yup.string().required("Bank account number is required"),
     IFSCCode: Yup.string().required("IFSC code is required"),
@@ -589,6 +592,7 @@ const getInitialValues = (initialData, mode) => ({
   employmentType: initialData?.employmentType || "",
   payrollType: initialData?.payrollType || "",
   state: initialData?.state || "",
+  payrollState: initialData?.payrollState || "",
 
   joinningDate: normalizeDateForInput(initialData?.joinningDate) || "",
   exitDate: normalizeDateForInput(initialData?.exitDate) || "",
@@ -1619,6 +1623,27 @@ const EmployeeForm = ({
     simplified,
   ]);
 
+  // The state auto-detected from the work-location's address alone, ignoring
+  // any payrollState override — used only to prefill the "State as per
+  // Payroll" field itself (see effect below), never for the actual LWF/PT math.
+  const detectedLocationState = useMemo(() => {
+    const selectedCenter = centerOptions?.find(
+      (o) => o.value === (values.firstLocation || values.currentLocation),
+    );
+    return resolveLWFState(
+      selectedCenter
+        ? { title: selectedCenter.title, address: selectedCenter.address }
+        : null,
+    );
+  }, [centerOptions, values.currentLocation, values.firstLocation]);
+
+  useEffect(() => {
+    if (!values.payrollState && detectedLocationState) {
+      setFieldValue("payrollState", detectedLocationState, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectedLocationState]);
+
   // LWF is derived from the work-location's state + monthly wage base, never
   // entered by hand. The stored yearly figure is the TRUE annual (sum of the
   // applicable months), not a monthly amount × 12 — most states only charge LWF
@@ -1631,8 +1656,9 @@ const EmployeeForm = ({
       selectedCenter
         ? { title: selectedCenter.title, address: selectedCenter.address }
         : null,
+      values.payrollState,
     );
-  }, [centerOptions, values.currentLocation, values.firstLocation]);
+  }, [centerOptions, values.currentLocation, values.firstLocation, values.payrollState]);
 
   // LWF is charged only in specific months, so its true yearly total is NOT the
   // monthly charge × 12. Mirror the server's applyAnnualLWF so the yearly In-Hand
@@ -2366,6 +2392,28 @@ const EmployeeForm = ({
               onBlur={() => setFieldTouched("payrollType", true)}
             />
             {errorText("payrollType")}
+          </Col>
+          {/* PAYROLL STATE (override) */}
+          <Col md={6}>
+            <Label htmlFor="payrollState">State as per Payroll</Label>
+            <Select
+              inputId="payrollState"
+              options={payrollStateOptions}
+              isClearable
+              placeholder="Derive from location (default)"
+              value={
+                payrollStateOptions.find(
+                  (opt) => opt.value === values.payrollState,
+                ) || null
+              }
+              onChange={(opt) => setFieldValue("payrollState", opt?.value || "")}
+              onBlur={() => setFieldTouched("payrollState", true)}
+            />
+            <small className="text-muted">
+              Defaults to the employee's first location's state and is saved as
+              such unless you pick a different one here.
+            </small>
+            {errorText("payrollState")}
           </Col>
           {/* DATE OF JOINING */}
           <Col md={6}>
@@ -4936,6 +4984,28 @@ const EmployeeForm = ({
               onBlur={() => setFieldTouched("payrollType", true)}
             />
             {errorText("payrollType")}
+          </Col>
+          {/* PAYROLL STATE (override) */}
+          <Col md={6}>
+            <Label htmlFor="payrollState">State as per Payroll</Label>
+            <Select
+              inputId="payrollState"
+              options={payrollStateOptions}
+              isClearable
+              placeholder="Derive from location (default)"
+              value={
+                payrollStateOptions.find(
+                  (opt) => opt.value === values.payrollState,
+                ) || null
+              }
+              onChange={(opt) => setFieldValue("payrollState", opt?.value || "")}
+              onBlur={() => setFieldTouched("payrollState", true)}
+            />
+            <small className="text-muted">
+              Defaults to the employee's first location's state and is saved as
+              such unless you pick a different one here.
+            </small>
+            {errorText("payrollState")}
           </Col>
           {/* DATE OF JOINING */}
           <Col md={6}>
