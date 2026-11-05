@@ -1611,9 +1611,9 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
                         placeholder="12 digit Aadhaar number"
                       />
                       <FormFeedback>{validation.errors.aadhaarNumber}</FormFeedback>
-                      <div className="text-muted small mt-1">
+                      {/* <div className="text-muted small mt-1">
                         Upload the Aadhaar card image under Documents.
-                      </div>
+                      </div> */}
                     </Col>
                   )}
                   {v.vendorType === "company" && (
