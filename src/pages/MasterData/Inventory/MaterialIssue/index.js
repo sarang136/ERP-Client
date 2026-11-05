@@ -146,6 +146,9 @@ const MaterialIssue = () => {
     if (!centerId || !storageLocationId) {
       return toast.error("Select Site and Storage Location");
     }
+    if (issueType === "department" && !departmentId) {
+      return toast.error("Select the Department this material is issued to");
+    }
     const invalid = lines.find(
       (l) => !l.itemName.trim() || Number(l.quantity) <= 0,
     );
@@ -349,7 +352,12 @@ const MaterialIssue = () => {
               </Input>
             </Col>
             <Col md={6} className="mb-3">
-              <Label>Department</Label>
+              <Label>
+                Department{" "}
+                {issueType === "department" && (
+                  <span className="text-danger">*</span>
+                )}
+              </Label>
               <Input
                 type="select"
                 value={departmentId}

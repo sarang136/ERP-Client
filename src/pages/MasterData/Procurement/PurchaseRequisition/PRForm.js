@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import {
   createPR,
   updatePR,
+  addPRAttachment,
+  removePRAttachment,
   getBudgets,
   getItemMasters,
 } from "../../../../helpers/backend_helper";
@@ -58,6 +60,43 @@ const { items: uoms } = useReferenceList("uomsAll");
   const [itemSearchState, setItemSearchState] = useState({});
   const itemSearchTimers = useRef({});
   const itemInputRefs = useRef({});
+
+  // Attachments: files already on the PR (edit) and files chosen now, uploaded after the PR is saved
+  const [savedFiles, setSavedFiles] = useState(editingItem?.attachments || []);
+  const [newFiles, setNewFiles] = useState([]);
+  const [removingId, setRemovingId] = useState("");
+  const MAX_FILES = 10;
+  const MAX_MB = 10;
+
+  const pickFiles = (e) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = "";
+    const room = MAX_FILES - savedFiles.length - newFiles.length;
+    const ok = picked.filter((f) => {
+      if (f.size > MAX_MB * 1024 * 1024) {
+        toast.error(`${f.name} is larger than ${MAX_MB} MB`);
+        return false;
+      }
+      return true;
+    });
+    if (ok.length > room) toast.error(`A PR can have at most ${MAX_FILES} attachments`);
+    setNewFiles((cur) => [...cur, ...ok.slice(0, Math.max(room, 0))]);
+  };
+
+  const removeSaved = async (att) => {
+    if (removingId) return;
+    setRemovingId(att._id);
+    try {
+      const res = await removePRAttachment(editingItem._id, att._id);
+      setSavedFiles(res?.data || savedFiles.filter((a) => a._id !== att._id));
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error?.response?.data?.message || error?.message || "Couldn't remove the file");
+      }
+    } finally {
+      setRemovingId("");
+    }
+  };
 
 
   const validation = useFormik({
@@ -156,12 +195,26 @@ const { items: uoms } = useReferenceList("uomsAll");
       if (!payload.requiredByDate) delete payload.requiredByDate;
 
       try {
+        let prId = editingItem?._id;
         if (editingItem) {
           await updatePR(editingItem._id, payload);
           toast.success("PR updated successfully");
         } else {
-          await createPR(payload);
+          const res = await createPR(payload);
+          prId = res?.data?._id || res?.data?.data?._id;
           toast.success("PR saved as draft");
+        }
+        // The PR is saved first; the files go up one by one. A failed file never loses the PR.
+        const failed = [];
+        for (const f of newFiles) {
+          try {
+            await addPRAttachment(prId, f);
+          } catch (err) {
+            failed.push(f.name);
+          }
+        }
+        if (failed.length > 0) {
+          toast.error(`PR saved, but these files were not attached: ${failed.join(", ")}. Open the PR and add them again.`);
         }
         onSaved();
       } catch (error) {
@@ -505,6 +558,62 @@ const { items: uoms } = useReferenceList("uomsAll");
                 value={v.remarks}
                 onChange={validation.handleChange}
               />
+            </Col>
+          </Row>
+          <Row>
+            <Col md={12} className="mb-4">
+              <Label>
+                Attachments{" "}
+                <span className="text-muted small">
+                  (PDF, image, Word, Excel or CSV, up to {MAX_MB} MB each, max {MAX_FILES})
+                </span>
+              </Label>
+              <Input
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.csv"
+                onChange={pickFiles}
+                disabled={validation.isSubmitting || savedFiles.length + newFiles.length >= MAX_FILES}
+              />
+              {(savedFiles.length > 0 || newFiles.length > 0) && (
+                <ul className="list-unstyled mt-2 mb-0">
+                  {savedFiles.map((a) => (
+                    <li key={a._id} className="d-flex align-items-center gap-2 small">
+                      <i className="bx bx-paperclip"></i>
+                      <a href={a.url} target="_blank" rel="noreferrer">
+                        {a.originalName}
+                      </a>
+                      <Button
+                        type="button"
+                        size="sm"
+                        color="link"
+                        className="text-danger p-0"
+                        disabled={!!removingId}
+                        onClick={() => removeSaved(a)}
+                      >
+                        Remove
+                      </Button>
+                    </li>
+                  ))}
+                  {newFiles.map((f, i) => (
+                    <li key={`${f.name}-${i}`} className="d-flex align-items-center gap-2 small">
+                      <i className="bx bx-paperclip"></i>
+                      <span>{f.name}</span>
+                      <span className="text-muted">(will be attached on save)</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        color="link"
+                        className="text-danger p-0"
+                        disabled={validation.isSubmitting}
+                        onClick={() => setNewFiles((cur) => cur.filter((_, j) => j !== i))}
+                      >
+                        Remove
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Col>
           </Row>
 
