@@ -179,15 +179,19 @@ const { items: uoms } = useReferenceList("uomsAll");
   const v = validation.values;
 
   useEffect(() => {
-    if (!v.departmentId) {
+    if (!v.departmentId || !v.deliverySiteId) {
       setBudgets([]);
       return;
     }
-    getBudgets({ departmentId: v.departmentId, status: "approved" })
+    getBudgets({
+      departmentId: v.departmentId,
+      centerId: v.deliverySiteId,
+      status: "approved",
+    })
       .then((res) => setBudgets(res?.data || []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v.departmentId]);
+  }, [v.departmentId, v.deliverySiteId]);
 
   const addLineItem = () => {
     validation.setFieldValue("lineItems", [...v.lineItems, emptyLineItem()]);
@@ -383,7 +387,7 @@ const { items: uoms } = useReferenceList("uomsAll");
               <Input
                 type="select"
                 value={v.budgetId}
-                disabled={!v.departmentId}
+                disabled={!v.departmentId || !v.deliverySiteId}
                 onChange={(e) =>
                   validation.setFieldValue("budgetId", e.target.value)
                 }
@@ -393,7 +397,9 @@ const { items: uoms } = useReferenceList("uomsAll");
                 }
               >
                 <option value="">
-                  {v.departmentId ? "Select Budget" : "Select Department First"}
+                  {v.departmentId && v.deliverySiteId
+                    ? "Select Budget"
+                    : "Select Delivery Site & Department First"}
                 </option>
                 {budgets.map((b) => (
                   <option key={b._id} value={b._id}>
@@ -404,9 +410,9 @@ const { items: uoms } = useReferenceList("uomsAll");
                 ))}
               </Input>
               <FormFeedback>{validation.errors.budgetId}</FormFeedback>
-              {v.departmentId && budgets.length === 0 && (
+              {v.departmentId && v.deliverySiteId && budgets.length === 0 && (
                 <div className="text-muted small mt-1">
-                  No approved budgets found for this department.
+                  No approved budgets found for this center and department.
                 </div>
               )}
             </Col>
@@ -455,9 +461,10 @@ const { items: uoms } = useReferenceList("uomsAll");
               <Input
                 type="select"
                 value={v.deliverySiteId}
-                onChange={(e) =>
-                  validation.setFieldValue("deliverySiteId", e.target.value)
-                }
+                onChange={(e) => {
+                  validation.setFieldValue("deliverySiteId", e.target.value);
+                  validation.setFieldValue("budgetId", "");
+                }}
                 onBlur={validation.handleBlur}
                 invalid={
                   validation.touched.deliverySiteId &&
@@ -687,6 +694,7 @@ const { items: uoms } = useReferenceList("uomsAll");
                           }
                         >
                           <option value={0}>0%</option>
+                          <option value={5}>5%</option>
                           <option value={12}>12%</option>
                           <option value={18}>18%</option>
                           <option value={28}>28%</option>

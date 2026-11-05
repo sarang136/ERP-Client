@@ -903,6 +903,7 @@ const POForm = ({ onSaved, onCancel }) => {
                               }
                             >
                               <option value={0}>0%</option>
+                              <option value={5}>5%</option>
                               <option value={12}>12%</option>
                               <option value={18}>18%</option>
                               <option value={28}>28%</option>

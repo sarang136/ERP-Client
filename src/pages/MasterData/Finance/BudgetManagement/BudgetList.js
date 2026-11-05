@@ -324,9 +324,15 @@ const BudgetList = ({ onAdd, onEdit }) => {
       minWidth: "150px",
       cell: (row) => (
         <span className="uom-cell-muted">
-          {row.budgetType === "global"
-            ? "Global"
-            : row.departmentId?.name || "—"}
+          {row.budgetType === "global" ? (
+            "Global"
+          ) : (
+            <>
+              <span className="fw-semibold">{row.centerId?.title || "All centers"}</span>
+              <br />
+              {row.departmentId?.name || "—"}
+            </>
+          )}
         </span>
       ),
     },
@@ -496,7 +502,7 @@ const BudgetList = ({ onAdd, onEdit }) => {
         <div className="uom-search-wrap mb-0">
           <i className="bx bx-search"></i>
           <Input
-            placeholder="Search by fiscal year, department..."
+            placeholder="Search by fiscal year, center..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -537,7 +543,10 @@ const BudgetList = ({ onAdd, onEdit }) => {
               <div className="d-flex justify-content-between align-items-start mb-3">
                 <div>
                   <h5 className="mb-1">
-                    {ub.fiscalYear} · {ub.budgetType === "global" ? "Global" : ub.departmentName || "Department"}
+                    {ub.fiscalYear} ·{" "}
+                    {ub.budgetType === "global"
+                      ? "Global"
+                      : `${ub.centerName ? `${ub.centerName} · ` : ""}${ub.departmentName || "Department"}`}
                   </h5>
                   <div className="text-muted small">
                     Budget head: {ub.budgetHead || "—"} · Created {dateFmt(ub.createdAt)}

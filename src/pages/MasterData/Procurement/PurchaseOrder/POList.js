@@ -154,6 +154,7 @@ const POList = ({ onAdd, onOpen }) => {
         r.poTitle,
         r.vendorId?.tradeName,
         r.vendorId?.legalName,
+        r.deliverySiteId?.title,
         r.status,
         PO_TYPE_LABELS[r.poType],
       ].some((v) => clean(v).includes(q)),
@@ -246,12 +247,24 @@ const POList = ({ onAdd, onOpen }) => {
       sortable: true,
       minWidth: "200px",
       cell: (row) => (
-        <span
-          style={{ whiteSpace: "nowrap", fontWeight: 600 }}
-          title={row.poNumber}
-        >
-          {row.poNumber}
-        </span>
+        <div style={{ lineHeight: 1.3, padding: "4px 0" }}>
+          <div
+            style={{ whiteSpace: "nowrap", fontWeight: 600 }}
+            title={row.poNumber}
+          >
+            {row.poNumber}
+          </div>
+          {row.deliverySiteId?.title && (
+            <div
+              className="uom-cell-muted"
+              style={{ fontSize: 12 }}
+              title={row.deliverySiteId.title}
+            >
+              <i className="bx bx-buildings me-1"></i>
+              {row.deliverySiteId.title}
+            </div>
+          )}
+        </div>
       ),
     },
     {

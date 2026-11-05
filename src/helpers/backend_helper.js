@@ -6232,7 +6232,12 @@ export const recordVendorQuote = (rfqId, vendorQuoteId, data) => {
   return axios.patch(
     `${url.RFQ_BASE}/${rfqId}/vendor-quote/${vendorQuoteId}`,
     data,
-    { headers: { "X-No-Cookie-Token": "true" } },
+    {
+      headers: {
+        "X-No-Cookie-Token": "true",
+        "Content-Type": "multipart/form-data",
+      },
+    },
   );
 };
 export const closeRFQ = (id, data = {}) => {
