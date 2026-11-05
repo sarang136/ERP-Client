@@ -17,6 +17,13 @@ import { useAuthError } from "../../Components/Hooks/useAuthError";
 import PhoneInputWithCountrySelect from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { Input, Label } from "reactstrap";
+import ProfessionalRegistrations, {
+  missingRequiredRegistration,
+  registrationSchema,
+  registrationsPayload,
+  toRegistrationFormValue,
+} from "./ProfessionalRegistrations";
+import { REGISTRATION_REQUIREMENT } from "../../Components/constants/professionalRegistration";
 
 const UserForm = ({
   isOpen,
@@ -107,12 +114,18 @@ const UserForm = ({
   }, [token]);
 
   // Job roles from Setting → User Roles (active only). The select renders
-  // `_id` as the option value, so the stored role value goes there.
+  // `_id` as the option value, so the stored role value goes there. Each role
+  // also says whether its users record a professional registration.
   useEffect(() => {
     getJobRoles({ active: true })
       .then((res) =>
         setJobRoles(
-          (res?.payload || []).map((r) => ({ _id: r.value, name: r.name })),
+          (res?.payload || []).map((r) => ({
+            _id: r.value,
+            name: r.name,
+            registration: r.registration,
+            profession: r.profession,
+          })),
         ),
       )
       .catch(() => toast.error("Failed to fetch user roles."));
@@ -126,6 +139,15 @@ const UserForm = ({
     currentRole && !jobRoles.some((r) => r._id === currentRole)
       ? [...jobRoles, { _id: currentRole, name: currentRole }]
       : jobRoles;
+  const jobRoleFor = (role) => roleOptions.find((r) => r._id === role);
+
+  // The Professional Registration section shows for roles that ask for one,
+  // and for anyone who already has registrations (so they can be removed).
+  const showsRegistrations = (values) =>
+    (jobRoleFor(values.role)?.registration ||
+      REGISTRATION_REQUIREMENT.NOT_NEEDED) !==
+      REGISTRATION_REQUIREMENT.NOT_NEEDED ||
+    values.professionalRegistrations?.length > 0;
 
   useEffect(() => {
     if (!userForm.isOpen || userForm.data?.role !== "DOCTOR") return;
@@ -296,6 +318,9 @@ const UserForm = ({
         ? userData?.therapies?.map((e) => ({ label: e, value: e }))
         : [],
       availabilityMode: userData ? userData?.availabilityMode : [],
+      professionalRegistrations: (userData?.professionalRegistrations || []).map(
+        toRegistrationFormValue,
+      ),
     },
     validationSchema: Yup.object({
       email: Yup.string().required("Please Enter Your Email"),
@@ -337,6 +362,15 @@ const UserForm = ({
         },
       ),
       role: Yup.string().required("Please Select User Role"),
+      professionalRegistrations: Yup.array()
+        .of(registrationSchema)
+        .test("required-for-role", function (list) {
+          const missing = missingRequiredRegistration(
+            jobRoleFor(this.parent.role),
+            list,
+          );
+          return missing ? this.createError({ message: missing }) : true;
+        }),
     }),
     onSubmit: async (values) => {
       const formData = new FormData();
@@ -347,14 +381,30 @@ const UserForm = ({
       formData.append("role", values.role);
       formData.append("gender", values.gender);
       formData.append("phoneNumber", values.phoneNumber);
-      formData.append("degrees", values.degrees);
-      formData.append("speciality", values.speciality);
-      formData.append("registrationNo", values.registrationNo);
-      formData.append("unit", values.unit);
+      // `?? ""`: FormData turns undefined into the text "undefined", which used
+      // to be saved — and printed on prescriptions as the Reg. No.
+      formData.append("degrees", values.degrees ?? "");
+      formData.append("speciality", values.speciality ?? "");
+      formData.append("registrationNo", values.registrationNo ?? "");
+      formData.append("unit", values.unit ?? "");
       formData.append("centerAccess", values?.centerAccess.join(","));
       formData.append("pageAccess", JSON.stringify(values.pageAccess));
       formData.append("password", values.password);
-      formData.append("bio", values.bio);
+      formData.append("bio", values.bio ?? "");
+      // Sent only while the section shows; otherwise the Login Service leaves
+      // the stored list alone.
+      if (showsRegistrations(values)) {
+        const { registrations, files } = registrationsPayload(
+          values.professionalRegistrations,
+        );
+        formData.append(
+          "professionalRegistrations",
+          JSON.stringify(registrations),
+        );
+        files.forEach((file) =>
+          formData.append("registrationCertificates", file),
+        );
+      }
       formData.append("availabilityMode", values.availabilityMode);
       if (values.experience) {
         formData.append("experience", values.experience);
@@ -2537,6 +2587,13 @@ const UserForm = ({
                 </div>
               </div>
             )}
+
+          {showsRegistrations(validation.values) && (
+            <ProfessionalRegistrations
+              validation={validation}
+              jobRole={jobRoleFor(validation.values.role)}
+            />
+          )}
 
           <div
             style={{
