@@ -426,6 +426,11 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         vendor: v,
     }));
 
+    // A vendor from the Vendor master brings its own bank details, which are not editable here
+    const vendorLocked = vendorOptions.some(
+        (o) => o.label.toLowerCase() === String(form.values.vendor || "").trim().toLowerCase(),
+    );
+
     const handleVendorSelect = (opt) => {
         if (!opt) {
             form.setFieldValue("vendor", "");
@@ -1024,9 +1029,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="IFSCCode"
                     name="IFSCCode"
                     value={form.values.IFSCCode}
+                    readOnly={vendorLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${form.touched.IFSCCode && form.errors.IFSCCode
+                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.IFSCCode && form.errors.IFSCCode
                         ? "is-invalid"
                         : ""
                         }`}
@@ -1047,9 +1053,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="accountHolderName"
                     name="accountHolderName"
                     value={form.values.accountHolderName}
+                    readOnly={vendorLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${form.touched.accountHolderName && form.errors.accountHolderName
+                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.accountHolderName && form.errors.accountHolderName
                         ? "is-invalid"
                         : ""
                         }`}
@@ -1070,9 +1077,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="accountNo"
                     name="accountNo"
                     value={form.values.accountNo}
+                    readOnly={vendorLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${form.touched.accountNo && form.errors.accountNo
+                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.accountNo && form.errors.accountNo
                         ? "is-invalid"
                         : ""
                         }`}
