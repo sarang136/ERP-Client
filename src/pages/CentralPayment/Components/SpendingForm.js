@@ -23,7 +23,7 @@ import { categoryOptions, tallyBankAccounts } from '../../../Components/constant
 import Select from "react-select";
 import { getExitEmployeesBySearch } from '../../../store/features/HR/hrSlice';
 import AsyncSelect from "react-select/async";
-import CreatableSelect from "react-select/creatable";
+import AsyncCreatableSelect from "react-select/async-creatable";
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { getSearchPatients, getEmployeesBySearch, getVendors } from '../../../helpers/backend_helper';
 
@@ -408,36 +408,53 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         form.setFieldValue("initialPaymentStatus", mode, true);
     };
 
-    // Vendors created as "Central Payment Vendor" in Master Data. Typing a new name still works.
-    const [centralVendors, setCentralVendors] = useState([]);
-    useEffect(() => {
-        let cancelled = false;
-        getVendors({ vendorCategory: "central_payment", limit: 1000 })
-            .then((res) => { if (!cancelled) setCentralVendors(res?.data || []); })
-            .catch(() => { });
-        return () => { cancelled = true; };
-    }, []);
+    // Vendors created as "Central Payment Vendor" in Master Data. They are searched on the server as the
+    // user types, because there are more of them than can be loaded into one list.
+    // Typing a name that is not in the master still works.
 
     // Commas break the Tally payment line, so they are removed from anything copied from the vendor
     const clean = (t) => String(t || "").replace(/,/g, " ").replace(/\s+/g, " ").trim();
-    const vendorOptions = centralVendors.map((v) => ({
-        value: v._id,
-        label: clean(v.tradeName),
-        vendor: v,
-    }));
+    const toVendorOption = (v) => ({ value: v._id, label: clean(v.tradeName), vendor: v });
+    const escapeRegex = (t) => String(t || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    // A vendor from the Vendor master brings its own bank details, which are not editable here
-    const vendorLocked = vendorOptions.some(
-        (o) => o.label.toLowerCase() === String(form.values.vendor || "").trim().toLowerCase(),
-    );
+    const searchVendors = (text, limit = 50) =>
+        getVendors({ vendorCategory: "central_payment", search: escapeRegex(text), limit })
+            .then((res) => (res?.data || []).map(toVendorOption))
+            .catch(() => []);
+
+    const findMasterVendor = async (name) => {
+        const wanted = clean(name).toLowerCase();
+        if (!wanted) return null;
+        const found = await searchVendors(name, 20);
+        return found.find((o) => o.label.toLowerCase() === wanted) || null;
+    };
+
+    // Name of the master vendor currently chosen; while it matches the Vendor field, its bank details are locked
+    const [masterVendorName, setMasterVendorName] = useState("");
+    const [vendorInput, setVendorInput] = useState("");
+    const vendorLocked =
+        !!masterVendorName &&
+        masterVendorName.toLowerCase() === String(form.values.vendor || "").trim().toLowerCase();
+
+    // Editing an existing payment: lock the bank details if its vendor is in the master
+    useEffect(() => {
+        let cancelled = false;
+        if (form.values.vendor) {
+            findMasterVendor(form.values.vendor).then((o) => { if (!cancelled && o) setMasterVendorName(o.label); });
+        }
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleVendorSelect = (opt) => {
         if (!opt) {
+            setMasterVendorName("");
             form.setFieldValue("vendor", "");
             return;
         }
         if (opt.vendor) {
             const bank = opt.vendor.bankDetails || {};
+            setMasterVendorName(clean(opt.vendor.tradeName));
             form.setFieldValue("vendor", clean(opt.vendor.tradeName));
             form.setFieldValue("IFSCCode", clean(bank.ifsc).toUpperCase());
             form.setFieldValue("accountHolderName", clean(bank.accountHolderName));
@@ -445,6 +462,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             return;
         }
         // typed a name that is not in the vendor master: keep the old rules
+        setMasterVendorName("");
         const text = String(opt.label || "");
         if (!/^[a-zA-Z0-9 ]*$/.test(text)) {
             form.setFieldTouched("vendor", true, false);
@@ -891,14 +909,29 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                 <Label for="vendor" className="fw-medium">
                     Vendor <span className="text-danger">*</span>
                 </Label>
-                <CreatableSelect
+                <AsyncCreatableSelect
                     inputId="vendor"
                     isClearable
-                    placeholder="Select a Central Payment vendor or type a name"
-                    options={vendorOptions}
+                    cacheOptions
+                    defaultOptions
+                    loadOptions={(text) => searchVendors(text)}
+                    placeholder="Search a Central Payment vendor or type a name"
                     value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
                     onChange={handleVendorSelect}
-                    onBlur={() => form.setFieldTouched("vendor", true)}
+                    inputValue={vendorInput}
+                    onInputChange={(text, meta) => {
+                        if (meta.action === "input-change") setVendorInput(text);
+                        else if (meta.action === "set-value") setVendorInput("");
+                    }}
+                    onBlur={async () => {
+                        // a name typed but not picked still counts, as it did with the old text box
+                        const typed = vendorInput.trim();
+                        if (typed) {
+                            setVendorInput("");
+                            handleVendorSelect((await findMasterVendor(typed)) || { label: typed });
+                        }
+                        form.setFieldTouched("vendor", true);
+                    }}
                     formatCreateLabel={(text) => `Use "${text}" (not in vendor master)`}
                     classNamePrefix="react-select"
                     styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
@@ -1278,14 +1311,29 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                 <Label for="vendor" className="fw-medium">
                     Vendor <span className="text-danger">*</span>
                 </Label>
-                <CreatableSelect
+                <AsyncCreatableSelect
                     inputId="vendor"
                     isClearable
-                    placeholder="Select a Central Payment vendor or type a name"
-                    options={vendorOptions}
+                    cacheOptions
+                    defaultOptions
+                    loadOptions={(text) => searchVendors(text)}
+                    placeholder="Search a Central Payment vendor or type a name"
                     value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
                     onChange={handleVendorSelect}
-                    onBlur={() => form.setFieldTouched("vendor", true)}
+                    inputValue={vendorInput}
+                    onInputChange={(text, meta) => {
+                        if (meta.action === "input-change") setVendorInput(text);
+                        else if (meta.action === "set-value") setVendorInput("");
+                    }}
+                    onBlur={async () => {
+                        // a name typed but not picked still counts, as it did with the old text box
+                        const typed = vendorInput.trim();
+                        if (typed) {
+                            setVendorInput("");
+                            handleVendorSelect((await findMasterVendor(typed)) || { label: typed });
+                        }
+                        form.setFieldTouched("vendor", true);
+                    }}
                     formatCreateLabel={(text) => `Use "${text}" (not in vendor master)`}
                     classNamePrefix="react-select"
                     styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
