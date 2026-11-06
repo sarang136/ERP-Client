@@ -54,6 +54,11 @@ const ChartDate = ({
   editChartData,
   patient,
   user,
+  // When set, skips the "Add Records" chart-type picker and goes straight
+  // into this chart type once the date is confirmed — for entry points that
+  // only ever create one specific kind of chart (e.g. the psychologist
+  // dashboard's "Start Counselling Note").
+  fixedChart,
 }) => {
   const dispatch = useDispatch();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -202,7 +207,33 @@ const ChartDate = ({
           </Form>
         </div>
         <div>
-          {type !== "CLINICTEST" ? (
+          {fixedChart ? (
+            <div className="d-flex justify-content-between align-items-center mt-3 border-top pt-3">
+              <span className="text-danger">
+                {isOnOutpass && !editChartData.data
+                  ? "Patient is on Outpass. Chart creation is disabled."
+                  : null}
+              </span>
+              <Button
+                color="primary"
+                disabled={isOnOutpass && !editChartData.data}
+                onClick={() => {
+                  dispatch(
+                    createEditChart({
+                      ...editChartData,
+                      chart: fixedChart,
+                      patient,
+                      isOpen: true,
+                      type,
+                    }),
+                  );
+                  toggle();
+                }}
+              >
+                Continue
+              </Button>
+            </div>
+          ) : type !== "CLINICTEST" ? (
             <Dropdown
               className="text-end border-top pt-2 mt-2"
               size="sm"
