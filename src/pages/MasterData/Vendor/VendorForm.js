@@ -18,10 +18,6 @@ import { usePermissions } from "../../../Components/Hooks/useRoles.js";
 import "./vendor.scss";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-const AADHAAR_REGEX = /^[0-9]{12}$/;
-// Aadhaar is only collected (and mandatory) for natural persons
-const needsAadhaar = (vendorType) =>
-  vendorType === "individual" || vendorType === "proprietor";
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
@@ -168,7 +164,7 @@ const COUNTRIES = [
   "Zimbabwe",
 ];
 
-const getDocTypes = (hasGstin, hasPan, hasAadhaarReq) => [
+const getDocTypes = (hasGstin, hasPan) => [
   {
     key: "gst_certificate",
     label: "GST Certificate",
@@ -181,16 +177,6 @@ const getDocTypes = (hasGstin, hasPan, hasAadhaarReq) => [
     required: hasPan,
     accept: "PDF, JPG, PNG",
   },
-  ...(hasAadhaarReq
-    ? [
-        {
-          key: "aadhaar_card",
-          label: "Aadhaar Card (Image / Copy)",
-          required: true,
-          accept: "PDF, JPG, PNG",
-        },
-      ]
-    : []),
   {
     key: "msme_certificate",
     label: "MSME Certificate",
@@ -274,7 +260,6 @@ const emptyInitialValues = {
   udyamNumber: "",
   autoCreateLedger: true,
   pan: "",
-  aadhaarNumber: "",
   cin: "",
   gstRegistrations: [],
   tdsApplicable: false,
@@ -327,13 +312,6 @@ const validationSchema = Yup.object({
   pan: Yup.string()
     .required("PAN is required")
     .matches(PAN_REGEX, "Enter a valid PAN, e.g. ABCDE1234F"),
-  aadhaarNumber: Yup.string().when("vendorType", {
-    is: (t) => needsAadhaar(t),
-    then: (schema) =>
-      schema
-        .required("Aadhaar number is required")
-        .matches(AADHAAR_REGEX, "Aadhaar number must be 12 digits"),
-  }),
   gstRegistrations: Yup.array().of(
     Yup.object({
       gstin: Yup.string()
@@ -438,7 +416,6 @@ const collectMissingFields = (errors) => {
   if (errors.supplyType) labels.push("Supply type");
   if (errors.udyamNumber) labels.push("Udyam number");
   if (errors.cin) labels.push("CIN");
-  if (errors.aadhaarNumber) labels.push("Aadhaar number");
   if (Array.isArray(errors.gstRegistrations)) {
     errors.gstRegistrations.forEach((regErr, idx) => {
       if (!regErr) return;
@@ -478,7 +455,6 @@ const SECTION_FIELD_MAP = {
   supplyType: "identity",
   udyamNumber: "identity",
   pan: "tax",
-  aadhaarNumber: "tax",
   cin: "tax",
   gstRegistrations: "tax",
   tdsSection: "tds",
@@ -749,18 +725,6 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
             }
           }
 
-          if (needsAadhaar(values.vendorType)) {
-            const hasAadhaarCard =
-              !!documentFiles["aadhaar_card"] ||
-              (values.documents || []).some((d) => d.docType === "aadhaar_card");
-            if (!hasAadhaarCard) {
-              toast.error(
-                "Aadhaar Card image is required for individual / proprietor vendors.",
-              );
-              return;
-            }
-          }
-
           if (values.pan) {
             const hasPanCard =
               !!documentFiles["pan_card"] ||
@@ -785,7 +749,6 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
         delete payload.ledgerId;
         if (!payload.udyamNumber) delete payload.udyamNumber;
         if (!payload.cin) delete payload.cin;
-        if (!payload.aadhaarNumber) delete payload.aadhaarNumber;
         if (payload.tdsRate === "") delete payload.tdsRate;
         if (!payload.paymentTermId) delete payload.paymentTermId;
         if (!payload.preferredPaymentMode) delete payload.preferredPaymentMode;
@@ -961,9 +924,6 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
               ]
             : []),
           ...(v.vendorType === "company" ? [!!v.cin] : []),
-          ...(needsAadhaar(v.vendorType)
-            ? [!!v.aadhaarNumber && AADHAAR_REGEX.test(v.aadhaarNumber)]
-            : []),
         ],
       },
       {
@@ -1031,7 +991,6 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
                   : "Cancelled Cheque required",
                 checks: [
                   hasDoc("cancelled_cheque"),
-                  ...(needsAadhaar(v.vendorType) ? [hasDoc("aadhaar_card")] : []),
                   ...(hasGstin
                     ? [hasDoc("gst_certificate"), hasDoc("pan_card")]
                     : []),
@@ -1587,35 +1546,6 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
                     />
                     <FormFeedback>{validation.errors.pan}</FormFeedback>
                   </Col>
-                  {needsAadhaar(v.vendorType) && (
-                    <Col md={6} className="mb-3">
-                      <Label>
-                        Aadhaar Number <span className="text-danger">*</span>
-                      </Label>
-                      <Input
-                        name="aadhaarNumber"
-                        inputMode="numeric"
-                        maxLength={12}
-                        value={v.aadhaarNumber}
-                        onChange={(e) =>
-                          validation.setFieldValue(
-                            "aadhaarNumber",
-                            e.target.value.replace(/\D/g, "").slice(0, 12),
-                          )
-                        }
-                        onBlur={validation.handleBlur}
-                        invalid={
-                          validation.touched.aadhaarNumber &&
-                          !!validation.errors.aadhaarNumber
-                        }
-                        placeholder="12 digit Aadhaar number"
-                      />
-                      <FormFeedback>{validation.errors.aadhaarNumber}</FormFeedback>
-                      {/* <div className="text-muted small mt-1">
-                        Upload the Aadhaar card image under Documents.
-                      </div> */}
-                    </Col>
-                  )}
                   {v.vendorType === "company" && (
                     <Col md={6} className="mb-3">
                       <Label>
@@ -2507,11 +2437,7 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
                       (g) => !!g.gstin,
                     );
                     const hasPan = !!v.pan;
-                    const DOC_TYPES = getDocTypes(
-                      hasGstin,
-                      hasPan,
-                      needsAadhaar(v.vendorType),
-                    );
+                    const DOC_TYPES = getDocTypes(hasGstin, hasPan);
                     return (
                       <Row>
                         {DOC_TYPES.map((doc) => (
