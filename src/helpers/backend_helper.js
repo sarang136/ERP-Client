@@ -3114,6 +3114,35 @@ export const getCashRecoCompliance = (data) => {
   });
 };
 
+export const getReferralData = (data) => {
+  return api.get(url.GET_REFERRAL_DATA, {
+    params: {
+      centerIds: data?.centerAccess,
+      center: data?.center,
+      page: data?.page,
+      limit: data?.limit,
+      currentlyAdmitted: data?.currentlyAdmitted,
+    },
+    paramsSerializer: (params) => {
+      return qs.stringify(params, { arrayFormat: "repeat" });
+    },
+  });
+};
+
+export const exportReferralDataCSV = (data) => {
+  return api.get(url.EXPORT_REFERRAL_DATA_CSV, {
+    params: {
+      centerIds: data?.centerAccess,
+      center: data?.center,
+      currentlyAdmitted: data?.currentlyAdmitted,
+    },
+    responseType: "blob",
+    paramsSerializer: (params) => {
+      return qs.stringify(params, { arrayFormat: "repeat" });
+    },
+  });
+};
+
 export const getCenterDashboardLive = (data) => {
   return api.get(url.GET_CENTER_DASHBOARD_LIVE, {
     params: {

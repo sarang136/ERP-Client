@@ -647,6 +647,8 @@ export const GET_ASSIGNED_DATA = "/mi-reporting/assigned-data";
 export const GET_PATIENTS_WITH_SUSPENDED_STAFF = "/mi-reporting/patients-with-suspended-staff";
 export const GET_SOP_ALERTS_MONTHLY = "/mi-reporting/sop-alerts-monthly";
 export const GET_CASH_RECO_COMPLIANCE = "/mi-reporting/cash-reco-compliance";
+export const GET_REFERRAL_DATA = "/mi-reporting/referral-data";
+export const EXPORT_REFERRAL_DATA_CSV = "/mi-reporting/referral-data/export";
 
 // CENTER DASHBOARD
 export const GET_CENTER_DASHBOARD_LIVE = "/center-dashboard/live";

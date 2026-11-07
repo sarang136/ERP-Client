@@ -331,6 +331,7 @@ export const permissionList = [
       },
       { name: "QUALITY_INCIDENTS", label: "Quality & Incidents Category" },
       { name: "HR_ATTENDANCE", label: "HR & Attendance Category" },
+      { name: "MARKETING", label: "Marketing Category" },
 
       // Dashboards
       { name: "DAILY_DASHBOARD", label: "Daily Dashboard" },
@@ -383,6 +384,9 @@ export const permissionList = [
       // HR & Attendance
       { name: "ATTENDANCE", label: "Attendance" },
       { name: "ATTRITION_DATA", label: "Attrition Data" },
+
+      // Marketing
+      { name: "REFERRAL_DATA", label: "Referral Data" },
     ],
   },
   {

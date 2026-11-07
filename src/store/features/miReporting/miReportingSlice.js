@@ -53,6 +53,7 @@ import {
   getPatientsWithSuspendedStaff,
   getSopAlertsMonthly,
   getCashRecoCompliance,
+  getReferralData,
 
 } from "../../../helpers/backend_helper";
 
@@ -116,6 +117,7 @@ const initialState = {
   patientsWithSuspendedStaff: [],
   sopAlertsMonthly: [],
   cashRecoCompliance: [],
+  referralData: {},
 
   loading: false,
   error: null,
@@ -900,6 +902,20 @@ export const fetchCashRecoCompliance = createAsyncThunk(
   }
 );
 
+export const fetchReferralData = createAsyncThunk(
+  "miReporting/fetchReferralData",
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await getReferralData(data);
+      return response;
+    } catch (error) {
+      return rejectWithValue(
+        error.message || "Failed to fetch Referral Data"
+      );
+    }
+  }
+);
+
 
 
 const miReportingSlice = createSlice({
@@ -1624,6 +1640,19 @@ const miReportingSlice = createSlice({
         state.cashRecoCompliance = action.payload.payload || [];
       })
       .addCase(fetchCashRecoCompliance.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Referral Data
+      .addCase(fetchReferralData.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchReferralData.fulfilled, (state, action) => {
+        state.loading = false;
+        state.referralData = action.payload.payload || {};
+      })
+      .addCase(fetchReferralData.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

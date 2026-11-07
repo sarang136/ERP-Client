@@ -52,6 +52,7 @@ import AttritionData from "./AttritionData";
 import PatientAssignedStatus from "./PatientAssignedStatus";
 import SuspendedAssigned from "./SuspendedAssigned";
 import CashReco from "./CashReco";
+import ReferralData from "./Referral Data";
 
 const MiReporting = () => {
 
@@ -143,6 +144,7 @@ const MiReporting = () => {
   const hasCentralExpensesPermission = hasPermission("MIS_REPORTS", "CENTRAL_EXPENSES", "READ");
   const hasOccupancyPermission = hasPermission("MIS_REPORTS", "OCCUPANCY", "READ");
   const hasReadmissionPermission = hasPermission("MIS_REPORTS", "READMISSION", "READ");
+  const hasReferralDataPermission = hasPermission("MIS_REPORTS", "REFERRAL_DATA", "READ");
   const hasVitalSignsPermission = hasPermission("MIS_REPORTS", "VITAL_SIGNS", "READ");
   const hasRoundNotesPermission = hasPermission("MIS_REPORTS", "ROUND_NOTES", "READ");
   const hasClinicalNotesPermission = hasPermission("MIS_REPORTS", "CLINICAL_NOTES", "READ");
@@ -393,6 +395,11 @@ const MiReporting = () => {
                   {hasMISPermission && hasCashRecoCompliancePermission && <Route
                     path="/cash-reco-compliance"
                     element={<CashReco />}
+                  />}
+
+                  {hasMISPermission && hasReferralDataPermission && <Route
+                    path="/referral-data"
+                    element={<ReferralData />}
                   />}
 
               </Routes>

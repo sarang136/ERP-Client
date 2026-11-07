@@ -189,6 +189,14 @@ const Sidebar = () => {
         { id: "attrition-data", label: "Attrition Data", link: "/mi-reporting/attrition-data", icon: "bx bx-user-minus", submodule: "ATTRITION_DATA" },
       ],
     },
+    {
+      id: "marketing",
+      title: "📈 Marketing",
+      submodule: "MARKETING",
+      items: [
+        { id: "referral-data", label: "Referral Data", link: "/mi-reporting/referral-data", icon: "bx bx-share-alt", submodule: "REFERRAL_DATA" },
+      ],
+    },
   ];
 
   const visibleMISCategories = MIS_REPORT_CATEGORIES
