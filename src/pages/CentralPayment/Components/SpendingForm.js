@@ -24,7 +24,7 @@ import Select from "react-select";
 import { getExitEmployeesBySearch } from '../../../store/features/HR/hrSlice';
 import AsyncSelect from "react-select/async";
 import { formatCurrency } from '../../../utils/formatCurrency';
-import { getSearchPatients, getEmployeesBySearch, getVendors } from '../../../helpers/backend_helper';
+import { getSearchPatients, getEmployeesBySearch, getVendors, getCentralPaymentVendorPan } from '../../../helpers/backend_helper';
 
 const transactionMethodOptions = [
     { value: "UPI", label: "UPI" },
@@ -71,6 +71,9 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             title: c.title,
         }));
 
+    // PAN card already on file for the chosen vendor (Vendor Management or an earlier payment), so it is not asked for again
+    const [savedPan, setSavedPan] = useState(null);
+    const panCardOnFileRef = useRef(false);
     const [existingFiles, setExistingFiles] = useState(paymentData?.attachments || []);
     const [removedAttachments, setRemovedAttachments] = useState([]);
     const [existingScreenshot] = useState(paymentData?.transactionProof || null);
@@ -169,8 +172,8 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     return files.every((f) => f.size <= 100 * 1024 * 1024);
                 })
                 .test("panCardRequired", "PAN card upload is required when TDS is applied", (files) => {
-                    // an earlier upload on an existing payment counts
-                    return (files && files.length > 0) || !!paymentData?.panCard?.url;
+                    // a PAN card already on file for this vendor counts, so it is not asked for again
+                    return (files && files.length > 0) || panCardOnFileRef.current;
                 }),
             otherwise: (schema) => schema.notRequired(),
         }),
@@ -391,7 +394,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
 
             values.attachments.forEach(f => formData.append("attachments", f));
             values.paymentScreenshot.forEach(f => formData.append("paymentScreenshot", f));
-            if (Number(values.TDSRate) > 0) {
+            if (Number(values.TDSRate) > 0 && !panCardOnFileRef.current) {
                 values.panCard.forEach(f => formData.append("panCard", f));
             }
             if (paymentData?._id && removedAttachments.length > 0) {
@@ -453,6 +456,11 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         return found.find((o) => o.label.toLowerCase() === wanted) || null;
     };
 
+    const loadSavedPan = (name) =>
+        getCentralPaymentVendorPan(name)
+            .then((res) => res?.data || null)
+            .catch(() => null);
+
     // Name of the master vendor currently chosen; while it matches the Vendor field, its bank details are locked
     const [masterVendorName, setMasterVendorName] = useState("");
     const [masterVendorPan, setMasterVendorPan] = useState("");
@@ -469,6 +477,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                 setMasterVendorName(o.label);
                 setMasterVendorPan(clean(o.vendor.pan).toUpperCase());
             });
+            loadSavedPan(form.values.vendor).then((saved) => { if (!cancelled) setSavedPan(saved); });
         }
         return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -482,6 +491,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             // PAN details belong to the vendor, so they go with it
             form.setFieldValue("panNumber", "");
             form.setFieldValue("panCard", []);
+            setSavedPan(null);
             return;
         }
         const bank = opt.vendor.bankDetails || {};
@@ -491,6 +501,12 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         // Always replaced, so the previous vendor's PAN number and PAN card file never stay behind
         form.setFieldValue("panNumber", vendorPan);
         form.setFieldValue("panCard", []);
+        setSavedPan(null);
+        loadSavedPan(clean(opt.vendor.tradeName)).then((saved) => {
+            setSavedPan(saved);
+            // a vendor without a PAN in Vendor Management gets the PAN from the earlier payment, if there is one
+            if (!vendorPan && saved?.panNumber) form.setFieldValue("panNumber", saved.panNumber);
+        });
         form.setFieldValue("vendor", clean(opt.vendor.tradeName));
         form.setFieldValue("IFSCCode", clean(bank.ifsc).toUpperCase());
         form.setFieldValue("accountHolderName", clean(bank.accountHolderName));
@@ -499,7 +515,16 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
 
     // TDS needs the vendor's PAN card number and a copy of the PAN card.
     // A PAN that comes from the Vendor master is not editable here.
-    const panLocked = vendorLocked && !!masterVendorPan;
+    const vendorUnchanged =
+        String(form.values.vendor || "").trim().toUpperCase() === String(paymentData?.vendor || "").trim().toUpperCase();
+    const typedPan = String(form.values.panNumber || "").toUpperCase();
+    const panCardOnFile =
+        (paymentData?.panCard?.url && vendorUnchanged && paymentData.panCard) ||
+        (savedPan?.panCard?.url && (!savedPan.panNumber || savedPan.panNumber.toUpperCase() === typedPan) && savedPan.panCard) ||
+        null;
+    panCardOnFileRef.current = !!panCardOnFile;
+    // The PAN number and PAN card that come with the vendor cannot be changed here (change them in Vendor Management)
+    const panLocked = !!panCardOnFile || (vendorLocked && !!masterVendorPan);
     const renderPanFields = (suffix) => Number(form.values.TDSRate) > 0 && (
         <>
             <FormGroup>
@@ -526,22 +551,23 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             </FormGroup>
             <FormGroup>
                 <Label className="fw-medium">
-                    PAN Card Upload <span className="text-danger">*</span>
+                    PAN Card Upload {!panCardOnFile && <span className="text-danger">*</span>}
                 </Label>
-                {paymentData?.panCard?.url && (form.values.panCard || []).length === 0 && (
-                    <div className="small mb-1">
-                        <a href={paymentData.panCard.url} target="_blank" rel="noopener noreferrer">
-                            {paymentData.panCard.originalName || "View uploaded PAN card"}
-                        </a>{" "}
-                        <span className="text-muted">(upload a new file to replace)</span>
+                {panCardOnFile ? (
+                    <div className="form-control bg-light d-flex align-items-center" style={{ height: "auto", minHeight: 38 }}>
+                        <i className="fas fa-lock text-muted me-2"></i>
+                        <a href={panCardOnFile.url} target="_blank" rel="noopener noreferrer">
+                            {panCardOnFile.originalName || "View PAN card"}
+                        </a>
                     </div>
+                ) : (
+                    <FileUpload
+                        inputId={`panCardUploadInput${suffix}`}
+                        files={form.values.panCard || []}
+                        setFiles={(files) => form.setFieldValue("panCard", files)}
+                        multiple={false}
+                    />
                 )}
-                <FileUpload
-                    inputId={`panCardUploadInput${suffix}`}
-                    files={form.values.panCard || []}
-                    setFiles={(files) => form.setFieldValue("panCard", files)}
-                    multiple={false}
-                />
                 {form.touched.panCard && form.errors.panCard && (
                     <div className="invalid-feedback d-block">
                         <i className="fas fa-exclamation-circle me-1"></i>

@@ -463,6 +463,7 @@ export const GET_SUMMARY_CENTRAL_PAYMENT_REPORT =
 export const EXPORT_DETAILED_CENTRAL_PAYMENT_REPORT =
   "/central-payment/report/detailed/export";
 export const GET_ALL_ENETS = "/central-payment/eNets";
+export const CENTRAL_PAYMENT_VENDOR_PAN = "/central-payment/vendor-pan";
 export const REGENERATE_ENETS = "/central-payment/eNets/regenerate";
 export const PROCESS_PAYMENTS = "/central-payment/process";
 export const UPLOAD_TRANSACTION_PROOF = "/central-payment/transaction-proof";

@@ -1741,6 +1741,14 @@ export const getCentralPaymentById = (paymentId) => {
   });
 };
 
+// Is this vendor's PAN card already on file (Vendor Management, or an earlier Central Payment)?
+export const getCentralPaymentVendorPan = (vendor) => {
+  return axios.get(url.CENTRAL_PAYMENT_VENDOR_PAN, {
+    params: { vendor },
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+};
+
 export const getAllENets = (params = {}) => {
   return api.get(`${url.GET_ALL_ENETS}`, {
     params,
