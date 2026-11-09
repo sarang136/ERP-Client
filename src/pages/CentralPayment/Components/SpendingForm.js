@@ -153,22 +153,22 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         GSTAmount: Yup.string()
             .required("GST amount is required")
             .matches(/^\d+(\.\d{1,2})?$/, "GST amount can have at most 2 decimal places"),
-        panNumber: Yup.string().when("GSTAmount", {
+        panNumber: Yup.string().when("TDSRate", {
             is: (v) => Number(v) > 0,
             then: (schema) => schema
                 .trim()
-                .required("PAN card number is required when GST amount is mentioned")
+                .required("PAN card number is required when TDS is applied")
                 .matches(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "Enter a valid PAN, e.g. ABCDE1234F"),
             otherwise: (schema) => schema.notRequired(),
         }),
-        panCard: Yup.array().when("GSTAmount", {
+        panCard: Yup.array().when("TDSRate", {
             is: (v) => Number(v) > 0,
             then: (schema) => schema
                 .test("fileSize", "File must be under 100MB", (files) => {
                     if (!files || files.length === 0) return true;
                     return files.every((f) => f.size <= 100 * 1024 * 1024);
                 })
-                .test("panCardRequired", "PAN card upload is required when GST amount is mentioned", (files) => {
+                .test("panCardRequired", "PAN card upload is required when TDS is applied", (files) => {
                     // an earlier upload on an existing payment counts
                     return (files && files.length > 0) || !!paymentData?.panCard?.url;
                 }),
@@ -391,7 +391,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
 
             values.attachments.forEach(f => formData.append("attachments", f));
             values.paymentScreenshot.forEach(f => formData.append("paymentScreenshot", f));
-            if (Number(values.GSTAmount) > 0) {
+            if (Number(values.TDSRate) > 0) {
                 values.panCard.forEach(f => formData.append("panCard", f));
             }
             if (paymentData?._id && removedAttachments.length > 0) {
@@ -479,23 +479,28 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             setMasterVendorName("");
             setMasterVendorPan("");
             form.setFieldValue("vendor", "");
+            // PAN details belong to the vendor, so they go with it
+            form.setFieldValue("panNumber", "");
+            form.setFieldValue("panCard", []);
             return;
         }
         const bank = opt.vendor.bankDetails || {};
         const vendorPan = clean(opt.vendor.pan).toUpperCase();
         setMasterVendorName(clean(opt.vendor.tradeName));
         setMasterVendorPan(vendorPan);
-        if (vendorPan) form.setFieldValue("panNumber", vendorPan);
+        // Always replaced, so the previous vendor's PAN number and PAN card file never stay behind
+        form.setFieldValue("panNumber", vendorPan);
+        form.setFieldValue("panCard", []);
         form.setFieldValue("vendor", clean(opt.vendor.tradeName));
         form.setFieldValue("IFSCCode", clean(bank.ifsc).toUpperCase());
         form.setFieldValue("accountHolderName", clean(bank.accountHolderName));
         form.setFieldValue("accountNo", clean(bank.accountNo));
     };
 
-    // Mentioning a GST amount needs the vendor's PAN card number and a copy of the PAN card.
+    // TDS needs the vendor's PAN card number and a copy of the PAN card.
     // A PAN that comes from the Vendor master is not editable here.
     const panLocked = vendorLocked && !!masterVendorPan;
-    const renderPanFields = (suffix) => Number(form.values.GSTAmount) > 0 && (
+    const renderPanFields = (suffix) => Number(form.values.TDSRate) > 0 && (
         <>
             <FormGroup>
                 <Label for={`panNumber${suffix}`} className="fw-medium">
@@ -1101,7 +1106,6 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     </div>
                 )}
             </FormGroup>
-            {renderPanFields("A")}
             <FormGroup>
                 <Label for="totalAmountWithGST" className="fw-medium">
                     Total Amount including GST
@@ -1211,6 +1215,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     </div>
                 )}
             </FormGroup>
+            {renderPanFields("A")}
             <FormGroup>
                 <Label className="fw-medium">
                     You need to upload at least one of the following <span className="text-danger">*</span>
@@ -1489,7 +1494,6 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     </div>
                 )}
             </FormGroup>
-            {renderPanFields("B")}
             <FormGroup>
                 <Label for="totalAmountWithGST" className="fw-medium">
                     Total Amount Including GST
@@ -1527,6 +1531,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     </div>
                 )}
             </FormGroup>
+            {renderPanFields("B")}
             <FormGroup>
                 <Label for="transactionId" className="fw-medium">
                     Transaction ID <span className="text-danger">*</span>
