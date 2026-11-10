@@ -12,6 +12,8 @@ import {
   alertSourceLabel,
   alertCategoryLabel,
   isResolutionNote,
+  isComplianceAlert,
+  complianceCentrePath,
 } from "./alertUtils";
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -91,9 +93,29 @@ const AlertsList = ({
       },
     },
     {
-      name: "Patient",
+      name: "Patient / Licence",
       grow: 1.2,
-      cell: (row) => (
+      // A licence alert has no patient — show the licence and link to the
+      // centre's Compliance page instead.
+      cell: (row) => isComplianceAlert(row) ? (
+        <Link
+          key={row._id}
+          to={complianceCentrePath(row)}
+          className="dropdown-item fs-13 notify-item"
+        >
+          <div {...RC}>
+            <div {...RC} className={row.isRead ? "" : "fw-semibold"}>
+              <i {...RC} className="bx bx-certification me-1" />
+              {row.complianceInfo?.typeName || "Licence"}
+            </div>
+            {row.complianceInfo?.licenceNumber && (
+              <small {...RC} className="text-muted">
+                {row.complianceInfo.licenceNumber}
+              </small>
+            )}
+          </div>
+        </Link>
+      ) : (
         <Link
           key={row.patient?._id}
           to={`/patient/${row.patient?._id}`}
