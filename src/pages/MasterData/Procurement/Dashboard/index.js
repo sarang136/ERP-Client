@@ -9,6 +9,7 @@ import {
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
 import { usePermissions } from "../../../../Components/Hooks/useRoles.js";
 import "../../UnitOfMeasurement/uom.scss";
+import { useReferenceList } from "../../../../Components/Hooks/useReferenceData";
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 const dateFmt = (d) => (d ? new Date(d).toLocaleDateString("en-IN") : "—");
@@ -67,6 +68,9 @@ const ProcurementDashboard = () => {
   const [rows, setRows] = useState([]);
   const [closedRows, setClosedRows] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [centerRows, setCenterRows] = useState([]);
+  const [centerId, setCenterId] = useState("");
+  const { items: centers } = useReferenceList("centers");
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("all");
   const [refreshFlag, setRefreshFlag] = useState(0);
@@ -78,12 +82,13 @@ const ProcurementDashboard = () => {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getProcurementDashboard()
+    getProcurementDashboard({ centerId: centerId || undefined })
       .then((res) => {
         if (cancelled) return;
         setRows(res?.data?.rows || []);
         setClosedRows(res?.data?.closedRows || []);
         setSummary(res?.data?.summary || null);
+        setCenterRows(res?.data?.centers || []);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -102,7 +107,7 @@ const ProcurementDashboard = () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshFlag]);
+  }, [refreshFlag, centerId]);
 
   const openReason = (row) => {
     setReasonTarget(row);
@@ -162,6 +167,12 @@ const ProcurementDashboard = () => {
           {row.poNumber}
         </span>
       ),
+    },
+    {
+      name: "Center",
+      minWidth: "140px",
+      wrap: true,
+      cell: (row) => <span className="uom-cell-muted">{row.centerName || "—"}</span>,
     },
     {
       name: "Vendor",
@@ -248,9 +259,25 @@ const ProcurementDashboard = () => {
             Ordered vs received vs pending for every approved purchase order
           </p>
         </div>
-        <Button color="light" onClick={() => setRefreshFlag((f) => f + 1)}>
-          <i className="bx bx-refresh me-1"></i> Refresh
-        </Button>
+        <div className="d-flex gap-2 align-items-center">
+          <Input
+            type="select"
+            style={{ width: 200 }}
+            value={centerId}
+            onChange={(e) => setCenterId(e.target.value)}
+            aria-label="Center"
+          >
+            <option value="">All centers</option>
+            {centers.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.title}
+              </option>
+            ))}
+          </Input>
+          <Button color="light" onClick={() => setRefreshFlag((f) => f + 1)}>
+            <i className="bx bx-refresh me-1"></i> Refresh
+          </Button>
+        </div>
       </div>
 
       {summary && (
@@ -275,6 +302,54 @@ const ProcurementDashboard = () => {
               sub={`${money(summary.releasedTotal)} budget released`}
             />
           )}
+        </div>
+      )}
+
+      {centerRows.length > 0 && (
+        <div className="uom-table-card mb-3" style={{ overflowX: "auto" }}>
+          <div className="px-3 pt-3 fw-semibold">Center-wise</div>
+          <table className="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th className="ps-3">Center</th>
+                <th className="text-end">Approved POs</th>
+                <th className="text-end">PO value</th>
+                <th className="text-end">Ordered</th>
+                <th className="text-end">Received</th>
+                <th className="text-end">Pending</th>
+                <th className="text-end">Delayed</th>
+                <th className="text-end pe-3">Closed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {centerRows.map((c) => (
+                <tr
+                  key={c.centerId || "none"}
+                  style={{
+                    cursor: c.centerId ? "pointer" : "default",
+                    background: c.centerId && c.centerId === centerId ? "#eef2ff" : undefined,
+                  }}
+                  onClick={() =>
+                    c.centerId && setCenterId(c.centerId === centerId ? "" : c.centerId)
+                  }
+                >
+                  <td className="ps-3 fw-semibold">{c.centerName}</td>
+                  <td className="text-end">{c.totalPOs}</td>
+                  <td className="text-end">{money(c.totalValue)}</td>
+                  <td className="text-end">{c.orderedQty}</td>
+                  <td className="text-end">{c.receivedQty}</td>
+                  <td className="text-end">{c.pendingQty}</td>
+                  <td className={`text-end ${c.delayedCount ? "text-danger fw-semibold" : ""}`}>
+                    {c.delayedCount}
+                  </td>
+                  <td className="text-end pe-3">{c.closedCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="text-muted small px-3 pb-2">
+            Click a center to see only its purchase orders.
+          </div>
         </div>
       )}
 

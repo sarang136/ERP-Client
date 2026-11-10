@@ -463,6 +463,7 @@ export const GET_SUMMARY_CENTRAL_PAYMENT_REPORT =
 export const EXPORT_DETAILED_CENTRAL_PAYMENT_REPORT =
   "/central-payment/report/detailed/export";
 export const GET_ALL_ENETS = "/central-payment/eNets";
+export const CENTRAL_PAYMENT_VENDOR_PAN = "/central-payment/vendor-pan";
 export const REGENERATE_ENETS = "/central-payment/eNets/regenerate";
 export const PROCESS_PAYMENTS = "/central-payment/process";
 export const UPLOAD_TRANSACTION_PROOF = "/central-payment/transaction-proof";
@@ -647,6 +648,8 @@ export const GET_ASSIGNED_DATA = "/mi-reporting/assigned-data";
 export const GET_PATIENTS_WITH_SUSPENDED_STAFF = "/mi-reporting/patients-with-suspended-staff";
 export const GET_SOP_ALERTS_MONTHLY = "/mi-reporting/sop-alerts-monthly";
 export const GET_CASH_RECO_COMPLIANCE = "/mi-reporting/cash-reco-compliance";
+export const GET_REFERRAL_DATA = "/mi-reporting/referral-data";
+export const EXPORT_REFERRAL_DATA_CSV = "/mi-reporting/referral-data/export";
 
 // CENTER DASHBOARD
 export const GET_CENTER_DASHBOARD_LIVE = "/center-dashboard/live";

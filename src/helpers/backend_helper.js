@@ -1741,6 +1741,14 @@ export const getCentralPaymentById = (paymentId) => {
   });
 };
 
+// Is this vendor's PAN card already on file (Vendor Management, or an earlier Central Payment)?
+export const getCentralPaymentVendorPan = (vendor) => {
+  return axios.get(url.CENTRAL_PAYMENT_VENDOR_PAN, {
+    params: { vendor },
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+};
+
 export const getAllENets = (params = {}) => {
   return api.get(`${url.GET_ALL_ENETS}`, {
     params,
@@ -3110,6 +3118,35 @@ export const getCashRecoCompliance = (data) => {
   return api.get(url.GET_CASH_RECO_COMPLIANCE, {
     params: {
       centerIds: data?.centerAccess,
+    },
+  });
+};
+
+export const getReferralData = (data) => {
+  return api.get(url.GET_REFERRAL_DATA, {
+    params: {
+      centerIds: data?.centerAccess,
+      center: data?.center,
+      page: data?.page,
+      limit: data?.limit,
+      currentlyAdmitted: data?.currentlyAdmitted,
+    },
+    paramsSerializer: (params) => {
+      return qs.stringify(params, { arrayFormat: "repeat" });
+    },
+  });
+};
+
+export const exportReferralDataCSV = (data) => {
+  return api.get(url.EXPORT_REFERRAL_DATA_CSV, {
+    params: {
+      centerIds: data?.centerAccess,
+      center: data?.center,
+      currentlyAdmitted: data?.currentlyAdmitted,
+    },
+    responseType: "blob",
+    paramsSerializer: (params) => {
+      return qs.stringify(params, { arrayFormat: "repeat" });
     },
   });
 };
@@ -6180,6 +6217,21 @@ export const createPR = (data) => {
     headers: { "X-No-Cookie-Token": "true" },
   });
 };
+export const addPRAttachment = (id, file) => {
+  const data = new FormData();
+  data.append("attachment", file);
+  return axios.post(`${url.PR_BASE}/${id}/attachment`, data, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+export const removePRAttachment = (id, attachmentId) => {
+  return axios.delete(`${url.PR_BASE}/${id}/attachment/${attachmentId}`, {
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+};
 export const updatePR = (id, data) => {
   return axios.put(`${url.PR_BASE}/${id}`, data, {
     headers: { "X-No-Cookie-Token": "true" },
@@ -6232,7 +6284,12 @@ export const recordVendorQuote = (rfqId, vendorQuoteId, data) => {
   return axios.patch(
     `${url.RFQ_BASE}/${rfqId}/vendor-quote/${vendorQuoteId}`,
     data,
-    { headers: { "X-No-Cookie-Token": "true" } },
+    {
+      headers: {
+        "X-No-Cookie-Token": "true",
+        "Content-Type": "multipart/form-data",
+      },
+    },
   );
 };
 export const closeRFQ = (id, data = {}) => {
@@ -6362,7 +6419,10 @@ export const getDIsForGRN = () => {
 };
 export const createGRN = (data) => {
   return axios.post(url.GRN_BASE, data, {
-    headers: { "X-No-Cookie-Token": "true" },
+    headers: {
+      "X-No-Cookie-Token": "true",
+      "Content-Type": "multipart/form-data",
+    },
   });
 };
 export const getGRNs = (params = {}) => {
@@ -6894,8 +6954,9 @@ export const fitAssetTag = (id, data) =>
     headers: { "X-No-Cookie-Token": "true" },
   });
 
-export const getProcurementDashboard = () =>
+export const getProcurementDashboard = (params = {}) =>
   axios.get("/master/po-dashboard", {
+    params,
     headers: { "X-No-Cookie-Token": "true" },
   });
 export const setPODelayReason = (id, data) =>

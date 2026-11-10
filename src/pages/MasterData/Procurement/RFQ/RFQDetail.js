@@ -27,6 +27,8 @@ const RFQDetail = ({ rfqId, onBack }) => {
   const [quoteModalFor, setQuoteModalFor] = useState(null);
   const [draftLines, setDraftLines] = useState([]);
   const [draftRemarks, setDraftRemarks] = useState("");
+  const [draftFile, setDraftFile] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
   const [saving, setSaving] = useState(false);
 
   // Final vendor choice. Follows the lowest quote until the user picks one manually.
@@ -71,6 +73,7 @@ const RFQDetail = ({ rfqId, onBack }) => {
           })),
     );
     setDraftRemarks(vendorQuote.remarks || "");
+    setDraftFile(null);
   };
 
   const updateDraftLine = (idx, field, value) => {
@@ -78,17 +81,27 @@ const RFQDetail = ({ rfqId, onBack }) => {
   };
 
   const saveQuote = async () => {
+    if (!draftFile && !quoteModalFor.attachment?.url) {
+      toast.error("Vendor quotation attachment is required");
+      return;
+    }
     setSaving(true);
     try {
-      await recordVendorQuote(rfq._id, quoteModalFor._id, {
-        lineItemQuotes: draftLines.map((li) => ({
-          ...li,
-          quantity: Number(li.quantity) || 0,
-          unitPrice: Number(li.unitPrice) || 0,
-          taxPercent: Number(li.taxPercent) || 0,
-        })),
-        remarks: draftRemarks,
-      });
+      const formData = new FormData();
+      formData.append(
+        "lineItemQuotes",
+        JSON.stringify(
+          draftLines.map((li) => ({
+            ...li,
+            quantity: Number(li.quantity) || 0,
+            unitPrice: Number(li.unitPrice) || 0,
+            taxPercent: Number(li.taxPercent) || 0,
+          })),
+        ),
+      );
+      formData.append("remarks", draftRemarks);
+      if (draftFile) formData.append("attachment", draftFile);
+      await recordVendorQuote(rfq._id, quoteModalFor._id, formData);
       toast.success("Vendor quote recorded");
       setQuoteModalFor(null);
       setRefreshFlag((f) => f + 1);
@@ -189,6 +202,7 @@ const RFQDetail = ({ rfqId, onBack }) => {
               <th>Vendor</th>
               <th>Status</th>
               <th>Total Quote</th>
+              <th>Quotation</th>
               <th>Remarks</th>
               <th style={{ width: 140 }}></th>
             </tr>
@@ -233,6 +247,30 @@ const RFQDetail = ({ rfqId, onBack }) => {
                           <span className="uom-status-pill status-active ms-2">Lowest</span>
                         )}
                       </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="align-middle small">
+                    {vq.attachment?.url ? (
+                      <div className="d-flex align-items-center gap-2">
+                        <span
+                          className="text-truncate"
+                          style={{ maxWidth: 160 }}
+                          title={vq.attachment.originalName}
+                        >
+                          <i className="bx bx-paperclip me-1"></i>
+                          {vq.attachment.originalName || "Quotation"}
+                        </span>
+                        <Button
+                          size="sm"
+                          color="light"
+                          title="Preview"
+                          onClick={() => setPreviewFile(vq.attachment)}
+                        >
+                          <i className="bx bx-show"></i>
+                        </Button>
+                      </div>
                     ) : (
                       "—"
                     )}
@@ -344,6 +382,7 @@ const RFQDetail = ({ rfqId, onBack }) => {
                         onChange={(e) => updateDraftLine(idx, "taxPercent", e.target.value)}
                       >
                         <option value={0}>0%</option>
+                        <option value={5}>5%</option>
                         <option value={12}>12%</option>
                         <option value={18}>18%</option>
                         <option value={28}>28%</option>
@@ -353,6 +392,25 @@ const RFQDetail = ({ rfqId, onBack }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <Label>
+            Vendor Quotation <span className="text-danger">*</span>
+          </Label>
+          <Input
+            type="file"
+            accept=".pdf,image/*"
+            className="mb-1"
+            onChange={(e) => setDraftFile(e.target.files?.[0] || null)}
+          />
+          <div className="text-muted small mb-3">
+            {quoteModalFor?.attachment?.url && !draftFile ? (
+              <>
+                Current file attached. Choose a file only to replace it.
+              </>
+            ) : (
+              "Attach the quotation received from the vendor (PDF or image)"
+            )}
           </div>
 
           <Label>Remarks</Label>
@@ -372,6 +430,43 @@ const RFQDetail = ({ rfqId, onBack }) => {
               {saving ? "Saving..." : "Save Quote"}
             </Button>
           </div>
+        </ModalBody>
+      </Modal>
+
+      <Modal isOpen={!!previewFile} toggle={() => setPreviewFile(null)} centered size="xl">
+        <ModalBody className="p-3">
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <div className="fw-semibold text-truncate" style={{ maxWidth: "70%" }}>
+              {previewFile?.originalName || "Quotation"}
+            </div>
+            <div className="d-flex gap-2">
+              <a
+                className="btn btn-light btn-sm"
+                href={previewFile?.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <i className="bx bx-link-external me-1"></i> Open in new tab
+              </a>
+              <Button size="sm" color="light" onClick={() => setPreviewFile(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+          {previewFile &&
+            (/\.(png|jpe?g|gif|webp)$/i.test(previewFile.originalName || previewFile.url) ? (
+              <img
+                src={previewFile.url}
+                alt="Quotation"
+                style={{ maxWidth: "100%", maxHeight: "75vh", display: "block", margin: "0 auto" }}
+              />
+            ) : (
+              <iframe
+                title="Quotation preview"
+                src={previewFile.url}
+                style={{ width: "100%", height: "75vh", border: 0 }}
+              />
+            ))}
         </ModalBody>
       </Modal>
     </div>

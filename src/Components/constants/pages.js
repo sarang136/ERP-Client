@@ -28,6 +28,13 @@ const pages = [
     icon: "bx bx-user",
   },
   {
+    id: "psychologist",
+    label: "Psychologist",
+    name: "Psychologist",
+    link: "/psychologist",
+    icon: "bx bx-comment-detail",
+  },
+  {
     id: "emergency",
     label: "Emergency",
     name: "Emergency",

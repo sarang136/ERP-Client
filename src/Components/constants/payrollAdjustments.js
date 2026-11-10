@@ -8,6 +8,7 @@ export const adjustmentEarningOptions = [
 
 export const adjustmentDeductionOptions = [
     { value: "PT_ARREAR", label: "PT Arrear" },
+    { value: "PF_ARREAR", label: "PF Arrear" },
     { value: "VOLUNTARY_PF", label: "Voluntary PF" },
     { value: "OTHER_DEDUCTION", label: "Other Deduction" },
 ];

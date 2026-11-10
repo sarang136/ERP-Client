@@ -1,4 +1,4 @@
-const indianStatesAndUTs = [
+export const indianStatesAndUTs = [
     "Andhra Pradesh",
     "Arunachal Pradesh",
     "Assam",

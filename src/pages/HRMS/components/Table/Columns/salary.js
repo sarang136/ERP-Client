@@ -392,6 +392,13 @@ export const salaryColumns = ({ searchText, copyId, onCopy, onOpen, onApprove, o
         style: employeeDeductionStyle,
     },
     {
+        name: <div>PF Arrear</div>,
+        selector: row => formatCurrency((row?.earned?.PFArrears || 0) + (row?.earned?.adjustments?.PF_ARREAR || 0)),
+        wrap: true,
+        center: true,
+        style: employeeDeductionStyle,
+    },
+    {
         name: <div>TDS</div>,
         selector: row => formatCurrency(row?.earned?.TDSAmount),
         wrap: true,

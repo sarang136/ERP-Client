@@ -26,6 +26,7 @@ const CURRENT_FISCAL_YEAR = getCurrentFiscalYear();
 const BudgetForm = ({ editingItem, onSaved, onCancel }) => {
   const handleAuthError = useAuthError();
   const { items: departments } = useReferenceList("departments");
+  const { items: centers } = useReferenceList("centers");
   const [userSearch, setUserSearch] = useState("");
   const [userOptions, setUserOptions] = useState([]);
   const [selectedUserLabel, setSelectedUserLabel] = useState(
@@ -55,6 +56,7 @@ const BudgetForm = ({ editingItem, onSaved, onCancel }) => {
     initialValues: {
       budgetType: editingItem?.budgetType || "department",
       fiscalYear: editingItem?.fiscalYear || CURRENT_FISCAL_YEAR,
+      centerId: editingItem?.centerId?._id || editingItem?.centerId || "",
       departmentId:
         editingItem?.departmentId?._id || editingItem?.departmentId || "",
       departmentBudgetHeadId:
@@ -68,6 +70,10 @@ const BudgetForm = ({ editingItem, onSaved, onCancel }) => {
     validationSchema: Yup.object({
       budgetType: Yup.string().required(),
       fiscalYear: Yup.string().trim().required("Fiscal year is required"),
+      centerId: Yup.string().when("budgetType", {
+        is: "department",
+        then: (schema) => schema.required("Center is required"),
+      }),
       departmentId: Yup.string().when("budgetType", {
         is: "department",
         then: (schema) => schema.required("Department is required"),
@@ -83,6 +89,7 @@ const BudgetForm = ({ editingItem, onSaved, onCancel }) => {
       if (Object.keys(errors).length > 0) {
         setTouched({
           fiscalYear: true,
+          centerId: true,
           departmentId: true,
           departmentBudgetHeadId: true,
           requestedAmount: true,
@@ -94,7 +101,10 @@ const BudgetForm = ({ editingItem, onSaved, onCancel }) => {
         ...values,
         requestedAmount: Number(values.requestedAmount),
       };
-      if (payload.budgetType === "global") delete payload.departmentId;
+      if (payload.budgetType === "global") {
+        delete payload.departmentId;
+        delete payload.centerId;
+      }
 
       try {
         if (editingItem) {
@@ -164,8 +174,8 @@ const BudgetForm = ({ editingItem, onSaved, onCancel }) => {
                 <div>
                   <div className="fw-semibold small">Department Budget</div>
                   <div className="text-muted" style={{ fontSize: 11.5 }}>
-                    Allocated to a single department. Available in PR, PO, and
-                    projects for that department only.
+    Allocated to one department of one center. Available in PR and PO
+                    for that center's department only.
                   </div>
                 </div>
               </div>
@@ -225,6 +235,33 @@ const BudgetForm = ({ editingItem, onSaved, onCancel }) => {
               </Input>
               <FormFeedback>{validation.errors.fiscalYear}</FormFeedback>
             </Col>
+
+            {v.budgetType === "department" && (
+              <Col md={4} className="mb-4">
+                <Label>
+                  Center <span className="text-danger">*</span>
+                </Label>
+                <Input
+                  type="select"
+                  value={v.centerId}
+                  onChange={(e) =>
+                    validation.setFieldValue("centerId", e.target.value)
+                  }
+                  onBlur={validation.handleBlur}
+                  invalid={
+                    validation.touched.centerId && !!validation.errors.centerId
+                  }
+                >
+                  <option value="">Select Center</option>
+                  {centers.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </Input>
+                <FormFeedback>{validation.errors.centerId}</FormFeedback>
+              </Col>
+            )}
 
             {v.budgetType === "department" && (
               <Col md={4} className="mb-4">

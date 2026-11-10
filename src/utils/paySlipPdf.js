@@ -375,7 +375,7 @@ const StandardPayslip = ({ row }) => {
     { label: "PF Employee",    value: row?.pfEmployee     ?? null },
     // { label: "PF Employer", value: row?.pfEmployer     ?? null }, // PF Employer hidden from payslip
     { label: "Voluntary PF",   value: withAdjustment(row?.voluntaryPF ?? null, adjustments.voluntaryPF) },
-    { label: "PF Arrear",      value: row?.pfArrear       ?? null },
+    { label: "PF Arrear",      value: withAdjustment(row?.PFArrears ?? null, adjustments.pfArrear) },
     { label: "Member ESIC",    value: row?.esicEmployee   ?? null },
     { label: "LWF",            value: row?.LWFEmployee    ?? null },
     { label: "PT",             value: row?.PT             ?? null },
@@ -584,6 +584,7 @@ const SimplifiedPayslip = ({ row, cfg }) => {
     TDSAmount: num(row?.TDSAmount),
     advanceSalary: num(row?.advanceSalary),
     PTArrears: num(row?.PTArrears) + num(adjustments.ptArrear),
+    PFArrears: num(row?.PFArrears) + num(adjustments.pfArrear),
     voluntaryPF: num(row?.voluntaryPF) + num(adjustments.voluntaryPF),
     otherDeductions: num(row?.otherDeductions) + num(adjustments.otherDeduction),
     insurance: num(row?.insurance),
@@ -645,6 +646,7 @@ const CONSULTANT_CFG = {
     ["TDS", "TDSAmount"],
     ["Advance Recovery", "advanceSalary"],
     ["PT Arrear", "PTArrears"],
+    ["PF Arrear", "PFArrears"],
     ["Voluntary PF", "voluntaryPF"],
     ["Other Recovery", "otherDeductions"],
     ["Insurance", "insurance"],
@@ -661,6 +663,7 @@ const INTERN_CFG = {
   deductionFields: [
     ["Advance Recovery", "advanceSalary"],
     ["PT Arrear", "PTArrears"],
+    ["PF Arrear", "PFArrears"],
     ["Voluntary PF", "voluntaryPF"],
     ["Other Recoveries", "otherDeductions"],
     ["Insurance", "insurance"],

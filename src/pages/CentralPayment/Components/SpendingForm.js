@@ -23,9 +23,8 @@ import { categoryOptions, tallyBankAccounts } from '../../../Components/constant
 import Select from "react-select";
 import { getExitEmployeesBySearch } from '../../../store/features/HR/hrSlice';
 import AsyncSelect from "react-select/async";
-import CreatableSelect from "react-select/creatable";
 import { formatCurrency } from '../../../utils/formatCurrency';
-import { getSearchPatients, getEmployeesBySearch, getVendors } from '../../../helpers/backend_helper';
+import { getSearchPatients, getEmployeesBySearch, getVendors, getCentralPaymentVendorPan } from '../../../helpers/backend_helper';
 
 const transactionMethodOptions = [
     { value: "UPI", label: "UPI" },
@@ -72,6 +71,9 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             title: c.title,
         }));
 
+    // PAN card already on file for the chosen vendor (Vendor Management or an earlier payment), so it is not asked for again
+    const [savedPan, setSavedPan] = useState(null);
+    const panCardOnFileRef = useRef(false);
     const [existingFiles, setExistingFiles] = useState(paymentData?.attachments || []);
     const [removedAttachments, setRemovedAttachments] = useState([]);
     const [existingScreenshot] = useState(paymentData?.transactionProof || null);
@@ -154,6 +156,27 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         GSTAmount: Yup.string()
             .required("GST amount is required")
             .matches(/^\d+(\.\d{1,2})?$/, "GST amount can have at most 2 decimal places"),
+        panNumber: Yup.string().when("TDSRate", {
+            is: (v) => Number(v) > 0,
+            then: (schema) => schema
+                .trim()
+                .required("PAN card number is required when TDS is applied")
+                .matches(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "Enter a valid PAN, e.g. ABCDE1234F"),
+            otherwise: (schema) => schema.notRequired(),
+        }),
+        panCard: Yup.array().when("TDSRate", {
+            is: (v) => Number(v) > 0,
+            then: (schema) => schema
+                .test("fileSize", "File must be under 100MB", (files) => {
+                    if (!files || files.length === 0) return true;
+                    return files.every((f) => f.size <= 100 * 1024 * 1024);
+                })
+                .test("panCardRequired", "PAN card upload is required when TDS is applied", (files) => {
+                    // a PAN card already on file for this vendor counts, so it is not asked for again
+                    return (files && files.length > 0) || panCardOnFileRef.current;
+                }),
+            otherwise: (schema) => schema.notRequired(),
+        }),
         IFSCCode: Yup.string().when("initialPaymentStatus", {
             is: "COMPLETED",
             then: (schema) => schema.notRequired(),
@@ -275,6 +298,8 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             IFSCCode: paymentData?.bankDetails?.IFSCCode || "",
             accountHolderName: paymentData?.bankDetails?.accountHolderName || "",
             accountNo: paymentData?.bankDetails?.accountNo || "",
+            panNumber: paymentData?.panNumber || "",
+            panCard: [],
             initialPaymentStatus: paymentData?.initialPaymentStatus || "",
             TDSRate: paymentData?.TDSRate || "",
             attachmentType: paymentData?.attachmentType || "",
@@ -310,7 +335,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             const formData = new FormData();
 
             Object.entries(values).forEach(([key, val]) => {
-                if (key === "attachments" || key === "paymentScreenshot") return;
+                if (key === "attachments" || key === "paymentScreenshot" || key === "panCard") return;
 
                 if (key === "date" || key === "invoiceDate") {
                     const now = new Date();
@@ -369,6 +394,9 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
 
             values.attachments.forEach(f => formData.append("attachments", f));
             values.paymentScreenshot.forEach(f => formData.append("paymentScreenshot", f));
+            if (Number(values.TDSRate) > 0 && !panCardOnFileRef.current) {
+                values.panCard.forEach(f => formData.append("panCard", f));
+            }
             if (paymentData?._id && removedAttachments.length > 0) {
                 formData.append("removedAttachments", JSON.stringify(removedAttachments));
             }
@@ -408,46 +436,147 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         form.setFieldValue("initialPaymentStatus", mode, true);
     };
 
-    // Vendors created as "Central Payment Vendor" in Master Data. Typing a new name still works.
-    const [centralVendors, setCentralVendors] = useState([]);
-    useEffect(() => {
-        let cancelled = false;
-        getVendors({ vendorCategory: "central_payment", limit: 1000 })
-            .then((res) => { if (!cancelled) setCentralVendors(res?.data || []); })
-            .catch(() => { });
-        return () => { cancelled = true; };
-    }, []);
+    // Only Active vendors created as "Central Payment Vendor" in Vendor Management can be chosen. They are
+    // searched on the server as the user types, because there are more of them than fit in one list.
 
     // Commas break the Tally payment line, so they are removed from anything copied from the vendor
     const clean = (t) => String(t || "").replace(/,/g, " ").replace(/\s+/g, " ").trim();
-    const vendorOptions = centralVendors.map((v) => ({
-        value: v._id,
-        label: clean(v.tradeName),
-        vendor: v,
-    }));
+    const toVendorOption = (v) => ({ value: v._id, label: clean(v.tradeName), vendor: v });
+    const escapeRegex = (t) => String(t || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const searchVendors = (text, limit = 50) =>
+        getVendors({ vendorCategory: "central_payment", status: "active", search: escapeRegex(text), limit })
+            .then((res) => (res?.data || []).map(toVendorOption))
+            .catch(() => []);
+
+    const findMasterVendor = async (name) => {
+        const wanted = clean(name).toLowerCase();
+        if (!wanted) return null;
+        const found = await searchVendors(name, 20);
+        return found.find((o) => o.label.toLowerCase() === wanted) || null;
+    };
+
+    const loadSavedPan = (name) =>
+        getCentralPaymentVendorPan(name)
+            .then((res) => res?.data || null)
+            .catch(() => null);
+
+    // Name of the master vendor currently chosen; while it matches the Vendor field, its bank details are locked
+    const [masterVendorName, setMasterVendorName] = useState("");
+    const [masterVendorPan, setMasterVendorPan] = useState("");
+    const vendorLocked =
+        !!masterVendorName &&
+        masterVendorName.toLowerCase() === String(form.values.vendor || "").trim().toLowerCase();
+
+    // Editing an existing payment: lock the bank details if its vendor is in the master
+    useEffect(() => {
+        let cancelled = false;
+        if (form.values.vendor) {
+            findMasterVendor(form.values.vendor).then((o) => {
+                if (cancelled || !o) return;
+                setMasterVendorName(o.label);
+                setMasterVendorPan(clean(o.vendor.pan).toUpperCase());
+            });
+            loadSavedPan(form.values.vendor).then((saved) => { if (!cancelled) setSavedPan(saved); });
+        }
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleVendorSelect = (opt) => {
-        if (!opt) {
+        if (!opt?.vendor) {
+            setMasterVendorName("");
+            setMasterVendorPan("");
             form.setFieldValue("vendor", "");
+            // PAN details belong to the vendor, so they go with it
+            form.setFieldValue("panNumber", "");
+            form.setFieldValue("panCard", []);
+            setSavedPan(null);
             return;
         }
-        if (opt.vendor) {
-            const bank = opt.vendor.bankDetails || {};
-            form.setFieldValue("vendor", clean(opt.vendor.tradeName));
-            form.setFieldValue("IFSCCode", clean(bank.ifsc).toUpperCase());
-            form.setFieldValue("accountHolderName", clean(bank.accountHolderName));
-            form.setFieldValue("accountNo", clean(bank.accountNo));
-            return;
-        }
-        // typed a name that is not in the vendor master: keep the old rules
-        const text = String(opt.label || "");
-        if (!/^[a-zA-Z0-9 ]*$/.test(text)) {
-            form.setFieldTouched("vendor", true, false);
-            form.setFieldError("vendor", "No special characters allowed");
-            return;
-        }
-        form.setFieldValue("vendor", text);
+        const bank = opt.vendor.bankDetails || {};
+        const vendorPan = clean(opt.vendor.pan).toUpperCase();
+        setMasterVendorName(clean(opt.vendor.tradeName));
+        setMasterVendorPan(vendorPan);
+        // Always replaced, so the previous vendor's PAN number and PAN card file never stay behind
+        form.setFieldValue("panNumber", vendorPan);
+        form.setFieldValue("panCard", []);
+        setSavedPan(null);
+        loadSavedPan(clean(opt.vendor.tradeName)).then((saved) => {
+            setSavedPan(saved);
+            // a vendor without a PAN in Vendor Management gets the PAN from the earlier payment, if there is one
+            if (!vendorPan && saved?.panNumber) form.setFieldValue("panNumber", saved.panNumber);
+        });
+        form.setFieldValue("vendor", clean(opt.vendor.tradeName));
+        form.setFieldValue("IFSCCode", clean(bank.ifsc).toUpperCase());
+        form.setFieldValue("accountHolderName", clean(bank.accountHolderName));
+        form.setFieldValue("accountNo", clean(bank.accountNo));
     };
+
+    // TDS needs the vendor's PAN card number and a copy of the PAN card.
+    // A PAN that comes from the Vendor master is not editable here.
+    const vendorUnchanged =
+        String(form.values.vendor || "").trim().toUpperCase() === String(paymentData?.vendor || "").trim().toUpperCase();
+    const typedPan = String(form.values.panNumber || "").toUpperCase();
+    const panCardOnFile =
+        (paymentData?.panCard?.url && vendorUnchanged && paymentData.panCard) ||
+        (savedPan?.panCard?.url && (!savedPan.panNumber || savedPan.panNumber.toUpperCase() === typedPan) && savedPan.panCard) ||
+        null;
+    panCardOnFileRef.current = !!panCardOnFile;
+    // The PAN number and PAN card that come with the vendor cannot be changed here (change them in Vendor Management)
+    const panLocked = !!panCardOnFile || (vendorLocked && !!masterVendorPan);
+    const renderPanFields = (suffix) => Number(form.values.TDSRate) > 0 && (
+        <>
+            <FormGroup>
+                <Label for={`panNumber${suffix}`} className="fw-medium">
+                    PAN Card No <span className="text-danger">*</span>
+                </Label>
+                <Input
+                    type="text"
+                    id={`panNumber${suffix}`}
+                    name="panNumber"
+                    value={form.values.panNumber}
+                    readOnly={panLocked}
+                    maxLength={10}
+                    onChange={(e) => form.setFieldValue("panNumber", e.target.value.toUpperCase().replace(/\s/g, ""))}
+                    onBlur={form.handleBlur}
+                    className={`form-control ${panLocked ? "bg-light" : ""} ${form.touched.panNumber && form.errors.panNumber ? "is-invalid" : ""}`}
+                />
+                {form.touched.panNumber && form.errors.panNumber && (
+                    <div className="invalid-feedback d-block">
+                        <i className="fas fa-exclamation-circle me-1"></i>
+                        {form.errors.panNumber}
+                    </div>
+                )}
+            </FormGroup>
+            <FormGroup>
+                <Label className="fw-medium">
+                    PAN Card Upload {!panCardOnFile && <span className="text-danger">*</span>}
+                </Label>
+                {panCardOnFile ? (
+                    <div className="form-control bg-light d-flex align-items-center" style={{ height: "auto", minHeight: 38 }}>
+                        <i className="fas fa-lock text-muted me-2"></i>
+                        <a href={panCardOnFile.url} target="_blank" rel="noopener noreferrer">
+                            {panCardOnFile.originalName || "View PAN card"}
+                        </a>
+                    </div>
+                ) : (
+                    <FileUpload
+                        inputId={`panCardUploadInput${suffix}`}
+                        files={form.values.panCard || []}
+                        setFiles={(files) => form.setFieldValue("panCard", files)}
+                        multiple={false}
+                    />
+                )}
+                {form.touched.panCard && form.errors.panCard && (
+                    <div className="invalid-feedback d-block">
+                        <i className="fas fa-exclamation-circle me-1"></i>
+                        {form.errors.panCard}
+                    </div>
+                )}
+            </FormGroup>
+        </>
+    );
 
     const normalizeTextInput = (e) => {
         const { name, value } = e.target;
@@ -886,15 +1015,17 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                 <Label for="vendor" className="fw-medium">
                     Vendor <span className="text-danger">*</span>
                 </Label>
-                <CreatableSelect
+                <AsyncSelect
                     inputId="vendor"
                     isClearable
-                    placeholder="Select a Central Payment vendor or type a name"
-                    options={vendorOptions}
+                    cacheOptions
+                    defaultOptions
+                    loadOptions={(text) => searchVendors(text)}
+                    placeholder="Select vendor"
+                    noOptionsMessage={() => "No active vendor found. Create it in Vendor Management first."}
                     value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
                     onChange={handleVendorSelect}
                     onBlur={() => form.setFieldTouched("vendor", true)}
-                    formatCreateLabel={(text) => `Use "${text}" (not in vendor master)`}
                     classNamePrefix="react-select"
                     styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
                 />
@@ -1024,9 +1155,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="IFSCCode"
                     name="IFSCCode"
                     value={form.values.IFSCCode}
+                    readOnly={vendorLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${form.touched.IFSCCode && form.errors.IFSCCode
+                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.IFSCCode && form.errors.IFSCCode
                         ? "is-invalid"
                         : ""
                         }`}
@@ -1047,9 +1179,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="accountHolderName"
                     name="accountHolderName"
                     value={form.values.accountHolderName}
+                    readOnly={vendorLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${form.touched.accountHolderName && form.errors.accountHolderName
+                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.accountHolderName && form.errors.accountHolderName
                         ? "is-invalid"
                         : ""
                         }`}
@@ -1070,9 +1203,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="accountNo"
                     name="accountNo"
                     value={form.values.accountNo}
+                    readOnly={vendorLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${form.touched.accountNo && form.errors.accountNo
+                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.accountNo && form.errors.accountNo
                         ? "is-invalid"
                         : ""
                         }`}
@@ -1107,6 +1241,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     </div>
                 )}
             </FormGroup>
+            {renderPanFields("A")}
             <FormGroup>
                 <Label className="fw-medium">
                     You need to upload at least one of the following <span className="text-danger">*</span>
@@ -1270,15 +1405,17 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                 <Label for="vendor" className="fw-medium">
                     Vendor <span className="text-danger">*</span>
                 </Label>
-                <CreatableSelect
+                <AsyncSelect
                     inputId="vendor"
                     isClearable
-                    placeholder="Select a Central Payment vendor or type a name"
-                    options={vendorOptions}
+                    cacheOptions
+                    defaultOptions
+                    loadOptions={(text) => searchVendors(text)}
+                    placeholder="Select vendor"
+                    noOptionsMessage={() => "No active vendor found. Create it in Vendor Management first."}
                     value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
                     onChange={handleVendorSelect}
                     onBlur={() => form.setFieldTouched("vendor", true)}
-                    formatCreateLabel={(text) => `Use "${text}" (not in vendor master)`}
                     classNamePrefix="react-select"
                     styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
                 />
@@ -1420,6 +1557,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     </div>
                 )}
             </FormGroup>
+            {renderPanFields("B")}
             <FormGroup>
                 <Label for="transactionId" className="fw-medium">
                     Transaction ID <span className="text-danger">*</span>

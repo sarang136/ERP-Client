@@ -8,16 +8,16 @@ import moment from "moment";
 import "flatpickr/dist/flatpickr.css";
 
 const METRICS = [
-    { label: "Nurses Data",                                     key: "nurses_data",        compliance: true },
-    { label: "Clinical Notes",                                  key: "clinical_notes",     compliance: true },
-    { label: "Vital Signs",                                     key: "vital_signs",        compliance: true },
-    { label: "Counseling Sessions",                             key: "counselling_sessions", compliance: true },
-    { label: "Round Notes",                                     key: "round_notes",        compliance: true },
-    { label: "Attendance Count",                                key: "attendance_count",   compliance: true },
-    { label: "Invoice Creation",                                key: "invoice_creation",   compliance: true },
+    { label: "Nurses Data",                                     key: "nurses_data",        compliance: true, highlightLowCompliance: true },
+    { label: "Clinical Notes",                                  key: "clinical_notes",     compliance: true, highlightLowCompliance: true },
+    { label: "Vital Signs",                                     key: "vital_signs",        compliance: true, highlightLowCompliance: true },
+    { label: "Counseling Sessions",                             key: "counselling_sessions", compliance: true, highlightLowCompliance: true },
+    { label: "Round Notes",                                     key: "round_notes",        compliance: true, highlightLowCompliance: true },
+    { label: "Attendance Count",                                key: "attendance_count",   compliance: true, highlightLowCompliance: true },
+    { label: "Invoice Creation",                                key: "invoice_creation",   compliance: true, highlightLowCompliance: true },
     { label: "Till Date Revenue MTD / Advance Payment",         key: "revenue_mtd",        revenueRow: true, compliance: true },
-    { label: "Docs Till Date(Ipd) MTD",                        key: "docs_ipd",           compliance: true },
-    { label: "Docs (Opd). MTD",                                key: "docs_opd",           compliance: true },
+    { label: "Docs Till Date(Ipd) MTD",                        key: "docs_ipd",           compliance: true, highlightLowCompliance: true },
+    { label: "Docs (Opd). MTD",                                key: "docs_opd",           compliance: true, highlightLowCompliance: true },
     { label: "Occupancy Till Date",                             key: "occupancy_mtd",      compliance: false },
     { label: "Admission MTD",                                   key: "admission_mtd",      compliance: false },
     { label: "Discharged MTD",                                  key: "discharged_mtd",     compliance: false },
@@ -159,7 +159,7 @@ const DailyDashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {METRICS.map(({ label, key, revenueRow, compliance: showCompliance }, idx) => {
+                                    {METRICS.map(({ label, key, revenueRow, compliance: showCompliance, highlightLowCompliance }, idx) => {
                                         const metric = selectedRow[key] || {};
                                         const shouldBe = metric.should_be_count ?? null;
                                         const actual = metric.result_count ?? null;
@@ -168,6 +168,11 @@ const DailyDashboard = () => {
                                                 ? computeRevenueCompliance(actual, shouldBe)
                                                 : computeCompliance(actual, shouldBe))
                                             : "";
+                                        const isLowCompliance =
+                                            highlightLowCompliance &&
+                                            typeof compliance === "string" &&
+                                            compliance.endsWith("%") &&
+                                            parseInt(compliance, 10) < 100;
                                         return (
                                             <tr key={key}>
                                                 <td className="px-2 py-1 fw-semibold" style={cellStyle(idx)}>
@@ -179,7 +184,13 @@ const DailyDashboard = () => {
                                                 <td className="text-center px-2 py-1" style={cellStyle(idx)}>
                                                     {actual != null ? actual : ""}
                                                 </td>
-                                                <td className="text-center px-2 py-1" style={cellStyle(idx)}>
+                                                <td
+                                                    className="text-center px-2 py-1 fw-semibold"
+                                                    style={{
+                                                        ...cellStyle(idx),
+                                                        background: isLowCompliance ? "#ffcdd2" : cellStyle(idx).background,
+                                                    }}
+                                                >
                                                     {compliance}
                                                 </td>
                                             </tr>

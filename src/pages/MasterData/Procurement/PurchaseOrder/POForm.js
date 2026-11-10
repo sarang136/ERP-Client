@@ -116,6 +116,7 @@ const POForm = ({ onSaved, onCancel }) => {
         then: (schema) => schema.required("Budget is required"),
       }),
       deliverySiteId: Yup.string().required("Delivery site is required"),
+      billingSiteId: Yup.string().required("Bill To is required"),
       expectedDeliveryDate: Yup.string().required(
         "Expected delivery date is required",
       ),
@@ -150,6 +151,7 @@ const POForm = ({ onSaved, onCancel }) => {
           justification: true,
           lineItems: true,
           deliverySiteId: true,
+          billingSiteId: true,
           expectedDeliveryDate: true,
         });
         toast.error("Please fill in all required fields");
@@ -720,13 +722,16 @@ const POForm = ({ onSaved, onCancel }) => {
                 </Input>
               </Col>
               <Col md={6} className="mb-3">
-                <Label>Bill To</Label>
+                <Label>
+                  Bill To <span className="text-danger">*</span>
+                </Label>
                 <Input
                   type="select"
                   value={v.billingSiteId}
                   onChange={(ev) =>
                     validation.setFieldValue("billingSiteId", ev.target.value)
                   }
+                  invalid={t.billingSiteId && !!e.billingSiteId}
                 >
                   <option value="">Select billing site</option>
                   {centers.map((c) => (
@@ -735,6 +740,7 @@ const POForm = ({ onSaved, onCancel }) => {
                     </option>
                   ))}
                 </Input>
+                <FormFeedback>{e.billingSiteId}</FormFeedback>
               </Col>
             </Row>
           </div>
@@ -903,6 +909,7 @@ const POForm = ({ onSaved, onCancel }) => {
                               }
                             >
                               <option value={0}>0%</option>
+                              <option value={5}>5%</option>
                               <option value={12}>12%</option>
                               <option value={18}>18%</option>
                               <option value={28}>28%</option>
