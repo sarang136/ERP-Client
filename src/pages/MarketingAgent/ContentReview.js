@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import {
   Badge,
   Button,
@@ -16,6 +17,8 @@ import {
   approveContent,
   editContent,
   generateContent,
+  getActiveJob,
+  rewriteWeek,
   getContentChecks,
   getContentList,
   getPlans,
@@ -38,11 +41,17 @@ import {
   notifyError,
   useAction,
   useAgentAccess,
-  useJob,
   usePagedList,
   PANE,
 } from "./common";
-import { ImageTools, PostPreview, VideoTools } from "./PostPreview";
+import JobProgress from "./JobProgress";
+import RewriteWeek from "./RewriteWeek";
+import {
+  ButtonTools,
+  ImageTools,
+  PostPreview,
+  VideoTools,
+} from "./PostPreview";
 
 const TABS = [
   { state: "awaiting_b", label: "Marketing lead" },
@@ -243,6 +252,11 @@ const Detail = ({ item, onChanged }) => {
                   canEdit={can("CONTENT") && item.state !== "published"}
                 />
               )}
+              <ButtonTools
+                item={item}
+                onChanged={onChanged}
+                canEdit={can("CONTENT") && item.state !== "published"}
+              />
               <ImageTools
                 item={item}
                 onChanged={onChanged}
@@ -398,7 +412,10 @@ const ContentReview = () => {
   const [selectedId, setSelectedId] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [weekId, setWeekId] = useState("");
-  const { run, running } = useJob();
+  const [writingJob, setWritingJob] = useState(null);
+  const [showProgress, setShowProgress] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [rewriting, setRewriting] = useState(false);
   const { can } = useAgentAccess();
   const selected =
     list.items.find((i) => i.id === selectedId) || list.items[0] || null;
@@ -409,12 +426,89 @@ const ContentReview = () => {
       .catch(() => setWeeks([]));
   }, []);
 
-  const write = async () => {
-    const job = await run(() => generateContent({ week_id: weekId }), {
-      successText: "Content written and checked",
-    });
-    if (job?.status === "succeeded") list.reload();
+  const selectedWeek = selected?.week_id;
+  useEffect(() => {
+    if (!weekId && selectedWeek && weeks.some((w) => w.id === selectedWeek)) {
+      setWeekId(selectedWeek);
+    }
+  }, [weekId, selectedWeek, weeks]);
+
+  useEffect(() => {
+    setWritingJob(null);
+    if (!weekId) return undefined;
+    let alive = true;
+    let timer;
+    const look = async () => {
+      try {
+        const job = await getActiveJob(`content:week:${weekId}`);
+        if (!alive) return;
+        setWritingJob(
+          (current) => job || (current?.week === weekId ? current : null),
+        );
+      } catch {
+        if (!alive) return;
+      }
+      timer = setTimeout(look, 5000);
+    };
+    look();
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [weekId]);
+
+  const write = async (start = () => generateContent({ week_id: weekId })) => {
+    setRewriting(false);
+    setStarting(true);
+    try {
+      const job = await start();
+      setWritingJob({ ...job, week: weekId });
+      setShowProgress(true);
+    } catch (e) {
+      if (e.status === 409 && e.details?.job_id) {
+        setWritingJob({
+          id: e.details.job_id,
+          actor: e.details.actor,
+          week: weekId,
+        });
+        setShowProgress(true);
+        toast.info(
+          `${String(e.details.actor || "Someone")
+            .split(":")
+            .pop()} is already writing this week: showing its progress`,
+        );
+      } else {
+        notifyError(e);
+      }
+    } finally {
+      setStarting(false);
+    }
   };
+
+  const reload = list.reload;
+  const finished = useCallback(
+    (job) => {
+      reload();
+      if (job.status === "succeeded")
+        toast.success("Content written and checked");
+      else toast.error(job.error || "Writing stopped");
+      setWritingJob((current) =>
+        current
+          ? { ...current, status: job.status, progress: job.progress }
+          : current,
+      );
+    },
+    [reload],
+  );
+
+  const busyWriting =
+    writingJob && ["queued", "running", undefined].includes(writingJob.status);
+  const weekName = (() => {
+    const w = weeks.find((x) => x.id === weekId);
+    return w
+      ? `${w.city} · week of ${new Date(w.week_start).toLocaleDateString("en-IN")}`
+      : "";
+  })();
 
   const onChanged = (updated) => {
     setSelectedId(updated.state === tab ? updated.id : null);
@@ -444,17 +538,92 @@ const ContentReview = () => {
                 </option>
               ))}
             </Input>
-            <Button
-              size="sm"
-              color="primary"
-              disabled={!weekId || running}
-              onClick={write}
-            >
-              {running ? "Writing…" : "Write content for the week"}
-            </Button>
+            {busyWriting ? (
+              <Button
+                size="sm"
+                color="warning"
+                onClick={() => setShowProgress(true)}
+              >
+                <i className="bx bx-loader-alt bx-spin me-1" />
+                Writing
+                {writingJob.progress?.total
+                  ? ` ${writingJob.progress.done} of ${writingJob.progress.total}`
+                  : "…"}{" "}
+                · see progress
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                color="primary"
+                disabled={!weekId || starting}
+                onClick={() => write()}
+              >
+                {starting ? "Starting…" : "Write content for the week"}
+              </Button>
+            )}
+            {!busyWriting && (
+              <Button
+                size="sm"
+                color="warning"
+                outline
+                disabled={!weekId || starting}
+                title={weekId ? "" : "Pick an approved week first"}
+                onClick={() => setRewriting(true)}
+              >
+                <i className="bx bx-revision me-1" />
+                Rewrite all posts
+              </Button>
+            )}
+            {writingJob && !busyWriting && (
+              <Button
+                size="sm"
+                color="secondary"
+                outline
+                onClick={() => setShowProgress(true)}
+              >
+                Last run
+              </Button>
+            )}
           </>
         )}
       </PageHeader>
+      {busyWriting && writingJob.actor && (
+        <div
+          className="alert alert-warning py-2 d-flex align-items-center gap-2"
+          style={{ fontSize: 13 }}
+        >
+          <i className="bx bx-loader-alt bx-spin" />
+          <span>
+            <strong>{String(writingJob.actor).split(":").pop()}</strong> is
+            writing {weekName}. Nobody can start it again until it finishes.
+          </span>
+          <Button
+            size="sm"
+            color="warning"
+            outline
+            className="ms-auto"
+            onClick={() => setShowProgress(true)}
+          >
+            See progress
+          </Button>
+        </div>
+      )}
+      <RewriteWeek
+        weekId={weekId}
+        weekName={weekName}
+        isOpen={rewriting}
+        onClose={() => setRewriting(false)}
+        onStart={(body) => write(() => rewriteWeek(body))}
+      />
+      {writingJob?.id && (
+        <JobProgress
+          jobId={writingJob.id}
+          title={`Writing content: ${weekName}`}
+          isOpen={showProgress}
+          onClose={() => setShowProgress(false)}
+          onFinished={finished}
+        />
+      )}
       <Nav tabs className="mb-3">
         {TABS.map((t) => (
           <NavItem key={t.state}>

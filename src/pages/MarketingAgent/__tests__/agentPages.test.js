@@ -621,6 +621,7 @@ test("google reviews filter good, average and bad", async () => {
   agentApi.listSignals.mockResolvedValue(page([]));
   render(<Signals />);
 
+  fireEvent.click(await screen.findByText("Reviews"));
   const quality = await screen.findByDisplayValue("Good, average and bad");
   await waitFor(() =>
     expect(agentApi.listSignals).toHaveBeenCalledWith({
@@ -687,6 +688,26 @@ test("posts preview with their image and can be regenerated from a prompt", asyn
     expect(agentApi.generateContentImage).toHaveBeenCalledWith(
       "c1",
       "A sunlit reading corner",
+    ),
+  );
+
+  agentApi.getImageFaces.mockResolvedValue({
+    width: 1080,
+    height: 1080,
+    boxes: [{ x: 0.2, y: 0.1, w: 0.3, h: 0.3 }],
+  });
+  agentApi.blurContentImage.mockResolvedValue({
+    ...withImage,
+    image: { ...withImage.image, blurred: true },
+  });
+  fireEvent.click(screen.getByText("Blur parts of the image"));
+  expect(await screen.findByText("1 face found")).toBeInTheDocument();
+  fireEvent.click(screen.getByText("Blur 1 area"));
+  await waitFor(() =>
+    expect(agentApi.blurContentImage).toHaveBeenCalledWith(
+      "c1",
+      [{ type: "ellipse", x: 0.2, y: 0.1, w: 0.3, h: 0.3 }],
+      7,
     ),
   );
 });
@@ -1229,10 +1250,8 @@ test("owner settings show the rules, save them and list every change", async () 
       "A weekly plan must be approved before any post is written",
     ),
   ).toBeInTheDocument();
-  expect(await screen.findByDisplayValue("Warm")).toBeInTheDocument();
-  expect(await screen.findByDisplayValue("rapid detox")).toBeInTheDocument();
-  expect(await screen.findByDisplayValue("31000")).toBeInTheDocument();
-  expect(await screen.findByText("09:30")).toBeInTheDocument();
+  expect(screen.getByText("Monday 10:00")).toBeInTheDocument();
+  expect(await screen.findByText(/^1 of \d+ cities$/)).toBeInTheDocument();
 
   fireEvent.change(screen.getByDisplayValue("10:00"), {
     target: { value: "09:30" },
@@ -1247,9 +1266,17 @@ test("owner settings show the rules, save them and list every change", async () 
     ),
   );
 
-  fireEvent.change(screen.getByDisplayValue("rapid detox"), {
-    target: { value: "rapid detox\ngambling" },
+  fireEvent.click(screen.getByText("Brand voice"));
+  expect(await screen.findByDisplayValue("Warm")).toBeInTheDocument();
+  expect(screen.getByText("Be kind")).toBeInTheDocument();
+  expect(screen.getByText("Shame")).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByText("Off-limits topics").at(-1));
+  expect(await screen.findByText("rapid detox")).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText("e.g. rapid detox"), {
+    target: { value: "gambling" },
   });
+  fireEvent.click(screen.getByText("Add"));
   fireEvent.click(screen.getByText("Save for this city"));
   await waitFor(() =>
     expect(agentApi.setPlaybook).toHaveBeenCalledWith(
@@ -1260,4 +1287,351 @@ test("owner settings show the rules, save them and list every change", async () 
       }),
     ),
   );
+
+  fireEvent.click(screen.getByText("Ad limits"));
+  expect(await screen.findByDisplayValue("31000")).toBeInTheDocument();
+  expect(screen.getByText("Set by Lead")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByText("Change history"));
+  expect(await screen.findByText("09:30")).toBeInTheDocument();
+});
+
+test("writing a week shows live progress and nobody can start it twice", async () => {
+  const week = {
+    id: "w7",
+    city: "pune",
+    week_start: "2026-11-09",
+    status: "approved",
+  };
+  const running = {
+    id: "j9",
+    type: "content",
+    status: "running",
+    actor: "user:2:Asha",
+    created_at: now,
+    started_at: now,
+    progress: {
+      total: 2,
+      done: 1,
+      failed: 0,
+      current: "Talking to a parent: Second check by Gemini",
+      items: [
+        {
+          id: "b1",
+          label: "Withdrawal signs",
+          detail: "Carousel · instagram",
+          status: "done",
+          outcome: "Waiting for the marketing lead",
+          started_at: now,
+          finished_at: now,
+        },
+        {
+          id: "b2",
+          label: "Talking to a parent",
+          detail: "Post · facebook",
+          status: "running",
+          step: "Second check by Gemini",
+          started_at: now,
+        },
+      ],
+    },
+  };
+  agentApi.getPlans.mockResolvedValue(page([week]));
+  agentApi.getContentList.mockResolvedValue(page([]));
+  agentApi.getActiveJob.mockResolvedValue(null);
+  agentApi.getJob.mockResolvedValue(running);
+  agentApi.generateContent.mockRejectedValue({
+    status: 409,
+    message: "this is already running",
+    details: { job_id: "j9", actor: "user:2:Asha" },
+  });
+  render(<ContentReview />);
+
+  const select = await screen.findByDisplayValue("Approved week…");
+  await screen.findByText(/pune · week of/);
+  fireEvent.change(select, { target: { value: "w7" } });
+  fireEvent.click(await screen.findByText("Write content for the week"));
+
+  expect(await screen.findByText("Withdrawal signs")).toBeInTheDocument();
+  expect(
+    screen.getByText("Waiting for the marketing lead"),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Second check by Gemini…")).toBeInTheDocument();
+  expect(screen.getByText("1 of 2 posts")).toBeInTheDocument();
+  expect(screen.getAllByText("Asha").length).toBeGreaterThan(0);
+  expect(agentApi.generateContent).toHaveBeenCalledTimes(1);
+  expect(agentApi.getJob).toHaveBeenCalledWith("j9");
+});
+
+test("plans show the checker report and another user's planning progress", async () => {
+  const week = {
+    id: "w5",
+    city: "pune",
+    week_start: "2026-11-09",
+    status: "draft",
+    summary: "Checked week",
+    briefs: [],
+    verification: {
+      passed: true,
+      rewritten: 1,
+      dropped: [{ topic: "Cure in 7 days", problems: ["Promises a cure."] }],
+      rounds: [
+        {
+          round: 1,
+          checked: 2,
+          flagged: [
+            { topic: "Cure in 7 days", problems: ["Promises a cure."] },
+          ],
+        },
+        { round: 2, checked: 1, flagged: [] },
+      ],
+    },
+  };
+  const job = {
+    id: "pj1",
+    status: "running",
+    actor: "user:2:Asha",
+    created_at: now,
+    started_at: now,
+    progress: {
+      total: 4,
+      done: 2,
+      failed: 0,
+      current:
+        "Check every brief against the RAG: Rewriting 1 brief(s) the checker flagged",
+      items: [
+        {
+          id: "rag",
+          label: "Read the RAG output",
+          detail: "",
+          status: "done",
+          outcome: "12 ranked topics",
+          started_at: now,
+          finished_at: now,
+        },
+        {
+          id: "write",
+          label: "Write the plan with Gemini",
+          detail: "",
+          status: "done",
+          outcome: "10 briefs drafted",
+          started_at: now,
+          finished_at: now,
+        },
+        {
+          id: "check",
+          label: "Check every brief against the RAG",
+          detail: "",
+          status: "running",
+          step: "Rewriting 1 brief(s) the checker flagged",
+          started_at: now,
+        },
+        {
+          id: "save",
+          label: "Save the plan for approval",
+          detail: "",
+          status: "waiting",
+        },
+      ],
+    },
+  };
+  agentApi.getPlans.mockResolvedValue(page([week]));
+  agentApi.getPlan.mockResolvedValue(week);
+  agentApi.getActiveJob.mockImplementation((key) =>
+    Promise.resolve(key.startsWith("plan:pune:") ? job : null),
+  );
+  agentApi.getJob.mockResolvedValue(job);
+  render(<Plans />);
+
+  expect(
+    await screen.findByText("Checked against the RAG"),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByText("See what was fixed"));
+  expect(screen.getAllByText("Promises a cure.").length).toBeGreaterThan(0);
+  expect(screen.getByText(/Dropped \(still failing/)).toBeInTheDocument();
+
+  fireEvent.click(await screen.findByText(/Asha is planning/));
+  expect(
+    await screen.findByText("Rewriting 1 brief(s) the checker flagged…"),
+  ).toBeInTheDocument();
+  expect(screen.getByText("2 of 4 steps")).toBeInTheDocument();
+  agentApi.getActiveJob.mockReset();
+});
+
+test("rewrite all posts previews what changes and starts one tracked job", async () => {
+  agentApi.getPlans.mockResolvedValue(
+    page([
+      { id: "w8", city: "pune", week_start: "2026-11-09", status: "approved" },
+    ]),
+  );
+  agentApi.getContentList.mockResolvedValue(page([]));
+  agentApi.getActiveJob.mockResolvedValue(null);
+  agentApi.getRewritePreview.mockResolvedValue({
+    items: [
+      {
+        id: "c1",
+        topic: "Withdrawal signs",
+        state: "awaiting_b",
+        format: "post",
+      },
+    ],
+    skipped: [
+      {
+        id: "c2",
+        topic: "Visiting hours",
+        state: "approved",
+        format: "post",
+        reason: "already approved",
+      },
+    ],
+  });
+  agentApi.rewriteWeek.mockResolvedValue({
+    id: "j3",
+    status: "queued",
+    actor: "user:1:Lead",
+  });
+  agentApi.getJob.mockResolvedValue({
+    id: "j3",
+    status: "running",
+    actor: "user:1:Lead",
+    created_at: now,
+    progress: {
+      total: 1,
+      done: 0,
+      failed: 0,
+      current:
+        "Withdrawal signs: Checking it matches the brief, the RAG material and the brand voice",
+      items: [
+        {
+          id: "c1",
+          label: "Withdrawal signs",
+          detail: "Post · was Waiting for the marketing lead",
+          status: "running",
+          step: "Checking it matches the brief, the RAG material and the brand voice",
+          started_at: now,
+        },
+      ],
+    },
+  });
+  render(<ContentReview />);
+
+  const select = await screen.findByDisplayValue("Approved week…");
+  await screen.findByText(/pune · week of/);
+  fireEvent.change(select, { target: { value: "w8" } });
+  fireEvent.click(await screen.findByText("Rewrite all posts"));
+  expect(await screen.findByText("Withdrawal signs")).toBeInTheDocument();
+  expect(screen.getByText("already approved")).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText(/Warmer and shorter/), {
+    target: { value: "Speak to mothers" },
+  });
+  fireEvent.click(screen.getByText("Rewrite 1 post"));
+  await waitFor(() =>
+    expect(agentApi.rewriteWeek).toHaveBeenCalledWith({
+      week_id: "w8",
+      notes: "Speak to mothers",
+      include_approved: false,
+    }),
+  );
+  expect(
+    await screen.findByText(
+      "Checking it matches the brief, the RAG material and the brand voice…",
+    ),
+  ).toBeInTheDocument();
+});
+
+test("google posts let the owner pick the button and the week follows the post", async () => {
+  const gbp = {
+    ...content,
+    id: "g1",
+    week_id: "w4",
+    format: "gbp_post",
+    channel: "gbp",
+    button: null,
+  };
+  agentApi.getPlans.mockResolvedValue(
+    page([
+      {
+        id: "w4",
+        city: "mumbai",
+        week_start: "2026-11-02",
+        status: "approved",
+      },
+    ]),
+  );
+  agentApi.getContentList.mockResolvedValue(page([gbp]));
+  agentApi.getContentChecks.mockResolvedValue([]);
+  agentApi.getActiveJob.mockResolvedValue(null);
+  agentApi.setContentButton.mockResolvedValue({ ...gbp, button: "CALL" });
+  render(<ContentReview />);
+
+  const picker = await screen.findByLabelText("Button on the post");
+  expect(screen.getAllByText("Learn more").length).toBeGreaterThan(0);
+  fireEvent.change(picker, { target: { value: "CALL" } });
+  await waitFor(() =>
+    expect(agentApi.setContentButton).toHaveBeenCalledWith("g1", "CALL"),
+  );
+  await waitFor(() =>
+    expect(screen.getByDisplayValue(/mumbai · week of/)).toBeInTheDocument(),
+  );
+  expect(
+    screen.getByText("Rewrite all posts").closest("button"),
+  ).not.toBeDisabled();
+});
+
+test("signals and website reads show who is running them and their progress", async () => {
+  const listen = {
+    id: "lj1",
+    status: "running",
+    actor: "user:2:Asha",
+    created_at: now,
+    started_at: now,
+    progress: {
+      total: 6,
+      done: 2,
+      failed: 0,
+      current: "Google reviews",
+      items: [
+        {
+          id: "gsc",
+          label: "Google Search Console",
+          detail: "searches per city",
+          status: "done",
+          outcome: "new days only",
+          started_at: now,
+          finished_at: now,
+        },
+        {
+          id: "ga4",
+          label: "Google Analytics (GA4)",
+          detail: "",
+          status: "done",
+          outcome: "fetched",
+          started_at: now,
+          finished_at: now,
+        },
+        {
+          id: "gbp",
+          label: "Google reviews",
+          detail: "",
+          status: "running",
+          started_at: now,
+        },
+        { id: "erp", label: "Jagruti ERP", detail: "", status: "waiting" },
+      ],
+    },
+  };
+  agentApi.getLatestDigest.mockResolvedValue(null);
+  agentApi.getTrends.mockResolvedValue([]);
+  agentApi.getAlerts.mockResolvedValue(page([]));
+  agentApi.getActiveJob.mockImplementation((key) =>
+    Promise.resolve(key === "listen" ? listen : null),
+  );
+  agentApi.getJob.mockResolvedValue(listen);
+  render(<Signals />);
+
+  fireEvent.click(await screen.findByText(/Asha is fetching/));
+  expect(await screen.findByText("Google Search Console")).toBeInTheDocument();
+  expect(screen.getByText("2 of 6 steps")).toBeInTheDocument();
+  expect(screen.getByText("Rebuild digest")).toBeInTheDocument();
+  agentApi.getActiveJob.mockReset();
 });

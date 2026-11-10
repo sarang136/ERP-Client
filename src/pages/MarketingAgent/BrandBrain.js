@@ -1,3 +1,4 @@
+import { toast } from "react-toastify";
 import React, { useEffect, useState } from "react";
 import {
   Badge,
@@ -54,12 +55,12 @@ import {
   useAction,
   useAgentAccess,
   useDefaultCity,
-  useJob,
   usePagedList,
   CHANNELS,
   ChoiceChecks,
   FORMAT_CHOICES,
 } from "./common";
+import { useTrackedJob } from "./JobProgress";
 
 const CONDITIONS = [
   "alcohol",
@@ -1080,18 +1081,19 @@ const Website = () => {
   const [hits, setHits] = useState(null);
   const [embed, setEmbed] = useState(false);
   const { act, busy } = useAction();
-  const { run, running } = useJob();
   const { can } = useAgentAccess();
   const lead = can("BRAND");
+  const reloadPages = list.reload;
+  const crawlJob = useTrackedJob("website", {
+    onFinished: (job) => {
+      if (job.status === "succeeded") toast.success("Website read");
+      else toast.error(job.error || "Reading the website stopped");
+      reloadPages();
+    },
+  });
 
-  const crawl = async () => {
-    const job = await run(() => crawlWebsite(embed), {
-      successText: embed
-        ? "Website read and prepared for search"
-        : "Website read",
-    });
-    if (job?.status === "succeeded") list.reload();
-  };
+  const crawl = () =>
+    crawlJob.start(() => crawlWebsite(embed), "Reading the website");
 
   const tryIt = async () => {
     const found = await act("search", () =>
@@ -1136,11 +1138,24 @@ const Website = () => {
             </Label>
           </FormGroup>
         )}
-        {lead && (
-          <Button size="sm" color="primary" disabled={running} onClick={crawl}>
-            {running ? "Reading the website…" : "Read the website now"}
-          </Button>
-        )}
+        {lead &&
+          (crawlJob.active ? (
+            <Button
+              size="sm"
+              color="warning"
+              onClick={() =>
+                crawlJob.show(crawlJob.active.id, "Reading the website")
+              }
+            >
+              <i className="bx bx-loader-alt bx-spin me-1" />
+              {crawlJob.who} is reading the website · see progress
+            </Button>
+          ) : (
+            <Button size="sm" color="primary" onClick={crawl}>
+              Read the website now
+            </Button>
+          ))}
+        {crawlJob.modal()}
       </div>
       {!list.loading && list.total === 0 ? (
         <Empty>No pages yet. Read the website to load them.</Empty>

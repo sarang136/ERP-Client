@@ -46,6 +46,15 @@ export const updateCity = (slug, body) =>
   agentAxios.patch(`/cities/${slug}`, body);
 export const deleteCity = (slug) => agentAxios.delete(`/cities/${slug}`);
 export const getJob = (id) => get(`/jobs/${id}`);
+export const getActiveJob = (key) => get("/jobs/active", { key });
+export const getRewritePreview = (weekId, includeApproved) =>
+  get("/content/rewrite-preview", {
+    week_id: weekId,
+    include_approved: includeApproved,
+  });
+export const rewriteWeek = (body) => post("/content/rewrite-week", body);
+export const setContentButton = (contentId, button) =>
+  put(`/content/${contentId}/button`, { button });
 
 export const runListen = () => post("/listen/run");
 export const listSignals = (params) => get("/signals", params);
@@ -173,6 +182,10 @@ export const getVoiceGuide = () => get("/voice-guide");
 export const setVoiceGuide = (body) => put("/voice-guide", body);
 export const getPlaybook = (city) => get(`/playbooks/${city}`);
 export const setPlaybook = (city, body) => put(`/playbooks/${city}`, body);
+export const getImageFaces = (contentId) =>
+  get(`/content/${contentId}/image/faces`);
+export const blurContentImage = (contentId, shapes, intensity) =>
+  post(`/content/${contentId}/image/blur`, { shapes, intensity });
 export const getOwnerSettings = () => get("/owner/settings");
 export const setApprovalRules = (body) => put("/owner/approval-rules", body);
 export const getOwnerHistory = (params) => get("/owner/history", params);

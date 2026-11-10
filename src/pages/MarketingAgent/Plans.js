@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import {
   Badge,
   Button,
@@ -53,6 +54,7 @@ import {
   ScoreBreakdown,
   WriterInputsModal,
 } from "./InputsEditors";
+import JobProgress, { useActiveJob } from "./JobProgress";
 
 const CHANNEL_ICON = {
   instagram: ["bx bxl-instagram", "#d6249f", "Instagram"],
@@ -391,7 +393,79 @@ const Readiness = ({ version }) => {
   );
 };
 
-const PlanDetail = ({ planId, onDecided }) => {
+const person = (actor) =>
+  String(actor || "")
+    .split(":")
+    .pop();
+const planKey = (city, weekStart) =>
+  city && weekStart ? `plan:${city}:${String(weekStart).slice(0, 10)}` : null;
+
+const CheckerReport = ({ verification }) => {
+  const [open, setOpen] = useState(false);
+  if (!verification)
+    return (
+      <div className="text-muted mt-2" style={{ fontSize: 12 }}>
+        Made before the plan checker was added.
+      </div>
+    );
+  const last = verification.rounds.length;
+  return (
+    <div className="mt-3" style={{ fontSize: 13 }}>
+      <span
+        className={`badge bg-${verification.dropped.length ? "warning text-dark" : "success"} me-2`}
+      >
+        <i className="bx bx-check-shield me-1" />
+        Checked against the RAG
+      </span>
+      Passed in round {last}
+      {verification.rewritten > 0 &&
+        ` · ${verification.rewritten} brief${verification.rewritten === 1 ? "" : "s"} rewritten`}
+      {verification.dropped.length > 0 &&
+        ` · ${verification.dropped.length} dropped`}
+      <Button
+        color="link"
+        size="sm"
+        className="p-0 ms-2"
+        onClick={() => setOpen(!open)}
+      >
+        {open ? "Hide report" : "See what was fixed"}
+      </Button>
+      {open && (
+        <div className="mt-2 border rounded p-2 bg-white">
+          {verification.rounds.map((r) => (
+            <div key={r.round} className="mb-2">
+              <div className="fw-semibold">
+                Round {r.round}: {r.checked} checked,{" "}
+                {r.flagged.length
+                  ? `${r.flagged.length} flagged`
+                  : "all passed"}
+              </div>
+              {r.flagged.map((f) => (
+                <div key={f.topic} className="ms-2">
+                  <span className="text-danger">✕</span>{" "}
+                  <strong>{f.topic}</strong>
+                  {f.problems.map((pr) => (
+                    <div key={pr} className="ms-3 text-muted">
+                      {pr}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+          {verification.dropped.length > 0 && (
+            <div className="text-danger">
+              Dropped (still failing after two rewrites):{" "}
+              {verification.dropped.map((d) => d.topic).join(", ")}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PlanDetail = ({ planId, onDecided, onStartJob, onShowJob }) => {
   const [plan, setPlan] = useState(null);
   const [reason, setReason] = useState("");
   const [writing, setWriting] = useState(null);
@@ -407,6 +481,7 @@ const PlanDetail = ({ planId, onDecided }) => {
   }, [planId]);
 
   useEffect(load, [load]);
+  const busyJob = useActiveJob(planKey(plan?.city, plan?.week_start));
 
   if (!plan) return <Loading />;
   const isDraft = plan.status === "draft";
@@ -427,16 +502,10 @@ const PlanDetail = ({ planId, onDecided }) => {
   const remakePlan = async ({ city: _city, week_start: _week, ...body }) => {
     const mode = remake;
     setRemake(null);
-    const job = await run(() => regeneratePlan(plan.id, { mode, ...body }), {
-      successText:
-        mode === "more"
-          ? "New post ideas added: approve the plan again"
-          : "Plan regenerated: approve it again",
-    });
-    if (job?.status === "succeeded") {
-      load();
-      onDecided();
-    }
+    await onStartJob(
+      () => regeneratePlan(plan.id, { mode, ...body }),
+      `${mode === "more" ? "Adding ideas" : "Regenerating"}: ${plan.city} · week of ${weekRange(plan.week_start)}`,
+    );
   };
 
   const write = async (body) => {
@@ -519,7 +588,7 @@ const PlanDetail = ({ planId, onDecided }) => {
                   size="sm"
                   color="primary"
                   outline
-                  disabled={running}
+                  disabled={running || !!busyJob}
                   onClick={() => setRemake("regenerate")}
                 >
                   <i className="bx bx-refresh me-1" />
@@ -529,7 +598,7 @@ const PlanDetail = ({ planId, onDecided }) => {
                   size="sm"
                   color="primary"
                   outline
-                  disabled={running}
+                  disabled={running || !!busyJob}
                   onClick={() => setRemake("more")}
                 >
                   <i className="bx bx-plus me-1" />
@@ -546,6 +615,32 @@ const PlanDetail = ({ planId, onDecided }) => {
           </div>
         )}
 
+        {busyJob && (
+          <div
+            className="alert alert-warning py-2 d-flex align-items-center gap-2"
+            style={{ fontSize: 13 }}
+          >
+            <i className="bx bx-loader-alt bx-spin" />
+            <span>
+              <strong>{person(busyJob.actor)}</strong> is working on this plan
+              right now. Approving and regenerating wait until it finishes.
+            </span>
+            <Button
+              size="sm"
+              color="warning"
+              outline
+              className="ms-auto"
+              onClick={() =>
+                onShowJob(
+                  busyJob.id,
+                  `${plan.city} · week of ${weekRange(plan.week_start)}`,
+                )
+              }
+            >
+              See progress
+            </Button>
+          </div>
+        )}
         <NextStep plan={plan} live={live} written={written} />
 
         <div className="rounded p-3 mb-3" style={{ background: "#f3f6f9" }}>
@@ -556,6 +651,7 @@ const PlanDetail = ({ planId, onDecided }) => {
             This week&apos;s focus
           </div>
           <div style={{ fontSize: 14 }}>{plan.summary}</div>
+          <CheckerReport verification={plan.verification} />
           <div className="d-flex flex-wrap gap-2 mt-3">
             <Stat label="Posts">{live.length}</Stat>
             <Stat label="Who they speak to">
@@ -656,7 +752,7 @@ const PlanDetail = ({ planId, onDecided }) => {
                   <div className="d-flex gap-2 mt-2">
                     <Button
                       color="success"
-                      disabled={!!busy}
+                      disabled={!!busy || !!busyJob}
                       onClick={() => decide(true)}
                     >
                       Approve plan
@@ -708,7 +804,10 @@ const Plans = () => {
   const [selectedId, setSelectedId] = useState(null);
   const [preparing, setPreparing] = useState(false);
   const [draftWeek, setDraftWeek] = useState(nextMonday);
-  const { run, running } = useJob();
+  const [planJob, setPlanJob] = useState(null);
+  const [showJob, setShowJob] = useState(false);
+  const [version, setVersion] = useState(0);
+  const draftJob = useActiveJob(planKey(city, draftWeek));
   const { can } = useAgentAccess();
   const selected = list.items.some((p) => p.id === selectedId)
     ? selectedId
@@ -716,15 +815,51 @@ const Plans = () => {
 
   const closeInputs = useCallback(() => setPreparing(false), []);
 
+  const showProgress = useCallback((id, title) => {
+    setPlanJob({ id, title });
+    setShowJob(true);
+  }, []);
+
+  const startJob = useCallback(
+    async (start, title) => {
+      try {
+        const job = await start();
+        showProgress(job.id, title);
+      } catch (e) {
+        if (e.status === 409 && e.details?.job_id) {
+          showProgress(e.details.job_id, title);
+          toast.info(
+            `${person(e.details.actor) || "Someone"} is already working on this plan: showing its progress`,
+          );
+        } else {
+          notifyError(e);
+        }
+      }
+    },
+    [showProgress],
+  );
+
+  const reload = list.reload;
+  const finished = useCallback(
+    (job) => {
+      if (job.status === "succeeded") {
+        toast.success("Plan ready: checked and waiting for approval");
+        if (job.result?.week_id) setSelectedId(job.result.week_id);
+      } else {
+        toast.error(job.error || "Planning stopped");
+      }
+      reload();
+      setVersion((v) => v + 1);
+    },
+    [reload],
+  );
+
   const generate = async (body) => {
     setPreparing(false);
-    const job = await run(() => generatePlan(body), {
-      successText: "Plan drafted",
-    });
-    if (job?.status === "succeeded") {
-      setSelectedId(job.result.week_id);
-      list.reload();
-    }
+    await startJob(
+      () => generatePlan(body),
+      `Drafting: ${city} · week of ${weekRange(draftWeek)}`,
+    );
   };
 
   return (
@@ -746,24 +881,50 @@ const Plans = () => {
               onChange={(e) => setDraftWeek(weekStartOf(e.target.value))}
               style={{ width: 150 }}
             />
-            <Button
-              size="sm"
-              color="primary"
-              disabled={!city || !draftWeek || running}
-              onClick={() => setPreparing(true)}
-            >
-              {running
-                ? "Planning… (about a minute)"
-                : draftWeek === nextMonday()
+            {draftJob ? (
+              <Button
+                size="sm"
+                color="warning"
+                onClick={() =>
+                  showProgress(
+                    draftJob.id,
+                    `${city} · week of ${weekRange(draftWeek)}`,
+                  )
+                }
+              >
+                <i className="bx bx-loader-alt bx-spin me-1" />
+                {person(draftJob.actor)} is planning · see progress
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                color="primary"
+                disabled={!city || !draftWeek}
+                onClick={() => setPreparing(true)}
+              >
+                {draftWeek === nextMonday()
                   ? `Draft next week's plan (${formatDate(draftWeek)})`
                   : `Draft plan for week of ${formatDate(draftWeek)}`}
-            </Button>
+              </Button>
+            )}
           </>
         )}
       </PageHeader>
       <Readiness
         version={list.items.map((p) => `${p.id}:${p.status}`).join()}
       />
+      {planJob && (
+        <JobProgress
+          jobId={planJob.id}
+          title={planJob.title}
+          isOpen={showJob}
+          onClose={() => setShowJob(false)}
+          onFinished={finished}
+          unit="steps"
+          emptyText="Getting ready…"
+          doneLabel="See the plan"
+        />
+      )}
       {preparing && (
         <PlanInputsModal
           city={city}
@@ -841,9 +1002,11 @@ const Plans = () => {
           <Col lg={9} style={PANE}>
             {selected && (
               <PlanDetail
-                key={selected}
+                key={`${selected}-${version}`}
                 planId={selected}
                 onDecided={list.reload}
+                onStartJob={startJob}
+                onShowJob={showProgress}
               />
             )}
           </Col>

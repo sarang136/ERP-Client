@@ -6,12 +6,44 @@ import {
   makeReel,
   removeContentImage,
   removeContentVideo,
+  setContentButton,
   uploadContentImage,
   uploadContentVideo,
 } from "../../helpers/marketingAgentApi";
 import { formatDateTime, useAction, useJob } from "./common";
+import BlurTool from "./BlurTool";
 
 const PAGE_NAME = "Jagruti Rehabilitation Centre";
+
+export const GBP_BUTTONS = [
+  ["LEARN_MORE", "Learn more"],
+  ["CALL", "Call now"],
+  ["BOOK", "Book"],
+  ["SIGN_UP", "Sign up"],
+  ["ORDER", "Order online"],
+  ["SHOP", "Buy"],
+];
+export const META_AD_BUTTONS = [
+  ["LEARN_MORE", "Learn more"],
+  ["CONTACT_US", "Contact us"],
+  ["CALL_NOW", "Call now"],
+  ["BOOK_NOW", "Book now"],
+  ["SIGN_UP", "Sign up"],
+  ["SEND_MESSAGE", "Send message"],
+  ["WHATSAPP_MESSAGE", "Send WhatsApp message"],
+  ["GET_QUOTE", "Get quote"],
+  ["APPLY_NOW", "Apply now"],
+  ["SUBSCRIBE", "Subscribe"],
+  ["DOWNLOAD", "Download"],
+];
+const BUTTONS_BY_FORMAT = { gbp_post: GBP_BUTTONS, ad_copy: META_AD_BUTTONS };
+const buttonLabel = (item) => {
+  const options = BUTTONS_BY_FORMAT[item.format] || [];
+  return (
+    (options.find(([v]) => v === item.button) || options[0] || [])[1] ||
+    "Learn more"
+  );
+};
 const HANDLE = "jagrutirehab";
 
 const frame = {
@@ -294,7 +326,7 @@ const Ad = ({ item }) => {
             fontWeight: 600,
           }}
         >
-          Learn more
+          {buttonLabel(item)}
         </button>
       </div>
     </div>
@@ -321,7 +353,7 @@ const GoogleUpdate = ({ item }) => {
             fontWeight: 500,
           }}
         >
-          Learn more
+          {buttonLabel(item)}
         </button>
       </div>
     </div>
@@ -383,8 +415,51 @@ export const PostPreview = ({ item }) => {
   );
 };
 
+export const ButtonTools = ({ item, onChanged, canEdit }) => {
+  const options = BUTTONS_BY_FORMAT[item.format];
+  const { act, busy } = useAction();
+  if (!options) return null;
+  const google = item.format === "gbp_post";
+  const choose = async (value) => {
+    const updated = await act(
+      "button",
+      () => setContentButton(item.id, value),
+      "Button saved",
+    );
+    if (updated) onChanged(updated);
+  };
+  return (
+    <div className="mb-3" style={{ fontSize: 13 }}>
+      <div className="fw-semibold mb-1">Button on the post</div>
+      <Input
+        type="select"
+        bsSize="sm"
+        disabled={!canEdit || !!busy}
+        value={item.button || "LEARN_MORE"}
+        onChange={(e) => choose(e.target.value)}
+        style={{ maxWidth: 260 }}
+        aria-label="Button on the post"
+      >
+        {options.map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </Input>
+      <div className="text-muted mt-1" style={{ fontSize: 12 }}>
+        {google
+          ? item.button === "CALL"
+            ? "Call now rings the centre's phone number on Google; no link is needed."
+            : "The button opens the enquiry page with tracking. These are the buttons Google allows."
+          : "Used when this ad is set up in Meta Ads Manager. Normal Instagram and Facebook posts can't have a button, so they use the call to action in the text."}
+      </div>
+    </div>
+  );
+};
+
 export const ImageTools = ({ item, onChanged, canEdit }) => {
   const [prompt, setPrompt] = useState(null);
+  const [blurring, setBlurring] = useState(null);
   const file = useRef(null);
   const { act, busy } = useAction();
   const image = item.image;
@@ -409,13 +484,13 @@ export const ImageTools = ({ item, onChanged, canEdit }) => {
     const chosen = e.target.files?.[0];
     e.target.value = "";
     if (!chosen) return;
-    done(
-      await act(
-        "image",
-        () => uploadContentImage(item.id, chosen),
-        "Image uploaded",
-      ),
+    const updated = await act(
+      "image",
+      () => uploadContentImage(item.id, chosen),
+      "Image uploaded: check it for faces",
     );
+    done(updated);
+    if (updated) setBlurring("uploaded");
   };
 
   return (
@@ -425,7 +500,7 @@ export const ImageTools = ({ item, onChanged, canEdit }) => {
       </div>
       <div className="text-muted mb-2">
         {image
-          ? `${image.source === "uploaded" ? "Uploaded" : "Made by AI"} · ${formatDateTime(image.created_at)}`
+          ? `${image.source === "uploaded" ? "Uploaded" : "Made by AI"}${image.blurred ? " · blurred" : ""} · ${formatDateTime(image.created_at)}`
           : "No image yet."}
       </div>
       {busy === "image" && (
@@ -454,6 +529,18 @@ export const ImageTools = ({ item, onChanged, canEdit }) => {
             >
               {image ? "Regenerate" : "Make an image"}
             </Button>
+            {image && (
+              <Button
+                size="sm"
+                color="warning"
+                outline
+                disabled={!!busy}
+                onClick={() => setBlurring("manual")}
+              >
+                <i className="bx bx-hide me-1" />
+                Blur parts of the image
+              </Button>
+            )}
             {image && (
               <Button
                 size="sm"
@@ -523,8 +610,18 @@ export const ImageTools = ({ item, onChanged, canEdit }) => {
           )}
           <div className="text-muted mt-2" style={{ fontSize: 12 }}>
             The previous image is deleted when you upload or make a new one.
+            Images are only made when you press a button.
           </div>
         </>
+      )}
+      {image && (
+        <BlurTool
+          item={item}
+          isOpen={blurring !== null}
+          justUploaded={blurring === "uploaded"}
+          onClose={() => setBlurring(null)}
+          onBlurred={onChanged}
+        />
       )}
     </div>
   );
