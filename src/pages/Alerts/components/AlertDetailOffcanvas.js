@@ -12,11 +12,16 @@ import {
   PHASE_META,
   ALERT_SOURCE_META,
 } from "./alertConstants";
+import { Link } from "react-router-dom";
 import {
   timeAgo,
   isRuleSourced,
   alertSourceLabel,
   resolutionNote,
+  isComplianceAlert,
+  complianceCentrePath,
+  fmtLicenceDate,
+  licenceDaysLeftText,
 } from "./alertUtils";
 
 const sectionLabel = (icon, text) => (
@@ -94,7 +99,29 @@ const AlertDetailOffcanvas = ({ isOpen, onClose, alert }) => {
                 </div>
               </div>
 
-              {/* Patient */}
+              {/* Licence — a Compliance rule alert has no patient. */}
+              {isComplianceAlert(alert) ? (
+                <div className="mb-3 p-3 border rounded">
+                  {sectionLabel("bx bx-certification", "Licence")}
+                  <div className="fw-medium">
+                    {alert.complianceInfo?.typeName || "—"}
+                    {alert.center?.title && <> · {alert.center.title}</>}
+                  </div>
+                  <small className="text-muted d-block">
+                    Licence no. {alert.complianceInfo?.licenceNumber || "—"}
+                  </small>
+                  <small className="text-muted d-block">
+                    Valid till {fmtLicenceDate(alert.complianceInfo?.validTill)}
+                    {alert.complianceInfo?.validTill && (
+                      <> · {licenceDaysLeftText(alert.complianceInfo.validTill)}</>
+                    )}
+                  </small>
+                  <Link to={complianceCentrePath(alert)} className="small">
+                    Open the centre&apos;s compliance page
+                  </Link>
+                </div>
+              ) : (
+              /* Patient */
               <div className="mb-3 p-3 border rounded">
                 {sectionLabel("bx bx-user", "Patient")}
                 <div className="fw-medium">{alert.patient?.name || "—"}</div>
@@ -106,6 +133,7 @@ const AlertDetailOffcanvas = ({ isOpen, onClose, alert }) => {
                   </small>
                 )}
               </div>
+              )}
 
               {/* Source + Protocol. A baseline-package alert has no SOPRule, so
                   Protocol has nothing to show — drop the column and let Source

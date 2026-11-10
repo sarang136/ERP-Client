@@ -30,6 +30,11 @@ import {
   emptyTargetBlock,
   emptyForm,
   SOP_CATEGORY_OPTIONS,
+  COMPLIANCE_MODEL,
+  DAYS_BEFORE_OPERATOR,
+  ALERT_DAYS_BEFORE_MAX,
+  COMPLIANCE_TEMPLATE_HINT,
+  hasComplianceCondition,
 } from "../../../Components/constants/sopConstants";
 import ConditionRow from "./ConditionRow";
 import MainBlock from "./MainBlock";
@@ -81,6 +86,10 @@ const hydrateCondition = (c) => ({
   deadlineHours: c.deadlineHours != null ? String(c.deadlineHours) : "",
   value: Array.isArray(c.value) ? c.value : c.value != null ? [c.value] : [],
   schedule: hydrateSchedule(c.schedule),
+  // DAYS_BEFORE (Compliance Valid till) — the alert firing days.
+  alertDaysBefore: Array.isArray(c.alertDaysBefore)
+    ? c.alertDaysBefore.map(Number).filter((n) => Number.isFinite(n))
+    : [],
   arrayMatch: c.arrayMatch
     ? {
         keyField: c.arrayMatch.keyField || "",
@@ -212,6 +221,21 @@ const SOPForm = ({
   const [fieldErrors, setFieldErrors] = useState({});
   const [topError, setTopError] = useState(null);
   const [modelFieldsCache, setModelFieldsCache] = useState({});
+
+  // A compliance rule watches the centre licence register, not patients: it
+  // uses only the Compliance model, has the Compliance category, notifies roles
+  // or named users (no admission care team) and suggests no medicines.
+  const isComplianceRule =
+    hasComplianceCondition(satisfyingCriteria.conditions) ||
+    targetBlocks.some((b) => hasComplianceCondition(b.conditions));
+
+  useEffect(() => {
+    if (isComplianceRule) {
+      setForm((prev) =>
+        prev.category === "COMPLIANCE" ? prev : { ...prev, category: "COMPLIANCE" },
+      );
+    }
+  }, [isComplianceRule]);
 
   const clearError = (key) =>
     setFieldErrors((prev) => {
@@ -482,12 +506,21 @@ const SOPForm = ({
   };
 
   const formatCondition = (c) => {
+    const isCompliance = c.model?.value === COMPLIANCE_MODEL;
     const out = {
       model: c.model?.value,
       field: c.field,
       operator: c.operator?.value,
-      triggerType: c.triggerType?.value || "IMMEDIATE",
+      // Licence conditions are only ever checked by the daily sweep.
+      triggerType: isCompliance ? "DELAYED" : c.triggerType?.value || "IMMEDIATE",
     };
+
+    // Valid till "Days before": the firing days are the whole condition — no
+    // value, no schedule.
+    if (c.operator?.value === DAYS_BEFORE_OPERATOR) {
+      out.alertDaysBefore = (c.alertDaysBefore || []).map(Number);
+      return out;
+    }
 
     if (c.triggerType?.value === "DELAYED" && c.deadlineHours) {
       out.deadlineHours = Number(c.deadlineHours);
@@ -549,8 +582,8 @@ const SOPForm = ({
     }
 
     // Schedule is only meaningful for DELAYED conditions, and only when the
-    // user picked a non-default pattern.
-    if (c.triggerType?.value === "DELAYED") {
+    // user picked a non-default pattern. Never for licence conditions.
+    if (c.triggerType?.value === "DELAYED" && !isCompliance) {
       const sched = formatSchedule(c.schedule);
       if (sched) out.schedule = sched;
     }
@@ -574,6 +607,29 @@ const SOPForm = ({
           hasTargetErrors = true;
         } else if (!c.field) {
           bErr.conditions[cIdx] = "Field is required";
+          hasTargetErrors = true;
+        } else if (isComplianceRule && c.model.value !== COMPLIANCE_MODEL) {
+          bErr.conditions[cIdx] =
+            "A compliance rule can only use the Compliance model — make this a separate rule";
+          hasTargetErrors = true;
+        } else if (c.operator?.value === DAYS_BEFORE_OPERATOR) {
+          const days = c.alertDaysBefore || [];
+          if (!days.length) {
+            bErr.conditions[cIdx] = "Add at least one alert firing day";
+            hasTargetErrors = true;
+          } else if (
+            days.some(
+              (d) =>
+                !Number.isInteger(Number(d)) ||
+                Number(d) < 0 ||
+                Number(d) > ALERT_DAYS_BEFORE_MAX,
+            )
+          ) {
+            bErr.conditions[cIdx] = `Firing days must be whole numbers from 0 to ${ALERT_DAYS_BEFORE_MAX}`;
+            hasTargetErrors = true;
+          }
+        } else if (c.model.value === COMPLIANCE_MODEL && !c.value?.[0]) {
+          bErr.conditions[cIdx] = "Pick a value";
           hasTargetErrors = true;
         } else if (c.operator?.value === "ARRAY_ANY_MATCHES") {
           if (!c.arrayMatch?.keyValue) {
@@ -669,6 +725,20 @@ const SOPForm = ({
           }
         }
       });
+      // A compliance block fires from exactly one "Valid till — Days before".
+      if (isComplianceRule) {
+        const expiryIdx = block.conditions
+          .map((c, i) => (c.operator?.value === DAYS_BEFORE_OPERATOR ? i : -1))
+          .filter((i) => i >= 0);
+        if (expiryIdx.length === 0 && !bErr.conditions[0]) {
+          bErr.conditions[0] =
+            'This block needs a "Valid till — Days before" condition';
+          hasTargetErrors = true;
+        } else if (expiryIdx.length > 1 && !bErr.conditions[expiryIdx[1]]) {
+          bErr.conditions[expiryIdx[1]] = "Only one Valid till condition per block";
+          hasTargetErrors = true;
+        }
+      }
       if (!block.name?.trim()) {
         bErr.name = "Rule name is required";
         hasTargetErrors = true;
@@ -677,19 +747,42 @@ const SOPForm = ({
         bErr.severity = "Severity is required";
         hasTargetErrors = true;
       }
+      // The admission care-team toggles are hidden (and not sent) on a
+      // compliance rule, so they can't count towards its routing.
       const hasRouting =
         (block.selectedRoles?.length || 0) +
           (block.selectedUsers?.length || 0) +
-          (block.notifyAdmissionDoctor ? 1 : 0) +
-          (block.notifyAdmissionPsychologist ? 1 : 0) >
+          (!isComplianceRule && block.notifyAdmissionDoctor ? 1 : 0) +
+          (!isComplianceRule && block.notifyAdmissionPsychologist ? 1 : 0) >
         0;
       if (!hasRouting) {
-        bErr.routing = "Add at least one notification channel";
+        bErr.routing = isComplianceRule
+          ? "Pick at least one role or specific user"
+          : "Add at least one notification channel";
         hasTargetErrors = true;
       }
       return bErr;
     });
     if (hasTargetErrors) errs.targetBlocks = targetErrors;
+
+    // Satisfying Criteria on a compliance rule: licence filters only, each
+    // with a value. (Empty rows are dropped on submit.)
+    if (isComplianceRule) {
+      const scErrors = satisfyingCriteria.conditions.map((c) => {
+        if (!c.model || !c.field) return undefined;
+        if (c.model.value !== COMPLIANCE_MODEL)
+          return "A compliance rule can only use the Compliance model";
+        if (!c.value?.[0]) return "Pick a value";
+        return undefined;
+      });
+      if (scErrors.some(Boolean))
+        errs.satisfyingCriteria = { conditions: scErrors };
+      if (form.category !== "COMPLIANCE")
+        errs.category = "A compliance rule's category must be Compliance";
+    } else if (form.category === "COMPLIANCE") {
+      errs.category =
+        "The Compliance category is for rules on the Compliance model";
+    }
 
     let hasMedErrors = false;
     const medErrors = suggestedMedicines.map((m) => {
@@ -758,10 +851,12 @@ const SOPForm = ({
           ...(block.selectedUsers?.length && {
             notifySpecificUsers: block.selectedUsers.map((u) => u.value),
           }),
-          ...(block.notifyAdmissionDoctor && { notifyAdmissionDoctor: true }),
-          ...(block.notifyAdmissionPsychologist && {
-            notifyAdmissionPsychologist: true,
-          }),
+          ...(!isComplianceRule &&
+            block.notifyAdmissionDoctor && { notifyAdmissionDoctor: true }),
+          ...(!isComplianceRule &&
+            block.notifyAdmissionPsychologist && {
+              notifyAdmissionPsychologist: true,
+            }),
         },
       })),
     };
@@ -775,7 +870,7 @@ const SOPForm = ({
       }),
     };
 
-    if (suggestedMedicines.length > 0) {
+    if (suggestedMedicines.length > 0 && !isComplianceRule) {
       payload.suggestedMedicines = suggestedMedicines.map(formatMedicine);
     }
 
@@ -868,6 +963,7 @@ const SOPForm = ({
         fetchModelFields={fetchModelFields}
         isSubmitting={isSubmitting}
         fieldErrors={fieldErrors}
+        isComplianceRule={isComplianceRule}
       />
 
       <div className="mb-4">
@@ -950,7 +1046,11 @@ const SOPForm = ({
                       <Input
                         type="textarea"
                         rows="2"
-                        placeholder="Patient {patient.name} — {field.value}"
+                        placeholder={
+                          isComplianceRule
+                            ? "{complianceType} for {centre} expires on {validTill} — {daysLeft} left"
+                            : "Patient {patient.name} — {field.value}"
+                        }
                         value={block.alertTemplate}
                         onChange={(e) =>
                           handleTargetBlockField(
@@ -961,6 +1061,14 @@ const SOPForm = ({
                         }
                         disabled={isSubmitting}
                       />
+                      {isComplianceRule && (
+                        <small className="text-muted d-block mt-1">
+                          Optional. You can use {COMPLIANCE_TEMPLATE_HINT}.
+                          Left empty, the alert reads e.g. &ldquo;Fire NOC for
+                          Pune expires on 15 Dec 2026 — 30 days left
+                          (FIRE/PUN/1040).&rdquo;
+                        </small>
+                      )}
                     </FormGroup>
                   </Col>
                 </Row>
@@ -1019,6 +1127,7 @@ const SOPForm = ({
                     idPrefix={bIdx}
                     routingError={blockErrors.routing}
                     isSubmitting={isSubmitting}
+                    hideAdmissionToggles={isComplianceRule}
                   />
                 </div>
 
@@ -1065,12 +1174,14 @@ const SOPForm = ({
         })}
       </div>
 
-      <SuggestedMedicinesSection
-        medicines={suggestedMedicines}
-        onChange={setSuggestedMedicines}
-        isSubmitting={isSubmitting}
-        errors={fieldErrors.suggestedMedicines || []}
-      />
+      {!isComplianceRule && (
+        <SuggestedMedicinesSection
+          medicines={suggestedMedicines}
+          onChange={setSuggestedMedicines}
+          isSubmitting={isSubmitting}
+          errors={fieldErrors.suggestedMedicines || []}
+        />
+      )}
 
       <SOPDocumentSection
         mode={initialValues ? "edit" : "create"}
