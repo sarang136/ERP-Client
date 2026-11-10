@@ -33,7 +33,37 @@ const formatDate = (isoDateStr) => {
   return `${day} ${month} ${year}`;
 };
 
-const DetailInfo = ({ chart, patient, data, styles, admission }) => {
+// Missing values, and the literal strings "undefined"/"null" (stored when a
+// missing field was serialised through FormData on edit), render as empty.
+const clean = (value) => {
+  if (value === undefined || value === null) return "";
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  return trimmed === "undefined" || trimmed === "null" ? "" : trimmed;
+};
+
+const DetailInfo = ({ chart, patient, data: rawData, styles, admission }) => {
+  // The detailAdmission sub-object is absent on records saved without any of
+  // its fields (e.g. created from the mobile app).
+  const source = rawData || {};
+  // The chart's own value wins. The patient's registration record fills in
+  // only when the chart value is missing, blank or the literal "undefined".
+  const withFallback = (chartValue, patientValue) =>
+    clean(chartValue) || clean(patientValue);
+  const data = {
+    doctorConsultant: clean(source.doctorConsultant),
+    religion: withFallback(source.religion, patient?.religion),
+    maritalStatus: withFallback(source.maritalStatus, patient?.maritalstatus),
+    occupation: withFallback(source.occupation, patient?.occupation),
+    education: withFallback(source.education, patient?.education),
+    // The chart's "address" is the area type (Urban / Semi-urban / Rural),
+    // so it maps to patient.areatype, not the patient's street address.
+    address: withFallback(source.address, patient?.areatype),
+    referral: clean(source.referral),
+    provisionalDiagnosis: clean(source.provisionalDiagnosis),
+    revisedDiagnosis: clean(source.revisedDiagnosis),
+  };
+
   // const age = () =>
   //   differenceInYears(new Date(), new Date(patient?.dateOfBirth));
 
@@ -47,11 +77,13 @@ const DetailInfo = ({ chart, patient, data, styles, admission }) => {
     return null;
   };
 
+  console.log("chart.id:", chart.id);
+  console.log("chart.id.detailAdmission:", chart.id?.detailAdmission);
 
   const admissionDate =
-    admission?.addmissionDate ||
-    patient?.addmission?.addmissionDate;
+    admission?.addmissionDate || patient?.addmission?.addmissionDate;
 
+  console.log("patient", patient);
   const Row = ({ label, value }) => (
     <View style={{ flexDirection: "row", marginBottom: 6 }}>
       <Text
@@ -112,41 +144,57 @@ const DetailInfo = ({ chart, patient, data, styles, admission }) => {
     return "";
   };
   return (
-    <View style={{
-      flexDirection: "row",
-      justifyContent: "space-between",
-      width: "100%",
-    }}>
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        width: "100%",
+      }}
+    >
       <View
-        style={{ width: "60%", ...styles.column, ...styles.mrgnTop10, ...styles.mrgnBottom10 }}
+        style={{
+          width: "60%",
+          ...styles.column,
+          ...styles.mrgnTop10,
+          ...styles.mrgnBottom10,
+        }}
       >
         {/* <Row
         label="age:"
         value={data.age.toUpperCase()}
       /> */}
-        {admission?.Ipdnum ? <Row label="IPD Num:" value={admission?.Ipdnum} /> : ""}
+        {admission?.Ipdnum ? (
+          <Row label="IPD Num:" value={admission?.Ipdnum} />
+        ) : (
+          ""
+        )}
 
         <Row
           label="doctor consultant:"
-          value={data.doctorConsultant.toUpperCase() || ""}
+          value={String(data.doctorConsultant).toUpperCase()}
         />
         <Row label="name:" value={patient?.name} />
         {data.religion && <Row label="religion:" value={data.religion} />}
-        {age() !== null && (
-          <Row label="age:" value={age()} />
-        )}
+        {age() !== null && <Row label="age:" value={age()} />}
         {/* {age() && <Row label="age:" value={age()} />} */}
-        {patient.gender && (
+        {patient?.gender && (
           <Row label="gender:" value={patient.gender.toLowerCase()} />
         )}
         {data.maritalStatus && (
           <Row label="marital status:" value={data.maritalStatus} />
         )}
-        {data.occupation && <Row label="occupation:" value={data.occupation} />}
-        {data.education && <Row label="education:" value={data.education} />}
-        {data.address && <Row label="address:" value={data.address} />}
-        {data.referral && (
-          <Row label="source of referral:" value={data.referral} />
+        {patient?.occupation && (
+          <Row label="occupation:" value={patient?.occupation} />
+        )}
+        {patient?.education && (
+          <Row label="education:" value={patient?.education} />
+        )}
+        {patient?.address && <Row label="address:" value={patient?.address} />}
+        {patient?.referredBy?.doctorName && (
+          <Row
+            label="source of referral:"
+            value={patient?.referredBy?.doctorName}
+          />
         )}
         {data.provisionalDiagnosis && (
           <Row
@@ -162,11 +210,11 @@ const DetailInfo = ({ chart, patient, data, styles, admission }) => {
           />
         )}
       </View>
-      <View style={{ width: "35%", alignItems: "flex-end", ...styles.mrgnTop10 }}>
+      <View
+        style={{ width: "35%", alignItems: "flex-end", ...styles.mrgnTop10 }}
+      >
         {admissionDate && (
-          <Text>
-            Admission Date: {formatDate(admissionDate)}
-          </Text>
+          <Text>Admission Date: {formatDate(admissionDate)}</Text>
         )}
       </View>
     </View>
