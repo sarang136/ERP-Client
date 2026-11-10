@@ -458,6 +458,24 @@ const MedicineRequisitionForm = ({ initialData, onSubmit, loading, isEdit, showB
                         }}
                     />
                 </Col>
+                <Col md={4}>
+                    <Label className="fs-13 text-muted mb-1">Controlled Drug</Label>
+                    <Select
+                        name="isControlledDrug"
+                        placeholder="Controlled Drug?"
+                        options={[
+                            { value: true, label: "Yes" },
+                            { value: false, label: "No" },
+                        ]}
+                        onChange={(selected) => setFieldValue("isControlledDrug", selected ? selected.value : false)}
+                        value={
+                            values.isControlledDrug
+                                ? { value: true, label: "Yes" }
+                                : { value: false, label: "No" }
+                        }
+                        classNamePrefix="react-select"
+                    />
+                </Col>
                 {/* <Col md={4}>
                     <Label htmlFor="unitPrice" className="fs-13 text-muted mb-1">Estimated Unit Price (₹)</Label>
                     <Input id="unitPrice" name="unitPrice" type="number" value={values.unitPrice} onChange={handleChange} />

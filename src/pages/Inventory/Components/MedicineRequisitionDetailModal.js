@@ -133,6 +133,7 @@ const MedicineRequisitionDetailModal = ({
                 <DataRow label="Schedule" value={normalizeUnderscores(field("scheduleType").value)} isAi={field("scheduleType").isAi} />
                 <DataRow label="Category" value={normalizeUnderscores(field("category").value)} isAi={field("category").isAi} />
                 <DataRow label="Storage" value={normalizeUnderscores(field("storageType").value)} isAi={field("storageType").isAi} />
+                <DataRow label="Controlled Drug" value={data.proposedMedicine?.isControlledDrug ? "Yes" : "No"} />
                 {/* <DataRow label="Unit Price" value={data.proposedMedicine?.unitPrice ? `₹${data.proposedMedicine?.unitPrice}` : "—"} /> */}
                 {(() => {
                   const savedConv = data.proposedMedicine?.conversion;
