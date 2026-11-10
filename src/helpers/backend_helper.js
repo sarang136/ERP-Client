@@ -2339,6 +2339,27 @@ export const deleteMedicineRequisition = (id) => {
   });
 };
 
+export const exportMedicineRequisitionExcel = (params = {}) => {
+  return api.get(`${url.PHARMACY_MEDICINE_REQUISITION}/export`, {
+    params,
+    headers: { "X-No-Cookie-Token": "true" },
+    paramsSerializer: (parameters) =>
+      qs.stringify(parameters, { arrayFormat: "repeat", skipNulls: true }),
+    responseType: "blob",
+  });
+};
+
+export const bulkUploadMedicineRequisitions = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.create(`${url.PHARMACY_MEDICINE_REQUISITION}/bulk-upload`, formData, {
+    headers: {
+      "X-No-Cookie-Token": "true",
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
 // COMPLIANCE TYPES
 export const getComplianceTypes = (params = {}, { signal } = {}) => {
   return api.get(url.COMPLIANCE_TYPES, {

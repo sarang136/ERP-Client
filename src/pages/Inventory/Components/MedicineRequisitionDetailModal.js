@@ -133,7 +133,7 @@ const MedicineRequisitionDetailModal = ({
                 <DataRow label="Schedule" value={normalizeUnderscores(field("scheduleType").value)} isAi={field("scheduleType").isAi} />
                 <DataRow label="Category" value={normalizeUnderscores(field("category").value)} isAi={field("category").isAi} />
                 <DataRow label="Storage" value={normalizeUnderscores(field("storageType").value)} isAi={field("storageType").isAi} />
-                <DataRow label="Unit Price" value={data.proposedMedicine?.unitPrice ? `₹${data.proposedMedicine?.unitPrice}` : "—"} />
+                {/* <DataRow label="Unit Price" value={data.proposedMedicine?.unitPrice ? `₹${data.proposedMedicine?.unitPrice}` : "—"} /> */}
                 {(() => {
                   const savedConv = data.proposedMedicine?.conversion;
                   const aiConv = data.aiSuggestions?.conversion;
@@ -170,7 +170,7 @@ const MedicineRequisitionDetailModal = ({
                     />
                   </div>
                 </Col>
-                <Col md={6}>
+                {/* <Col md={6}>
                   <div className="text-muted small mb-1 fw-bold text-uppercase" style={{ fontSize: '10px' }}>Instructions</div>
                   <div className="fs-13 text-dark fw-medium">
                     <ExpandableText
@@ -178,7 +178,7 @@ const MedicineRequisitionDetailModal = ({
                       limit={100}
                     />
                   </div>
-                </Col>
+                </Col> */}
                 <Col md={12}>
                   <div className="text-muted small mb-1 fw-bold text-uppercase" style={{ fontSize: '10px' }}>Justification</div>
                   <div className="fs-13 text-muted" style={{ fontStyle: 'italic' }}>

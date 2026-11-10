@@ -458,20 +458,20 @@ const MedicineRequisitionForm = ({ initialData, onSubmit, loading, isEdit, showB
                         }}
                     />
                 </Col>
-                <Col md={4}>
+                {/* <Col md={4}>
                     <Label htmlFor="unitPrice" className="fs-13 text-muted mb-1">Estimated Unit Price (₹)</Label>
                     <Input id="unitPrice" name="unitPrice" type="number" value={values.unitPrice} onChange={handleChange} />
-                </Col>
+                </Col> */}
 
                 {/* Composition & Instruction */}
                 <Col md={6}>
                     <Label htmlFor="composition" className="fs-13 text-muted mb-1">Composition{aiTag("composition")}</Label>
                     <Input id="composition" name="composition" type="textarea" rows={3} value={values.composition} onChange={handleChange} />
                 </Col>
-                <Col md={6}>
+                {/* <Col md={6}>
                     <Label htmlFor="instruction" className="fs-13 text-muted mb-1">Instructions</Label>
                     <Input id="instruction" name="instruction" type="textarea" rows={3} value={values.instruction} onChange={handleChange} />
-                </Col>
+                </Col> */}
 
                 {/* Justification */}
                 <Col md={12}>

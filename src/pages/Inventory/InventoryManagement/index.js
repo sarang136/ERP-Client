@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { display } from "../../../utils/display";
 import {
   Search,
@@ -46,6 +46,7 @@ import { normalizeUnderscores } from "../../../utils/normalizeUnderscore";
 import { capitalizeWords } from "../../../utils/toCapitalize";
 import { formatCurrency } from "../../../utils/formatCurrency";
 import { formatDualUnitStock } from "../../../utils/pharmacyStockDisplay";
+import { formatTwoDecimals } from "../../../utils/numberFormat";
 import FailedMedicines from "../Components/FailedMedicines";
 import { useMediaQuery } from "../../../Components/Hooks/useMediaQuery";
 import { useAuthError } from "../../../Components/Hooks/useAuthError";
@@ -467,11 +468,11 @@ const InventoryManagement = () => {
     { key: "type", header: "Type", minWidth: 90, render: (m) => normalizeUnderscores(m?.type) },
     { key: "strength", header: "Strength", minWidth: 90, render: (m) => display(m?.strength) },
     { key: "unit", header: "Unit", minWidth: 80, render: (m) => display(m?.unit) },
-    { key: "expiry", header: "Expiry", minWidth: 100, render: (m) => fmtDate(m?.Expiry) },
-    { key: "instruction", header: "Instruction", minWidth: 140, render: (m) => capitalizeWords(m?.instruction) },
+    // { key: "expiry", header: "Expiry", minWidth: 100, render: (m) => fmtDate(m?.Expiry) },
+    // { key: "instruction", header: "Instruction", minWidth: 140, render: (m) => capitalizeWords(m?.instruction) },
     { key: "composition", header: "Composition", minWidth: 140, render: (m) => capitalizeWords(m?.composition) },
-    { key: "quantity", header: "Quantity", align: "right", minWidth: 90, render: (m) => display(m?.quantity) },
-    { key: "unitPrice", header: "Unit Price", align: "right", minWidth: 100, render: (m) => formatCurrency(m?.unitPrice) },
+    // { key: "quantity", header: "Quantity", align: "right", minWidth: 90, render: (m) => display(m?.quantity) },
+    // { key: "unitPrice", header: "Unit Price", align: "right", minWidth: 100, render: (m) => formatCurrency(m?.unitPrice) },
     { key: "controlledDrug", header: "Controlled Drug", minWidth: 110, render: (m) => (m?.isControlledDrug ? "Yes" : "No") },
   ];
 
@@ -552,6 +553,59 @@ const InventoryManagement = () => {
     );
   };
 
+  const isLiquidForm = (medicine) => medicine?.form === "LIQUID_FORM";
+
+  // Stock is stored per-center in the unit matching how it's tracked: purchase
+  // unit for LIQUID_FORM (e.g. bottles), base unit for everything else — so no
+  // conversion is needed, just sum the raw values.
+  const totalStockQty = (m) =>
+    (m?.centers || []).reduce((sum, c) => sum + (Number(c?.stock) || 0), 0);
+
+  const stockUnitLabel = (medicine) =>
+    normalizeUnderscores(isLiquidForm(medicine) ? medicine?.purchaseUnit : medicine?.baseUnit);
+
+  // MRP/Purchase Price/Sales Price are each the price of one purchase unit
+  // (e.g. per strip/bottle). For LIQUID_FORM, stock is already in purchase
+  // units, so the price applies directly. Otherwise, stock is in base units,
+  // so price per base unit = price * purchaseQuantity / baseQuantity
+  // (purchaseQuantity purchase units = baseQuantity base units).
+  const pricePerStockUnit = (medicine, pricePerPurchaseUnit) => {
+    const priceNum = Number(pricePerPurchaseUnit) || 0;
+    if (isLiquidForm(medicine)) return priceNum;
+    const purchaseQty = medicine?.conversion?.purchaseQuantity;
+    const baseQty = medicine?.conversion?.baseQuantity;
+    if (!purchaseQty || !baseQty) return priceNum;
+    return (priceNum * purchaseQty) / baseQty;
+  };
+
+  // Precomputed once per row (not per column render) so the 4 columns that
+  // need total stock, and the 3 price/unit + stock-value pairs, don't each
+  // redo the same centers.reduce()/conversion math — recomputed only when
+  // `medicines` (the current page's rows) changes.
+  const pharmacyInventoryData = useMemo(
+    () =>
+      (medicines || []).map((m) => {
+        const medicine = m?.medicineId;
+        const stockQty = totalStockQty(m);
+        const mrpPerUnit = pricePerStockUnit(medicine, m?.mrp);
+        const purchasePricePerUnit = pricePerStockUnit(medicine, m?.purchasePrice);
+        const salesPricePerUnit = pricePerStockUnit(medicine, m?.SalesPrice);
+        return {
+          ...m,
+          _stockQty: stockQty,
+          _stockUnitLabel: stockUnitLabel(medicine),
+          _mrpPerUnit: mrpPerUnit,
+          _mrpStockValue: mrpPerUnit * stockQty,
+          _purchasePricePerUnit: purchasePricePerUnit,
+          _purchaseStockValue: purchasePricePerUnit * stockQty,
+          _salesPricePerUnit: salesPricePerUnit,
+          _salesStockValue: salesPricePerUnit * stockQty,
+        };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [medicines]
+  );
+
   // Columns for the Pharmacy Inventory grid (CompactDataGrid shape).
   const pharmacyInventoryColumns = [
     { key: "id", header: "ID", minWidth: 90, render: (m) => display(m?.id) },
@@ -594,9 +648,16 @@ const InventoryManagement = () => {
     { key: "strength", header: "Strength", minWidth: 90, render: (m) => display(m?.Strength) },
     { key: "centerStock", header: "Centre / Available stock", minWidth: 260, render: centerStockCell },
     { key: "unit", header: "Unit", minWidth: 80, render: (m) => display(m?.unitType || m?.unit) },
+    { key: "totalStock", header: "Total Stock", align: "right", minWidth: 110, render: (m) => `${formatTwoDecimals(m._stockQty)} ${m._stockUnitLabel}` },
     { key: "mrp", header: "M.R.P", align: "right", minWidth: 90, render: (m) => display(m?.mrp) },
+    { key: "mrpPerUnit", header: "M.R.P / Unit", align: "right", minWidth: 100, render: (m) => formatCurrency(m._mrpPerUnit) },
+    { key: "mrpStockValue", header: "M.R.P Stock Value", align: "right", minWidth: 140, render: (m) => formatCurrency(m._mrpStockValue) },
     { key: "purchasePrice", header: "Purchase Price", align: "right", minWidth: 110, render: (m) => display(m?.purchasePrice) },
+    { key: "purchasePricePerUnit", header: "Purchase Price / Unit", align: "right", minWidth: 130, render: (m) => formatCurrency(m._purchasePricePerUnit) },
+    { key: "purchaseStockValue", header: "Purchase Stock Value", align: "right", minWidth: 150, render: (m) => formatCurrency(m._purchaseStockValue) },
     { key: "salesPrice", header: "Sales Price", align: "right", minWidth: 100, render: (m) => display(m?.SalesPrice) },
+    { key: "salesPricePerUnit", header: "Sales Price / Unit", align: "right", minWidth: 120, render: (m) => formatCurrency(m._salesPricePerUnit) },
+    { key: "salesStockValue", header: "Sales Stock Value", align: "right", minWidth: 140, render: (m) => formatCurrency(m._salesStockValue) },
     { key: "expiryDate", header: "Expiry Date", minWidth: 100, render: (m) => fmtDate(m?.Expiry) },
     { key: "batch", header: "Batch", minWidth: 100, render: (m) => display(m?.Batch) },
     { key: "company", header: "Company", minWidth: 120, render: (m) => display(m?.company) },
@@ -890,7 +951,7 @@ const InventoryManagement = () => {
             ) : (
               <CompactDataGrid
                 columns={pharmacyInventoryColumns}
-                data={medicines}
+                data={pharmacyInventoryData}
                 loading={loading}
                 page={currentPage}
                 setPage={goToPage}

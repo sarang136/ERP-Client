@@ -248,24 +248,24 @@ const EditMedicine = ({ updateMedicine, setUpdateMedicine }) => {
           {/* {selectField("Unit", "unit", medicineUnits, "Choose Unit")} */}
 
           {/* Row 5 */}
-          <Col md={4} className="mb-3">
+          {/* <Col md={4} className="mb-3">
             <label className="fs-12 text-muted mb-1">Instruction</label>
             <Input onChange={validation.handleChange} name="instruction" onBlur={validation.handleBlur} value={validation.values.instruction || ""} type="textarea" rows="2" bsSize="sm" placeholder="Instruction" />
-          </Col>
+          </Col> */}
           <Col md={4} className="mb-3">
             <label className="fs-12 text-muted mb-1">Composition</label>
             <Input onChange={validation.handleChange} name="composition" onBlur={validation.handleBlur} value={validation.values.composition || ""} type="textarea" rows="2" bsSize="sm" placeholder="Composition" />
           </Col>
-          <Col md={4} className="mb-3">
+          {/* <Col md={4} className="mb-3">
             <label className="fs-12 text-muted mb-1">Quantity</label>
             <Input onChange={validation.handleChange} name="quantity" onBlur={validation.handleBlur} value={validation.values.quantity || ""} bsSize="sm" placeholder="Quantity" type="number" />
-          </Col>
+          </Col> */}
 
           {/* Row 6 */}
-          <Col md={4} className="mb-3">
+          {/* <Col md={4} className="mb-3">
             <label className="fs-12 text-muted mb-1">Unit Price</label>
             <Input onChange={validation.handleChange} name="unitPrice" onBlur={validation.handleBlur} value={validation.values.unitPrice || ""} bsSize="sm" placeholder="Unit Price" type="number" />
-          </Col>
+          </Col> */}
           <Col md={4} className="mb-3">
             <label className="fs-12 text-muted mb-1">Controlled Drug</label>
             <Select

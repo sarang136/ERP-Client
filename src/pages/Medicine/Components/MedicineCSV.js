@@ -61,30 +61,30 @@ const MedicineCSV = ({ modal, toggle, centers, ...rest }) => {
       name: "Unit",
       selector: (row) => row.unit,
     },
-    {
-      name: "Instructions",
-      selector: (row) => row.instruction,
-    },
+    // {
+    //   name: "Instructions",
+    //   selector: (row) => row.instruction,
+    // },
     {
       name: "Composition",
       selector: (row) => row.composition,
     },
-    {
-      name: "Quantity",
-      selector: (row) => row.quantity,
-    },
+    // {
+    //   name: "Quantity",
+    //   selector: (row) => row.quantity,
+    // },
     {
       name: "Batch Number",
       selector: (row) => row.batch_number,
     },
-    {
-      name: "Expiry Date",
-      selector: (row) => row.expiry_date,
-    },
-    {
-      name: "Unit Price",
-      selector: (row) => row.unit_price,
-    },
+    // {
+    //   name: "Expiry Date",
+    //   selector: (row) => row.expiry_date,
+    // },
+    // {
+    //   name: "Unit Price",
+    //   selector: (row) => row.unit_price,
+    // },
   ];
 
   return (

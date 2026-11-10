@@ -424,24 +424,24 @@ const MedicinesForm = ({ toggle, currentPage = 1, itemsPerPage = 10, searchItem 
               </Col> */}
 
               {/* Row 5 */}
-              <Col md={4} className="mb-3">
+              {/* <Col md={4} className="mb-3">
                 <label className="fs-12 text-muted mb-1">Instruction</label>
                 <Input bsSize="sm" id={idx} onChange={handleChange} name="instruction" value={medicine.instruction} type="textarea" placeholder="Instruction" rows="2" />
-              </Col>
+              </Col> */}
               <Col md={4} className="mb-3">
                 <label className="fs-12 text-muted mb-1">Composition</label>
                 <Input bsSize="sm" id={idx} onChange={handleChange} name="composition" value={medicine.composition} type="textarea" placeholder="Composition" rows="2" />
               </Col>
-              <Col md={4} className="mb-3">
+              {/* <Col md={4} className="mb-3">
                 <label className="fs-12 text-muted mb-1">Quantity</label>
                 <Input bsSize="sm" id={idx} onChange={handleChange} name="quantity" value={medicine.quantity} type="number" placeholder="Quantity" />
-              </Col>
+              </Col> */}
 
               {/* Row 6 */}
-              <Col md={4} className="mb-3">
+              {/* <Col md={4} className="mb-3">
                 <label className="fs-12 text-muted mb-1">Unit Price</label>
                 <Input bsSize="sm" id={idx} onChange={handleChange} name="unitPrice" value={medicine.unitPrice} type="number" placeholder="Unit Price" />
-              </Col>
+              </Col> */}
               <Col md={4} className="mb-3">
                 <label className="fs-12 text-muted mb-1">Controlled Drug</label>
                 <Select

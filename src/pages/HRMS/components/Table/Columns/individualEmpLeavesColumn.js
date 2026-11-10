@@ -16,6 +16,15 @@ const formatDate = (date) => {
   return `${day}-${month}-${year}`;
 };
 
+const SHIFT_TYPE_LABELS = {
+  FULL_DAY: "Full Day",
+  FIRST_HALF: "First Half",
+  SECOND_HALF: "Second Half",
+};
+
+const formatShiftType = (shiftTime) =>
+  SHIFT_TYPE_LABELS[shiftTime] || shiftTime || "-";
+
 export const IndividualLeavesColumn = () => [
   {
     name: <div className="text-center">Leave Type</div>,
@@ -42,8 +51,8 @@ export const IndividualLeavesColumn = () => [
   },
 
   {
-    name: <div className="text-center">Shift time</div>,
-    selector: (row) => row?.shiftTime || "-",
+    name: <div className="text-center">Shift Type</div>,
+    selector: (row) => formatShiftType(row?.shiftTime),
     grow: 1,
     minWidth: "140px",
     center: true,
