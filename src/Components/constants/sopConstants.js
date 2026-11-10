@@ -52,6 +52,9 @@ export const TARGET_OPTIONS = [
   { value: "auditTest", label: "AUDIT Test" },
   { value: "cgisTest", label: "CGI-S Test" },
   { value: "ciwaBTest", label: "CIWA-B Test" },
+  // Centre licence register — not a patient model. A rule that uses it uses
+  // nothing else; it alerts N days before a licence's Valid till date.
+  { value: "Compliance", label: "Compliance (centre licences)" },
 ];
 export const OPERATOR_OPTIONS = [
   ...[
@@ -74,7 +77,33 @@ export const OPERATOR_OPTIONS = [
   // Trend operator. Splits the admission into successive periods counted from
   // the admission date and compares the first and last reading in each.
   { value: "CHANGE_OVER_PERIOD", label: "Changed over period (trend)" },
+  // Compliance only: Valid till, N days before. The days are the condition's
+  // `alertDaysBefore`, not its value.
+  { value: "DAYS_BEFORE", label: "Days before (alert)" },
 ];
+
+// --- Compliance (centre licence) rules ---------------------------------------
+// Mirrors the server's src/constants/sopCompliance.js.
+
+export const COMPLIANCE_MODEL = "Compliance";
+export const DAYS_BEFORE_OPERATOR = "DAYS_BEFORE";
+export const ALERT_DAYS_BEFORE_MAX = 365;
+
+// Quick picks for the "Alert firing day(s)" input; any 0–365 can be typed.
+export const alertDaysBeforeLabel = (n) =>
+  Number(n) === 0 ? "On expiry day" : `${n} days before`;
+export const ALERT_DAYS_BEFORE_OPTIONS = [90, 60, 30, 15, 7, 1, 0].map((n) => ({
+  value: n,
+  label: alertDaysBeforeLabel(n),
+}));
+
+// Placeholders a compliance block's alert template can use.
+export const COMPLIANCE_TEMPLATE_HINT =
+  "{centre} · {complianceType} · {licenceNumber} · {validTill} · {daysLeft}";
+
+/** True when any condition (UI shape, model = option) is on Compliance. */
+export const hasComplianceCondition = (conditions = []) =>
+  conditions.some((c) => c?.model?.value === COMPLIANCE_MODEL);
 
 // --- CHANGE_OVER_PERIOD side-car options -------------------------------------
 // The threshold is always entered as a positive number; `direction` carries the
@@ -156,11 +185,20 @@ export const OPERATORS_BY_TYPE = {
   // type, so "NOT_EQUALS Geriatric" still lets an untyped admission through.
   // The dropdown comes from the field's `options` metadata, not from here.
   DetailAdmissionPatientType: ["EQUALS", "NOT_EQUALS"],
+  // Synthetic types for the Compliance model. Valid till takes only "Days
+  // before" (with the firing-day picker); type / category are dropdowns from
+  // the field's `options` metadata.
+  ComplianceExpiry: ["DAYS_BEFORE"],
+  ComplianceRef: ["EQUALS", "NOT_EQUALS"],
 };
 
 // Field types that only mean something in Satisfying Criteria. ConditionRow
 // hides them from target-block rows; the server refuses them there too.
 export const CRITERIA_ONLY_FIELD_TYPES = new Set(["DetailAdmissionPatientType"]);
+
+// …and the reverse: Valid till only means something in a target block (it is
+// what fires the alert). MainBlock hides it; the server refuses it there too.
+export const TARGET_ONLY_FIELD_TYPES = new Set(["ComplianceExpiry"]);
 
 // Severity threshold dropdown for LabReport flagged-items conditions.
 // "Very Low" intentionally omitted — the server's severityRank treats it as
@@ -249,6 +287,9 @@ export const emptyConditionItem = () => ({
   // Populated only when operator is CHANGE_OVER_PERIOD —
   // { direction, comparator, unit, periodUnit, periodCount }.
   changeMatch: null,
+  // Populated only when operator is DAYS_BEFORE (Compliance Valid till) — the
+  // alert firing days, e.g. [30] or [90, 30, 7]. 0 = on the expiry day.
+  alertDaysBefore: [],
   // Optional discontinue-gate for DELAYED cadence ("missing assessment")
   // conditions — { count, criteria: [{ field, threshold }] }. Null = off.
   // When the last `count` assessments all score below the thresholds, the
@@ -291,6 +332,7 @@ export const SOP_CATEGORY_OPTIONS = [
   { value: "LAB_REPORTS", label: "Lab Reports" },
   { value: "ADMISSION_DOCUMENTATION", label: "Admission Documentation" },
   { value: "CLINICAL_DOCUMENTATION", label: "Clinical Documentation" },
+  { value: "COMPLIANCE", label: "Compliance" },
   { value: "OTHER", label: "Other" },
 ];
 

@@ -13,6 +13,7 @@ const MainBlock = ({
   fetchModelFields,
   isSubmitting,
   fieldErrors,
+  isComplianceRule = false,
 }) => {
   const handleCentersChange = (ids) => {
     setSatisfyingCriteria((prev) => ({ ...prev, centers: ids }));
@@ -67,8 +68,9 @@ const MainBlock = ({
             Applicable Centers <span className="text-danger">*</span>
           </Label>
           <small className="text-muted d-block mb-2">
-            This SOP only generates alerts for patients in the selected
-            center(s).
+            {isComplianceRule
+              ? "This SOP only generates alerts for licences of the selected center(s)."
+              : "This SOP only generates alerts for patients in the selected center(s)."}
           </small>
           <CenterDropdown
             options={centerOptions}

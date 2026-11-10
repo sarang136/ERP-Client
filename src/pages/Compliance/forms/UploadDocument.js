@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Row,
   Col,
@@ -424,10 +424,6 @@ const UploadDocument = () => {
     save("SEND");
   };
 
-  const reminderPreview = useMemo(() => {
-    if (noExpiry) return [];
-    return [90, 60, 30, 7].map((d) => `${d}-day reminder before expiry`);
-  }, [noExpiry]);
 
   if (draftLoading) {
     return (
@@ -853,15 +849,12 @@ const UploadDocument = () => {
                   No reminders — lifetime registration.
                 </p>
               ) : (
-                <ul className="text-muted mb-0 ps-3" style={{ fontSize: 13 }}>
-                  {reminderPreview.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
+                <p className="text-muted mb-0" style={{ fontSize: 13 }}>
+                  Sent by the Compliance SOP rules, on the days set in each
+                  rule — for example 30 days before Valid till. Paused while a
+                  renewal is underway.
+                </p>
               )}
-              <p className="text-muted mt-2 mb-0" style={{ fontSize: 12 }}>
-                Scheduling itself is handled by the SOP module, not this screen.
-              </p>
             </CardBody>
           </Card>
 
