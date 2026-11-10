@@ -523,6 +523,7 @@ export const UPLOAD_AUDIT_REPORT = "/pharmacy/audit/upload-chunk";
 export const GET_AUDIT_REPORT = "/pharmacy/audit/report";
 export const UPDATE_AUDIT_STATUS = "/pharmacy/audit/status";
 export const DOWNLOAD_AUDIT_FAILED_MEDICINES = "/pharmacy/audit/failed";
+export const DOWNLOAD_AUDIT_REPORT = "/pharmacy/audit/report/download";
 
 // PHARMACY REQUISITION - INTERNAL TRANSFER
 export const PHARMACY_INTERNAL_TRANSFER =

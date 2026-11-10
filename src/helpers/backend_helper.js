@@ -2288,6 +2288,19 @@ export const downloadAuditFailedMedicines = (id) => {
   });
 };
 
+export const downloadAuditReport = (params) => {
+  return api.get(url.DOWNLOAD_AUDIT_REPORT, {
+    params,
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+    paramsSerializer: (params) => {
+      return qs.stringify(params, { arrayFormat: "repeat" });
+    },
+    responseType: "blob",
+  });
+};
+
 export const getPharmacyConsolidated = (params) =>
   api.get(url.PHARMACY_CONSOLIDATED, {
     params,
