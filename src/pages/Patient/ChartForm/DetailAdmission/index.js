@@ -302,6 +302,17 @@ const DetailAdmission = ({
   const validationValuesRef = useRef(null);
 
   const detailAdmissionForm = editChartData?.detailAdmission;
+  // Missing detailAdmission fields (and "undefined"/"null" strings stored by
+  // an earlier edit) must reach the form as "", never as undefined.
+  const detailInfoValue = (key) => {
+    const value = detailAdmissionForm?.detailAdmission?.[key];
+    return value === undefined ||
+      value === null ||
+      value === "undefined" ||
+      value === "null"
+      ? ""
+      : value;
+  };
   const isOldMentalExamination = Boolean(
     detailAdmissionForm?.mentalExamination,
   );
@@ -371,31 +382,15 @@ const DetailAdmission = ({
           : patient?.center,
       addmission: patient?.addmission?._id,
       //detail addmission form
-      age: detailAdmissionForm ? detailAdmissionForm.detailAdmission?.age : "",
-      doctorConsultant: detailAdmissionForm
-        ? detailAdmissionForm.detailAdmission?.doctorConsultant
-        : "",
-      religion: detailAdmissionForm
-        ? detailAdmissionForm.detailAdmission?.religion
-        : "",
-      maritalStatus: detailAdmissionForm
-        ? detailAdmissionForm.detailAdmission?.maritalStatus
-        : "",
-      bloodGroup: detailAdmissionForm
-        ? detailAdmissionForm.detailAdmission?.bloodGroup
-        : "",
-      occupation: detailAdmissionForm
-        ? detailAdmissionForm.detailAdmission?.occupation
-        : "",
-      education: detailAdmissionForm
-        ? detailAdmissionForm.detailAdmission?.education
-        : "",
-      address: detailAdmissionForm
-        ? detailAdmissionForm.detailAdmission?.address
-        : "",
-      referral: detailAdmissionForm
-        ? detailAdmissionForm.detailAdmission?.referral
-        : "",
+      age: detailInfoValue("age"),
+      doctorConsultant: detailInfoValue("doctorConsultant"),
+      religion: detailInfoValue("religion"),
+      maritalStatus: detailInfoValue("maritalStatus"),
+      bloodGroup: detailInfoValue("bloodGroup"),
+      occupation: detailInfoValue("occupation"),
+      education: detailInfoValue("education"),
+      address: detailInfoValue("address"),
+      referral: detailInfoValue("referral"),
       provisionaldiagnosis: Array.isArray(
         detailAdmissionForm?.doctorSignature?.provisionaldiagnosis,
       )
