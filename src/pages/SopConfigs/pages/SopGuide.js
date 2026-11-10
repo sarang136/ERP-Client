@@ -174,6 +174,11 @@ const SopGuide = () => {
                       11. Tips &amp; common pitfalls
                     </a>
                   </li>
+                  <li>
+                    <a href="#compliance" onClick={(e) => { e.preventDefault(); scrollTo("compliance"); }}>
+                      12. Compliance — licence expiry alerts
+                    </a>
+                  </li>
                 </ul>
               </Col>
             </Row>
@@ -612,6 +617,67 @@ const SopGuide = () => {
             <strong>Edit creates a new version</strong>, not an overwrite —
             historical alerts still reference the rule by ID, so you can
             tweak thresholds without breaking the audit trail.
+          </li>
+        </ul>
+
+        {/* 12. Compliance */}
+        <SectionAnchor id="compliance">
+          12. Compliance — licence expiry alerts
+        </SectionAnchor>
+        <p>
+          A Compliance rule watches the centre licence register (Compliance →
+          Register) instead of patients, and alerts before a licence&apos;s{" "}
+          <strong>Valid till</strong> date.
+        </p>
+        <Step n={1} title="Basic Info.">
+          Any name; the category is set to <Kbd>Compliance</Kbd> for you.
+        </Step>
+        <Step n={2} title="Satisfying Criteria.">
+          Pick the centres. Optionally narrow it to a{" "}
+          <Kbd>Compliance · Compliance type</Kbd> or{" "}
+          <Kbd>Compliance · Compliance category</Kbd> (Equals / Not equals).
+        </Step>
+        <Step n={3} title="Target block condition.">
+          <Kbd>Compliance · Valid till · Days before</Kbd>, then the{" "}
+          <strong>Alert firing day(s)</strong> — e.g. <Kbd>30</Kbd>, or several
+          such as <Kbd>90</Kbd> <Kbd>30</Kbd> <Kbd>7</Kbd>. <Kbd>On expiry day</Kbd>{" "}
+          (0) alerts on the day itself.
+        </Step>
+        <Step n={4} title="Routing.">
+          Tick the roles (e.g. <Kbd>ADMIN</Kbd>, <Kbd>MANAGER</Kbd>) or pick
+          people. A role only sees alerts for the centres in their access.
+        </Step>
+        <ul>
+          <li>
+            Checked every morning at <strong>4:00 AM</strong>. Each firing day
+            alerts <strong>once per licence term</strong>; an approved renewal
+            starts a new cycle.
+          </li>
+          <li>
+            A licence uploaded late still gets its alert on the next run. If
+            several firing days are reached at once, only the nearest fires.
+          </li>
+          <li>
+            <Kbd>On expiry day</Kbd> also alerts once for a licence that has
+            already expired.
+          </li>
+          <li>
+            No alerts while a renewal is underway (marked In renewal, or a
+            renewed certificate is waiting for approval). Approving the renewal
+            closes the old term&apos;s open alerts automatically.
+          </li>
+          <li>
+            Skipped: lifetime registrations, records with no approved primary
+            certificate, and inactive compliance types.
+          </li>
+          <li>
+            The document&apos;s own &ldquo;Start renewal before expiry&rdquo;
+            value is not used — the rule&apos;s firing days decide.
+          </li>
+          <li>
+            Template placeholders: <Kbd>{"{centre}"}</Kbd>{" "}
+            <Kbd>{"{complianceType}"}</Kbd> <Kbd>{"{licenceNumber}"}</Kbd>{" "}
+            <Kbd>{"{validTill}"}</Kbd> <Kbd>{"{daysLeft}"}</Kbd>.
           </li>
         </ul>
 
