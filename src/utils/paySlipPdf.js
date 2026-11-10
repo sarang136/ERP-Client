@@ -383,8 +383,8 @@ const StandardPayslip = ({ row }) => {
     { label: "Salary Advance", value: row?.advanceSalary  ?? null },
     { label: "TDS",            value: row?.TDSAmount      ?? null },
     { label: "Insurance",      value: row?.insurance      ?? null },
-    { label: "Other Deductions", value: withAdjustment(row?.otherDeductions ?? null, adjustments.otherDeduction) },
     { label: "Bonus Adjustment", value: adjustments.bonusAdjustment },
+    { label: "Other Deductions", value: withAdjustment(row?.otherDeductions ?? null, adjustments.otherDeduction) },
   ];
 
   const rowCount = Math.max(earningsRows.length, deductionRows.length);
@@ -650,9 +650,9 @@ const CONSULTANT_CFG = {
     ["PT Arrear", "PTArrears"],
     ["PF Arrear", "PFArrears"],
     ["Voluntary PF", "voluntaryPF"],
-    ["Other Recovery", "otherDeductions"],
     ["Bonus Adjustment", "bonusAdjustment"],
     ["Insurance", "insurance"],
+    ["Other Recovery", "otherDeductions"],
   ],
   netLabel: "Net Amount Payable:",
 };
@@ -668,9 +668,9 @@ const INTERN_CFG = {
     ["PT Arrear", "PTArrears"],
     ["PF Arrear", "PFArrears"],
     ["Voluntary PF", "voluntaryPF"],
-    ["Other Recoveries", "otherDeductions"],
     ["Bonus Adjustment", "bonusAdjustment"],
     ["Insurance", "insurance"],
+    ["Other Recoveries", "otherDeductions"],
   ],
   netLabel: "Net Stipend Payable:",
 };

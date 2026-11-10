@@ -2000,10 +2000,26 @@ export const getEmployeePayslipById = (id) => {
   });
 };
 
+export const getEmployeePayslipsByIds = (ids) => {
+  return api.create(
+    `${url.GET_EMPLOYEE_PAYSLIPS}/bulk`,
+    { ids },
+    { headers: { "X-No-Cookie-Token": "true" } },
+  );
+};
+
 export const getMyPayslipById = (id) => {
   return api.get(`${url.GET_MY_PAYSLIPS}/${id}`, {
     headers: { "X-No-Cookie-Token": "true" },
   });
+};
+
+export const getMyPayslipsByIds = (ids) => {
+  return api.create(
+    `${url.GET_MY_PAYSLIPS}/bulk`,
+    { ids },
+    { headers: { "X-No-Cookie-Token": "true" } },
+  );
 };
 
 export const getMySalaryData = (params) => {

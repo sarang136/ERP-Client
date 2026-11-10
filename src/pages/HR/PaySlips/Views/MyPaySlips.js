@@ -3,7 +3,7 @@ import { Button, CardBody, Input, Spinner } from "reactstrap";
 import Select from "react-select";
 import { useDispatch, useSelector } from "react-redux";
 import { endOfYear, startOfYear } from "date-fns";
-import { Eye } from "lucide-react";
+import { Download, Eye } from "lucide-react";
 import { toast } from "react-toastify";
 import DataTableComponent from "../../../../Components/Common/DataTable";
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
@@ -12,12 +12,13 @@ import {
   buildPayslipPreviewFile,
   displayMoney,
   displayValue,
+  downloadPayslipsBulk,
   monthLabel,
   readStickyFilters,
   useDebouncedValue,
   writeStickyFilters,
 } from "../payslipUtils";
-import { getMyPayslipById } from "../../../../helpers/backend_helper";
+import { getMyPayslipById, getMyPayslipsByIds } from "../../../../helpers/backend_helper";
 import PreviewFile from "../../../../Components/Common/PreviewFile";
 import RefreshButton from "../../../../Components/Common/RefreshButton";
 
@@ -53,6 +54,9 @@ const MyPaySlipsTab = () => {
   );
   const [downloadingId, setDownloadingId] = useState("");
   const [previewFile,   setPreviewFile]   = useState(null);
+  const [selectedRows,  setSelectedRows]  = useState([]);
+  const [clearSelection, setClearSelection] = useState(false);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
 
   const debouncedSearch = useDebouncedValue(search);
 
@@ -70,6 +74,11 @@ const MyPaySlipsTab = () => {
   useEffect(() => {
     setPage(1);
   }, [type, selectedYear, limit, debouncedSearch]);
+
+  useEffect(() => {
+    setSelectedRows([]);
+    setClearSelection((prev) => !prev);
+  }, [page, type, selectedYear, limit, debouncedSearch]);
 
   const fetchKey = [
     type,
@@ -132,6 +141,25 @@ const MyPaySlipsTab = () => {
   const closePreview = () => {
     if (previewFile?.url) window.URL.revokeObjectURL(previewFile.url);
     setPreviewFile(null);
+  };
+
+  const handleBulkDownload = async () => {
+    if (!selectedRows.length) return;
+    setBulkDownloading(true);
+    try {
+      const { failures } = await downloadPayslipsBulk(selectedRows, getMyPayslipsByIds, { handleAuthError });
+      if (failures) {
+        toast.error(`${failures} of ${selectedRows.length} payslips failed to download`);
+      }
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error?.message || "Failed to download payslips");
+      }
+    } finally {
+      setBulkDownloading(false);
+      setClearSelection((prev) => !prev);
+      setSelectedRows([]);
+    }
   };
 
   const columns = useMemo(() => [
@@ -231,7 +259,21 @@ const MyPaySlipsTab = () => {
     <CardBody className="p-3 bg-white" style={{ width: "80%" }}>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4 className="fw-bold text-primary mb-0">MY PAY SLIPS</h4>
-        <RefreshButton loading={loading} onRefresh={runFetch} />
+        <div className="d-flex align-items-center gap-2">
+          {selectedRows.length > 0 && (
+            <Button
+              color="primary"
+              size="sm"
+              className="d-inline-flex align-items-center gap-1"
+              onClick={handleBulkDownload}
+              disabled={bulkDownloading}
+            >
+              {bulkDownloading ? <Spinner size="sm" /> : <Download size={16} />}
+              Download Selected ({selectedRows.length})
+            </Button>
+          )}
+          <RefreshButton loading={loading} onRefresh={runFetch} />
+        </div>
       </div>
 
       <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
@@ -277,6 +319,10 @@ const MyPaySlipsTab = () => {
         setLimit={setLimit}
         loading={loading}
         pagination={pagination}
+        selectableRows
+        selectableRowsHighlight
+        clearSelectedRows={clearSelection}
+        onSelectedRowsChange={({ selectedRows: rows }) => setSelectedRows(rows)}
         noDataComponent={
           type === "FORM"
             ? "Forms are not available yet"
