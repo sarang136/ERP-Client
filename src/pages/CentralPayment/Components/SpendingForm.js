@@ -464,7 +464,13 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
     // Name of the master vendor currently chosen; while it matches the Vendor field, its bank details are locked
     const [masterVendorName, setMasterVendorName] = useState("");
     const [masterVendorPan, setMasterVendorPan] = useState("");
+    // For these categories the vendor is not picked from Vendor Management: a Patient Refund is typed in,
+    // a Salary Advance takes the employee's name and bank details
+    const TYPED_VENDOR_CATEGORIES = ["PATIENT_REFUND", "SALARY_ADVANCE"];
+    const isTypedVendor = TYPED_VENDOR_CATEGORIES.includes(form.values.category);
+    const [employeeBankLocked, setEmployeeBankLocked] = useState(false);
     const vendorLocked =
+        !isTypedVendor &&
         !!masterVendorName &&
         masterVendorName.toLowerCase() === String(form.values.vendor || "").trim().toLowerCase();
 
@@ -525,6 +531,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
     panCardOnFileRef.current = !!panCardOnFile;
     // The PAN number and PAN card that come with the vendor cannot be changed here (change them in Vendor Management)
     const panLocked = !!panCardOnFile || (vendorLocked && !!masterVendorPan);
+    const bankLocked = vendorLocked || (form.values.category === "SALARY_ADVANCE" && employeeBankLocked);
     const renderPanFields = (suffix) => Number(form.values.TDSRate) > 0 && (
         <>
             <FormGroup>
@@ -577,6 +584,22 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             </FormGroup>
         </>
     );
+
+    const handleEmployeeSelect = (option) => {
+        form.setFieldValue("employeeId", option);
+        const bank = option?.bankDetails || {};
+        const ifsc = clean(bank.IFSCCode).toUpperCase();
+        const holder = clean(bank.accountName);
+        const accountNo = clean(bank.accountNo);
+        const complete = !!(option && ifsc && holder && accountNo);
+        setEmployeeBankLocked(complete);
+        form.setFieldValue("IFSCCode", ifsc);
+        form.setFieldValue("accountHolderName", holder);
+        form.setFieldValue("accountNo", accountNo);
+        if (option && !complete) {
+            toast.warn("Bank details are not complete for this employee. Please fill them in.");
+        }
+    };
 
     const normalizeTextInput = (e) => {
         const { name, value } = e.target;
@@ -632,11 +655,14 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     query: inputValue,
                     centers: form.values.center,
                     view: "SALARY_ADVANCE",
+                    withBank: true,
                 })
             ).unwrap();
             return (res?.data || []).map(emp => ({
                 value: emp._id,
                 label: `${emp.name} (${emp.eCode})`,
+                employeeName: emp.name,
+                bankDetails: emp.bankDetails,
             }));
         } catch (error) {
             if (!handleAuthError(error)) {
@@ -795,7 +821,25 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     }
                     onChange={(option) => {
                         const value = option?.value || "";
+                        const switchingVendorSource =
+                            form.values.category !== value &&
+                            (TYPED_VENDOR_CATEGORIES.includes(form.values.category) || TYPED_VENDOR_CATEGORIES.includes(value));
                         form.setFieldValue("category", value, true);
+
+                        // The vendor details come from a different place for Patient Refund and Salary Advance than
+                        // for the other categories, so switching between them starts the vendor details afresh
+                        if (switchingVendorSource) {
+                            setEmployeeBankLocked(false);
+                            setMasterVendorName("");
+                            setMasterVendorPan("");
+                            setSavedPan(null);
+                            form.setFieldValue("vendor", "");
+                            form.setFieldValue("IFSCCode", "");
+                            form.setFieldValue("accountHolderName", "");
+                            form.setFieldValue("accountNo", "");
+                            form.setFieldValue("panNumber", "");
+                            form.setFieldValue("panCard", []);
+                        }
 
                         if (value !== "OTHERS") {
                             form.setFieldValue("otherCategory", "");
@@ -843,9 +887,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                         loadOptions={debouncedLoadEmployees}
                         placeholder="Search by name or ECode"
                         value={form.values.employeeId}
-                        onChange={(option) => {
-                            form.setFieldValue("employeeId", option);
-                        }}
+                        onChange={handleEmployeeSelect}
                         onBlur={() => form.setFieldTouched("employeeId", true)}
                         classNamePrefix="react-select"
                         className={
@@ -1015,20 +1057,35 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                 <Label for="vendor" className="fw-medium">
                     Vendor <span className="text-danger">*</span>
                 </Label>
-                <AsyncSelect
-                    inputId="vendor"
-                    isClearable
-                    cacheOptions
-                    defaultOptions
-                    loadOptions={(text) => searchVendors(text)}
-                    placeholder="Select vendor"
-                    noOptionsMessage={() => "No active vendor found. Create it in Vendor Management first."}
-                    value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
-                    onChange={handleVendorSelect}
-                    onBlur={() => form.setFieldTouched("vendor", true)}
-                    classNamePrefix="react-select"
-                    styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
-                />
+                {isTypedVendor ? (
+                    <Input
+                        type="text"
+                        id="vendor"
+                        name="vendor"
+                        value={form.values.vendor}
+                        onChange={(e) => normalizeTextInput(e)}
+                        onBlur={form.handleBlur}
+                        className={`form-control ${form.touched.vendor && form.errors.vendor
+                            ? "is-invalid"
+                            : ""
+                            }`}
+                    />
+                ) : (
+                    <AsyncSelect
+                        inputId="vendor"
+                        isClearable
+                        cacheOptions
+                        defaultOptions
+                        loadOptions={(text) => searchVendors(text)}
+                        placeholder="Select vendor"
+                        noOptionsMessage={() => "No active vendor found. Create it in Vendor Management first."}
+                        value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
+                        onChange={handleVendorSelect}
+                        onBlur={() => form.setFieldTouched("vendor", true)}
+                        classNamePrefix="react-select"
+                        styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
+                    />
+                )}
                 {form.touched.vendor && form.errors.vendor && (
                     <div className="invalid-feedback d-block">
                         <i className="fas fa-exclamation-circle me-1"></i>
@@ -1155,10 +1212,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="IFSCCode"
                     name="IFSCCode"
                     value={form.values.IFSCCode}
-                    readOnly={vendorLocked}
+                    readOnly={bankLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.IFSCCode && form.errors.IFSCCode
+                    className={`form-control ${bankLocked ? "bg-light" : ""} ${form.touched.IFSCCode && form.errors.IFSCCode
                         ? "is-invalid"
                         : ""
                         }`}
@@ -1179,10 +1236,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="accountHolderName"
                     name="accountHolderName"
                     value={form.values.accountHolderName}
-                    readOnly={vendorLocked}
+                    readOnly={bankLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.accountHolderName && form.errors.accountHolderName
+                    className={`form-control ${bankLocked ? "bg-light" : ""} ${form.touched.accountHolderName && form.errors.accountHolderName
                         ? "is-invalid"
                         : ""
                         }`}
@@ -1203,10 +1260,10 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                     id="accountNo"
                     name="accountNo"
                     value={form.values.accountNo}
-                    readOnly={vendorLocked}
+                    readOnly={bankLocked}
                     onChange={(e) => normalizeTextInput(e)}
                     onBlur={form.handleBlur}
-                    className={`form-control ${vendorLocked ? "bg-light" : ""} ${form.touched.accountNo && form.errors.accountNo
+                    className={`form-control ${bankLocked ? "bg-light" : ""} ${form.touched.accountNo && form.errors.accountNo
                         ? "is-invalid"
                         : ""
                         }`}
@@ -1405,20 +1462,35 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                 <Label for="vendor" className="fw-medium">
                     Vendor <span className="text-danger">*</span>
                 </Label>
-                <AsyncSelect
-                    inputId="vendor"
-                    isClearable
-                    cacheOptions
-                    defaultOptions
-                    loadOptions={(text) => searchVendors(text)}
-                    placeholder="Select vendor"
-                    noOptionsMessage={() => "No active vendor found. Create it in Vendor Management first."}
-                    value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
-                    onChange={handleVendorSelect}
-                    onBlur={() => form.setFieldTouched("vendor", true)}
-                    classNamePrefix="react-select"
-                    styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
-                />
+                {isTypedVendor ? (
+                    <Input
+                        type="text"
+                        id="vendor"
+                        name="vendor"
+                        value={form.values.vendor}
+                        onChange={(e) => normalizeTextInput(e)}
+                        onBlur={form.handleBlur}
+                        className={`form-control ${form.touched.vendor && form.errors.vendor
+                            ? "is-invalid"
+                            : ""
+                            }`}
+                    />
+                ) : (
+                    <AsyncSelect
+                        inputId="vendor"
+                        isClearable
+                        cacheOptions
+                        defaultOptions
+                        loadOptions={(text) => searchVendors(text)}
+                        placeholder="Select vendor"
+                        noOptionsMessage={() => "No active vendor found. Create it in Vendor Management first."}
+                        value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
+                        onChange={handleVendorSelect}
+                        onBlur={() => form.setFieldTouched("vendor", true)}
+                        classNamePrefix="react-select"
+                        styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
+                    />
+                )}
                 {form.touched.vendor && form.errors.vendor && (
                     <div className="invalid-feedback d-block">
                         <i className="fas fa-exclamation-circle me-1"></i>

@@ -117,6 +117,7 @@ const POForm = ({ onSaved, onCancel }) => {
       }),
       deliverySiteId: Yup.string().required("Delivery site is required"),
       billingSiteId: Yup.string().required("Bill To is required"),
+      paymentTermId: Yup.string().required("Payment term is required"),
       expectedDeliveryDate: Yup.string().required(
         "Expected delivery date is required",
       ),
@@ -152,6 +153,7 @@ const POForm = ({ onSaved, onCancel }) => {
           lineItems: true,
           deliverySiteId: true,
           billingSiteId: true,
+          paymentTermId: true,
           expectedDeliveryDate: true,
         });
         toast.error("Please fill in all required fields");
@@ -705,13 +707,18 @@ const POForm = ({ onSaved, onCancel }) => {
                 <FormFeedback>{e.deliverySiteId}</FormFeedback>
               </Col>
               <Col md={6} className="mb-3">
-                <Label>Payment Terms</Label>
+                <Label>
+                  Payment Terms <span className="text-danger">*</span>
+                </Label>
                 <Input
                   type="select"
+                  name="paymentTermId"
                   value={v.paymentTermId}
                   onChange={(ev) =>
                     validation.setFieldValue("paymentTermId", ev.target.value)
                   }
+                  onBlur={validation.handleBlur}
+                  invalid={!!(validation.touched.paymentTermId && e.paymentTermId)}
                 >
                   <option value="">Select terms</option>
                   {paymentTerms.map((pt) => (
@@ -720,6 +727,7 @@ const POForm = ({ onSaved, onCancel }) => {
                     </option>
                   ))}
                 </Input>
+                <FormFeedback>{e.paymentTermId}</FormFeedback>
               </Col>
               <Col md={6} className="mb-3">
                 <Label>
