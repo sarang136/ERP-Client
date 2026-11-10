@@ -302,6 +302,7 @@ const POOverview = ({ poId, onBack }) => {
                   : PO_STATUS_LABELS[po.status] || po.status
               }
             />
+
             {isClosed && (
               <>
                 <Field label="Closed On" value={dateFmt(po.closedAt)} />
