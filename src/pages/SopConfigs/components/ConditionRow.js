@@ -22,6 +22,12 @@ import {
   CHANGE_UNIT_OPTIONS,
   CHANGE_PERIOD_UNIT_OPTIONS,
   CRITERIA_ONLY_FIELD_TYPES,
+  TARGET_ONLY_FIELD_TYPES,
+  COMPLIANCE_MODEL,
+  DAYS_BEFORE_OPERATOR,
+  ALERT_DAYS_BEFORE_OPTIONS,
+  ALERT_DAYS_BEFORE_MAX,
+  alertDaysBeforeLabel,
 } from "../../../Components/constants/sopConstants";
 import { getICDCodes, sopGetLabTests } from "../../../helpers/backend_helper";
 
@@ -69,7 +75,7 @@ const ConditionRow = ({
   // What the Field dropdown offers. Lookups below keep using the full list, so
   // a condition saved before this filter still displays its field.
   const pickableFieldOptions = isCriteria
-    ? fieldOptions
+    ? fieldOptions.filter((f) => !TARGET_ONLY_FIELD_TYPES.has(f.type))
     : fieldOptions.filter((f) => !CRITERIA_ONLY_FIELD_TYPES.has(f.type));
   const selectedField = fieldOptions.find((f) => f.value === condition.field);
   const fieldType = selectedField?.type || "String";
@@ -85,6 +91,10 @@ const ConditionRow = ({
   const isChangeOverPeriod = condition.operator?.value === "CHANGE_OVER_PERIOD";
   const isDelayed = condition.triggerType?.value === "DELAYED";
   const isFrequency = condition.schedule?.period?.value === "FREQUENCY";
+  // Compliance (centre licence) conditions: checked by the daily licence sweep,
+  // so no trigger / schedule controls. Valid till fires "N days before".
+  const isCompliance = condition.model?.value === COMPLIANCE_MODEL;
+  const isDaysBefore = condition.operator?.value === DAYS_BEFORE_OPERATOR;
   const hasEnum =
     !!fieldEnumOpts && !isGender && !isProvisional && !isBloodGroup;
 
@@ -146,6 +156,11 @@ const ConditionRow = ({
     onChange(idx, "value", []);
     onChange(idx, "operator", { value: "EXISTS", label: "EXISTS" });
     onChange(idx, "arrayMatch", null);
+    onChange(idx, "alertDaysBefore", []);
+    // Licence conditions are only ever checked by the daily sweep.
+    if (selected?.value === COMPLIANCE_MODEL) {
+      onChange(idx, "triggerType", TRIGGER_OPTIONS[1]);
+    }
     if (selected?.value) onModelChange(selected.value);
   };
 
@@ -155,6 +170,23 @@ const ConditionRow = ({
       fieldOptions.find((f) => f.value === newField)?.type || "String";
     onChange(idx, "field", newField);
     onChange(idx, "value", []);
+    // Valid till: the only operator is "Days before", seeded with 30 days.
+    if (newType === "ComplianceExpiry") {
+      onChange(idx, "operator", {
+        value: DAYS_BEFORE_OPERATOR,
+        label: "Days before (alert)",
+      });
+      onChange(idx, "triggerType", TRIGGER_OPTIONS[1]);
+      onChange(
+        idx,
+        "alertDaysBefore",
+        condition.alertDaysBefore?.length ? condition.alertDaysBefore : [30],
+      );
+      onChange(idx, "arrayMatch", null);
+      onChange(idx, "changeMatch", null);
+      return;
+    }
+    onChange(idx, "alertDaysBefore", []);
     if (newType === "FlaggedItemArray") {
       onChange(idx, "operator", {
         value: "ARRAY_ANY_MATCHES",
@@ -607,7 +639,43 @@ const ConditionRow = ({
     );
   };
 
+  // DAYS_BEFORE (Compliance Valid till): the alert firing days, furthest
+  // first. Quick picks, or type any whole number 0–365 and press Enter.
+  const renderFiringDays = () => {
+    const days = Array.isArray(condition.alertDaysBefore)
+      ? condition.alertDaysBefore
+      : [];
+    const valid = (n) =>
+      Number.isInteger(n) && n >= 0 && n <= ALERT_DAYS_BEFORE_MAX;
+    const setDays = (list) =>
+      onChange(
+        idx,
+        "alertDaysBefore",
+        [...new Set(list.map(Number).filter(valid))].sort((a, b) => b - a),
+      );
+    return (
+      <CreatableSelect
+        isMulti
+        options={ALERT_DAYS_BEFORE_OPTIONS}
+        value={days.map((n) => ({
+          value: Number(n),
+          label: alertDaysBeforeLabel(n),
+        }))}
+        onChange={(sel) => setDays((sel || []).map((o) => o.value))}
+        onCreateOption={(input) => setDays([...days, String(input).trim()])}
+        isValidNewOption={(input) => {
+          const t = String(input || "").trim();
+          return /^\d+$/.test(t) && valid(Number(t));
+        }}
+        formatCreateLabel={(input) => `Add: ${alertDaysBeforeLabel(input)}`}
+        placeholder="Pick or type days (e.g. 30)"
+        isDisabled={isDisabled}
+      />
+    );
+  };
+
   const renderValue = () => {
+    if (isDaysBefore) return renderFiringDays();
     if (isFlaggedItems) return renderFlaggedItemsEditor();
 
     // CONSECUTIVE_LOW: two inputs — threshold (value[0]) and consecutive count.
@@ -956,7 +1024,7 @@ const ConditionRow = ({
           />
         </Col>
 
-        {!disableTrigger && (
+        {!disableTrigger && !isCompliance && (
           <Col md={isDelayed ? 1 : 2}>
             <Label className="small text-muted mb-1">Trigger</Label>
             <Select
@@ -972,8 +1040,10 @@ const ConditionRow = ({
         )}
 
         {!valueless && !isFieldExists && (
-          <Col md={3}>
-            <Label className="small text-muted mb-1">Value</Label>
+          <Col md={isDaysBefore ? 5 : 3}>
+            <Label className="small text-muted mb-1">
+              {isDaysBefore ? "Alert firing day(s) — before Valid till" : "Value"}
+            </Label>
             {renderValue()}
           </Col>
         )}
@@ -992,8 +1062,18 @@ const ConditionRow = ({
         </Col>
       </Row>
 
-      {/* DELAYED-only: schedule controls (Period + Days + Interval + Grace) */}
-      {isDelayed && (
+      {isDaysBefore && (
+        <small className="text-muted d-block mb-2">
+          Checked every morning at 4:00 AM. Each firing day alerts once per
+          licence term (a late upload still gets it); if several are reached at
+          once only the nearest fires. "On expiry day" also alerts once for a
+          licence that has already expired. Skipped while a renewal is underway.
+        </small>
+      )}
+
+      {/* DELAYED-only: schedule controls (Period + Days + Interval + Grace).
+          Not for licence conditions — the compliance sweep has no cadence. */}
+      {isDelayed && !isCompliance && (
         <Row className="align-items-end mb-3 p-2 border rounded bg-light mx-0">
           <Col md={3}>
             <Label className="small text-muted mb-1">Cycle</Label>
@@ -1137,7 +1217,7 @@ const ConditionRow = ({
       {/* DELAYED-only: optional discontinue gate — suppress this "missing
           assessment" reminder once the patient's recent scores are stable
           (monitoring legitimately discontinued). */}
-      {isDelayed && (
+      {isDelayed && !isCompliance && (
         <div className="mb-3 p-2 border rounded bg-light mx-0">
           <div className="form-check mb-2">
             <input

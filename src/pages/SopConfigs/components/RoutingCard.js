@@ -63,6 +63,8 @@ const RoutingCard = ({
   // unaffected. Overridden where several of these stack and need telling apart
   // — e.g. one per tier in the baseline package ladder.
   title = "Routing — Who Gets Notified",
+  // Compliance (licence) rules have no patient, so no admission care team.
+  hideAdmissionToggles = false,
 }) => {
   const doctorId = `notifyAdmissionDoctor-${idPrefix}`;
   const psychId = `notifyAdmissionPsychologist-${idPrefix}`;
@@ -207,6 +209,7 @@ const RoutingCard = ({
           />
         </FormGroup>
 
+        {!hideAdmissionToggles && (
         <FormGroup>
           <Label className="fw-semibold mb-2">Patient's Care Team</Label>
           <div className="form-check">
@@ -248,6 +251,7 @@ const RoutingCard = ({
             current admission when the alert fires.
           </small>
         </FormGroup>
+        )}
 
         {routingError && (
           <Alert color="danger" className="mb-0 mt-2 py-2">

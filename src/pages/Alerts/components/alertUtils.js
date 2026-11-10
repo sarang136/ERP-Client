@@ -65,3 +65,43 @@ export const isResolutionNote = (n) => n?.kind === "RESOLUTION";
 // feature have none — callers must handle that.
 export const resolutionNote = (a) =>
   (a?.notes || []).find(isResolutionNote) || null;
+
+/* ── Compliance (licence) alerts ───────────────────────────────────────────
+ * Raised by a Compliance SOP rule when a centre licence nears its Valid till
+ * date. They have no patient: `compliance` is the licence record, `center` its
+ * centre, and `complianceInfo` a snapshot taken when the alert fired.
+ */
+export const isComplianceAlert = (a) => !!a?.compliance;
+
+// Where a licence alert links to: the centre's page in the Compliance module.
+export const complianceCentrePath = (a) =>
+  a?.center?._id ? `/compliance/centres/${a.center._id}` : "/compliance/register";
+
+// "15 Dec 2026"
+export const fmtLicenceDate = (d) =>
+  d
+    ? new Date(d).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Kolkata",
+      })
+    : "—";
+
+// Days left as of NOW (the snapshot's daysLeft is as of when it fired), in IST
+// calendar days. "30 days left" / "expires today" / "expired 3 days ago".
+export const licenceDaysLeftText = (validTill, now = new Date()) => {
+  if (!validTill) return "";
+  const istDay = (d) => {
+    const [y, m, day] = new Date(d)
+      .toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+      .split("-")
+      .map(Number);
+    return Date.UTC(y, m - 1, day);
+  };
+  const n = Math.round((istDay(validTill) - istDay(now)) / 86400000);
+  const days = (k) => `${k} day${k === 1 ? "" : "s"}`;
+  if (n > 0) return `${days(n)} left`;
+  if (n === 0) return "expires today";
+  return `expired ${days(-n)} ago`;
+};
