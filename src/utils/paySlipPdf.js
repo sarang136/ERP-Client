@@ -384,6 +384,7 @@ const StandardPayslip = ({ row }) => {
     { label: "TDS",            value: row?.TDSAmount      ?? null },
     { label: "Insurance",      value: row?.insurance      ?? null },
     { label: "Other Deductions", value: withAdjustment(row?.otherDeductions ?? null, adjustments.otherDeduction) },
+    { label: "Bonus Adjustment", value: adjustments.bonusAdjustment },
   ];
 
   const rowCount = Math.max(earningsRows.length, deductionRows.length);
@@ -587,6 +588,7 @@ const SimplifiedPayslip = ({ row, cfg }) => {
     PFArrears: num(row?.PFArrears) + num(adjustments.pfArrear),
     voluntaryPF: num(row?.voluntaryPF) + num(adjustments.voluntaryPF),
     otherDeductions: num(row?.otherDeductions) + num(adjustments.otherDeduction),
+    bonusAdjustment: num(adjustments.bonusAdjustment),
     insurance: num(row?.insurance),
   };
   const deductionRows = cfg.deductionFields.map(([label, key]) => ({
@@ -649,6 +651,7 @@ const CONSULTANT_CFG = {
     ["PF Arrear", "PFArrears"],
     ["Voluntary PF", "voluntaryPF"],
     ["Other Recovery", "otherDeductions"],
+    ["Bonus Adjustment", "bonusAdjustment"],
     ["Insurance", "insurance"],
   ],
   netLabel: "Net Amount Payable:",
@@ -666,6 +669,7 @@ const INTERN_CFG = {
     ["PF Arrear", "PFArrears"],
     ["Voluntary PF", "voluntaryPF"],
     ["Other Recoveries", "otherDeductions"],
+    ["Bonus Adjustment", "bonusAdjustment"],
     ["Insurance", "insurance"],
   ],
   netLabel: "Net Stipend Payable:",

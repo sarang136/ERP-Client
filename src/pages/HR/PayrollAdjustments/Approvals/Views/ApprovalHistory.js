@@ -153,6 +153,12 @@ const ApprovalHistory = ({ activeTab }) => {
         {
             name: <div>Month</div>,
             selector: row => {
+                if (row?.startMonth && row?.endMonth) {
+                    const start = new Date(row.startMonth);
+                    const end = new Date(row.endMonth);
+                    if (isNaN(start) || isNaN(end)) return "-";
+                    return `${format(start, "MMM yyyy")} - ${format(end, "MMM yyyy")}`;
+                }
                 if (!row?.date) return "-";
                 const date = new Date(row.date);
                 if (isNaN(date)) return "-";

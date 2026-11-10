@@ -11,6 +11,7 @@ export const adjustmentDeductionOptions = [
     { value: "PF_ARREAR", label: "PF Arrear" },
     { value: "VOLUNTARY_PF", label: "Voluntary PF" },
     { value: "OTHER_DEDUCTION", label: "Other Deduction" },
+    { value: "BONUS_ADJUSTMENT", label: "Bonus Adjustment" },
 ];
 
 export const adjustmentTypeGroups = [

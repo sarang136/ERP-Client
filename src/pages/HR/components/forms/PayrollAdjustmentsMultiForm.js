@@ -23,6 +23,8 @@ const makeEmptyRow = (id) => ({
     currentLocation: "",
     type: "",
     date: "",
+    startMonth: "",
+    endMonth: "",
     amount: "",
     details: "",
     files: [],
@@ -32,7 +34,15 @@ const getRowErrors = (row) => {
     const errors = {};
     if (!row.employeeId) errors.employeeId = "Employee is required";
     if (!row.type) errors.type = "Type is required";
-    if (!row.date) errors.date = "Month is required";
+    if (row.type === "BONUS_ADJUSTMENT") {
+        if (!row.startMonth) errors.startMonth = "Start month is required";
+        if (!row.endMonth) errors.endMonth = "End month is required";
+        if (row.startMonth && row.endMonth && new Date(row.endMonth) < new Date(row.startMonth)) {
+            errors.endMonth = "End month cannot be before start month";
+        }
+    } else if (!row.date) {
+        errors.date = "Month is required";
+    }
     if (!row.amount || Number(row.amount) < 1) errors.amount = "Amount must be greater than 0";
     if (!row.details.trim()) errors.details = "Details are required";
     return errors;
@@ -189,7 +199,12 @@ const PayrollAdjustmentsMultiForm = ({ hasCreatePermission }) => {
                         type: row.type,
                         amount: Number(row.amount),
                         details: row.details.trim(),
-                        date: endOfMonth(new Date(row.date)).toISOString(),
+                        ...(row.type === "BONUS_ADJUSTMENT"
+                            ? {
+                                startMonth: endOfMonth(new Date(row.startMonth)).toISOString(),
+                                endMonth: endOfMonth(new Date(row.endMonth)).toISOString(),
+                            }
+                            : { date: endOfMonth(new Date(row.date)).toISOString() }),
                     }))
                 )
             );
@@ -273,20 +288,53 @@ const PayrollAdjustmentsMultiForm = ({ hasCreatePermission }) => {
                                     {errors.type && <div className="text-danger small">{errors.type}</div>}
                                 </FormGroup>
                             </Col>
-                            <Col md={6}>
-                                <FormGroup className="mb-3">
-                                    <Label>Adjustment for the month of <span className="text-danger">*</span></Label>
-                                    <Flatpickr
-                                        value={row.date}
-                                        options={monthPickerOptions}
-                                        onChange={([date]) => updateRow(row.id, { date: date ? endOfMonth(date) : "" })}
-                                        className={`form-control${errors.date ? " is-invalid" : ""}`}
-                                        placeholder="Select month"
-                                        disabled={submitting}
-                                    />
-                                    {errors.date && <div className="text-danger small">{errors.date}</div>}
-                                </FormGroup>
-                            </Col>
+                            {row.type === "BONUS_ADJUSTMENT" ? (
+                                <>
+                                    <Col md={3}>
+                                        <FormGroup className="mb-3">
+                                            <Label>Start Month <span className="text-danger">*</span></Label>
+                                            <Flatpickr
+                                                value={row.startMonth}
+                                                options={monthPickerOptions}
+                                                onChange={([date]) => updateRow(row.id, { startMonth: date ? endOfMonth(date) : "" })}
+                                                className={`form-control${errors.startMonth ? " is-invalid" : ""}`}
+                                                placeholder="Select month"
+                                                disabled={submitting}
+                                            />
+                                            {errors.startMonth && <div className="text-danger small">{errors.startMonth}</div>}
+                                        </FormGroup>
+                                    </Col>
+                                    <Col md={3}>
+                                        <FormGroup className="mb-3">
+                                            <Label>End Month <span className="text-danger">*</span></Label>
+                                            <Flatpickr
+                                                value={row.endMonth}
+                                                options={monthPickerOptions}
+                                                onChange={([date]) => updateRow(row.id, { endMonth: date ? endOfMonth(date) : "" })}
+                                                className={`form-control${errors.endMonth ? " is-invalid" : ""}`}
+                                                placeholder="Select month"
+                                                disabled={submitting}
+                                            />
+                                            {errors.endMonth && <div className="text-danger small">{errors.endMonth}</div>}
+                                        </FormGroup>
+                                    </Col>
+                                </>
+                            ) : (
+                                <Col md={6}>
+                                    <FormGroup className="mb-3">
+                                        <Label>Adjustment for the month of <span className="text-danger">*</span></Label>
+                                        <Flatpickr
+                                            value={row.date}
+                                            options={monthPickerOptions}
+                                            onChange={([date]) => updateRow(row.id, { date: date ? endOfMonth(date) : "" })}
+                                            className={`form-control${errors.date ? " is-invalid" : ""}`}
+                                            placeholder="Select month"
+                                            disabled={submitting}
+                                        />
+                                        {errors.date && <div className="text-danger small">{errors.date}</div>}
+                                    </FormGroup>
+                                </Col>
+                            )}
                         </Row>
 
                         <FormGroup className="mb-3">
