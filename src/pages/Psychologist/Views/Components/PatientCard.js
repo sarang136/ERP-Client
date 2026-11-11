@@ -1,6 +1,6 @@
 import { Card, CardBody, CardTitle, CardText, Badge, Button } from "reactstrap";
 import moment from "moment";
-import { CalendarDays, MessageSquareText, FileText, ExternalLink } from "lucide-react";
+import { CalendarDays, MessageSquareText, FileText, ExternalLink, TriangleAlert } from "lucide-react";
 import { capitalizeWords } from "../../../../utils/toCapitalize";
 import { COUNSELLING_NOTE, MENTAL_EXAMINATION } from "../../../../Components/constants/patient";
 
@@ -17,7 +17,7 @@ const toTitleCase = (text) => {
   return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const PatientCard = ({ patient, onStartChart }) => {
+const PatientCard = ({ patient, onStartChart, onViewAlerts }) => {
   const { color, border } = statusColors[patient.patientType] || {
     color: "secondary",
     border: "#d9d9d9",
@@ -135,6 +135,16 @@ const PatientCard = ({ patient, onStartChart }) => {
           >
             <MessageSquareText size={14} />
             Start Counselling Note
+          </Button>
+          <Button
+            outline
+            color="danger"
+            size="sm"
+            className="d-flex align-items-center justify-content-center"
+            title="View unresolved alerts"
+            onClick={() => onViewAlerts(patient)}
+          >
+            <TriangleAlert size={14} />
           </Button>
           <Button
             outline

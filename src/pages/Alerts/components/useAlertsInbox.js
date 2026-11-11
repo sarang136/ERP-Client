@@ -21,7 +21,7 @@ const todayDefaults = () => {
   };
 };
 
-const initialFilters = () => ({
+const initialFilters = (overrides = {}) => ({
   patients: [],         // array of { value, label } from AsyncSelect
   rules: [],            // array of { value, label } from AsyncSelect
   categories: [],       // array of SOP category values (empty = all)
@@ -37,6 +37,7 @@ const initialFilters = () => ({
   // through the SOP-name dropdown above.
   source: "all",
   severity: [],         // array of LOW/MEDIUM/HIGH/CRITICAL
+  ...overrides,
 });
 
 // Translates UI filter state → server query params. Option-shaped fields
@@ -92,7 +93,7 @@ export { buildServerParams };
  * the next user-initiated load (refresh / page change / filter change) gets
  * the authoritative server state.
  */
-export const useAlertsInbox = () => {
+export const useAlertsInbox = (initialOverrides) => {
   const [alerts, setAlerts] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalUnread, setTotalUnread] = useState(0);
@@ -105,8 +106,12 @@ export const useAlertsInbox = () => {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Unified server-side filter state. Defaults: today's date range, no
-  // patient/rule restriction, all severities/phases/read-states.
-  const [serverFilters, setServerFilters] = useState(initialFilters);
+  // patient/rule restriction, all severities/phases/read-states — unless the
+  // caller (e.g. a dashboard's "jump to this patient's alerts" link) seeds
+  // different starting filters via initialOverrides.
+  const [serverFilters, setServerFilters] = useState(() =>
+    initialFilters(initialOverrides),
+  );
 
   // Debounced copy — only THIS triggers refetch.
   const [debouncedFilters, setDebouncedFilters] = useState(serverFilters);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { Button, Col, Row, Spinner } from "reactstrap";
 import { connect, useDispatch } from "react-redux";
+import { toast } from "react-toastify";
 import PsychBar from "./Views/Components/PsychBar";
 import PatientCard from "./Views/Components/PatientCard";
 import { getAllPatients, patchPatientNoteDate } from "../../store/features/psychologist/psychologistSlice";
@@ -9,9 +10,12 @@ import { setPatient } from "../../store/features/patient/patientSlice";
 import { IPD, COUNSELLING_NOTE } from "../../Components/constants/patient";
 import ChartDate from "../Patient/Modals/ChartDate";
 import ChartForm from "../Patient/ChartForm";
+import PatientAlertsModal from "./Views/Components/PatientAlertsModal";
+import { useAuthError } from "../../Components/Hooks/useAuthError";
 
 const Main = ({ loading, data, centerAccess }) => {
   const dispatch = useDispatch();
+  const handleAuthError = useAuthError();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -24,6 +28,7 @@ const Main = ({ loading, data, centerAccess }) => {
   const [activeChartType, setActiveChartType] = useState(COUNSELLING_NOTE);
   const [activePatientId, setActivePatientId] = useState(null);
   const [chartReady, setChartReady] = useState(false);
+  const [alertsModalPatient, setAlertsModalPatient] = useState(null);
   const limit = 12;
 
   document.title = "Psychologist Dashboard";
@@ -55,17 +60,27 @@ const Main = ({ loading, data, centerAccess }) => {
     if (!centerAccess || centerAccess.length === 0) return;
     const forceRefresh = forceRefreshRef.current;
     forceRefreshRef.current = false;
-    dispatch(
-      getAllPatients({
-        page,
-        limit,
-        search: debouncedSearch,
-        patientType: flag,
-        scope,
-        centerAccess,
-        forceRefresh,
-      }),
-    );
+
+    const fetchPatients = async () => {
+      try {
+        await dispatch(
+          getAllPatients({
+            page,
+            limit,
+            search: debouncedSearch,
+            patientType: flag,
+            scope,
+            centerAccess,
+            forceRefresh,
+          }),
+        ).unwrap();
+      } catch (error) {
+        if (!handleAuthError(error)) {
+          toast.error(error?.message || "Couldn't load patients.");
+        }
+      }
+    };
+    fetchPatients();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, page, limit, debouncedSearch, flag, scope, centerAccess, refreshToken]);
 
@@ -128,7 +143,11 @@ const Main = ({ loading, data, centerAccess }) => {
         <Row className="g-3 mt-1">
           {data.data.map((patient) => (
             <Col xl={4} lg={4} md={6} sm={12} xs={12} key={patient._id}>
-              <PatientCard patient={patient} onStartChart={handleStartChart} />
+              <PatientCard
+                patient={patient}
+                onStartChart={handleStartChart}
+                onViewAlerts={setAlertsModalPatient}
+              />
             </Col>
           ))}
         </Row>
@@ -179,6 +198,13 @@ const Main = ({ loading, data, centerAccess }) => {
           />
         </>
       )}
+
+      <PatientAlertsModal
+        isOpen={!!alertsModalPatient}
+        toggle={() => setAlertsModalPatient(null)}
+        patientId={alertsModalPatient?._id}
+        patientName={alertsModalPatient?.name}
+      />
     </div>
   );
 };

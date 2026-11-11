@@ -544,9 +544,9 @@ export const getLatestCharts = ({
 }) =>
   api.get(
     `${url.GET_LATEST_CHARTS}?patient=${patient}&limit=${limit}` +
-      `${chartType ? `&chartType=${chartType}` : ""}` +
-      `${type ? `&type=${type}` : ""}` +
-      `${carryForwardScope ? `&carryForwardScope=${carryForwardScope}` : ""}`,
+    `${chartType ? `&chartType=${chartType}` : ""}` +
+    `${type ? `&type=${type}` : ""}` +
+    `${carryForwardScope ? `&carryForwardScope=${carryForwardScope}` : ""}`,
   );
 export const getGeneralCharts = (data) => api.get(url.GET_GENERAL_CHARTS, data);
 export const postPrescription = (data) =>
@@ -1316,7 +1316,7 @@ export const getActivitiesByStatus = ({
 export const getDailyMedicationRecord = ({ patientId, date }) =>
   api.get(
     `${url.GET_DAILY_MEDICATION_RECORD}?patientId=${patientId}` +
-      `${date ? `&date=${date}` : ""}`,
+    `${date ? `&date=${date}` : ""}`,
   );
 
 export const getPrescriptionHistory = (patientId) => {
@@ -1407,7 +1407,10 @@ export const getAllEmergencyPatients = (params = {}) => {
 
 export const getAllPsychologistPatients = (params = {}) => {
   return api.create(url.GET_PSYCHOLOGIST_PATIENTS, params, {
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "X-No-Cookie-Token": "true",
+      "Content-Type": "application/json",
+    },
   });
 };
 

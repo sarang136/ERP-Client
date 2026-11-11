@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { getAllPsychologistPatients } from "../../../helpers/backend_helper";
-import { setAlert } from "../alert/alertSlice";
 
 const initialState = {
   loading: false,
@@ -9,13 +8,12 @@ const initialState = {
 
 export const getAllPatients = createAsyncThunk(
   "psychologist/getAllPsychologistPatients",
-  async (data, { dispatch, rejectWithValue }) => {
+  async (data, { rejectWithValue }) => {
     try {
       const response = await getAllPsychologistPatients(data);
       return response;
     } catch (error) {
-      dispatch(setAlert({ type: "error", message: error.message }));
-      return rejectWithValue("Failed to fetch patients");
+      return rejectWithValue(error);
     }
   }
 );
