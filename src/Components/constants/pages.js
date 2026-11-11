@@ -30,6 +30,7 @@ const pages = [
   {
     id: "psychologist",
     label: "Psychologist",
+    displayLabel: "Psychologist Dashboard",
     name: "Psychologist",
     link: "/psychologist",
     icon: "bx bx-comment-detail",

@@ -434,6 +434,7 @@ export const ROUND_NOTES_STAFF = "/round-notes/staff";
 // emergency
 export const ASSIGN_TYPE_TO_PATIENT = "/emergency/assign";
 export const GET_EMERGENCY_PATIENTS = "/emergency";
+export const GET_PSYCHOLOGIST_PATIENTS = "/psychologist-dashboard";
 
 // SOP Overview
 export const GET_SOP_OVERVIEW = "/patient/sop-overview";

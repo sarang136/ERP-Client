@@ -1405,6 +1405,12 @@ export const getAllEmergencyPatients = (params = {}) => {
   });
 };
 
+export const getAllPsychologistPatients = (params = {}) => {
+  return api.create(url.GET_PSYCHOLOGIST_PATIENTS, params, {
+    headers: { "Content-Type": "application/json" },
+  });
+};
+
 export const getSopOverview = (admissionId, currentDate) => {
   return api.get(`${url.GET_SOP_OVERVIEW}/${admissionId}`, {
     params: { currentDate },

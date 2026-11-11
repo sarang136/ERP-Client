@@ -28,6 +28,7 @@ const MentalExamination = ({
   shouldPrintAfterSave,
   patientLatestMentalExamination,
   populate,
+  onNoteSaved,
 }) => {
 
   const dispatch = useDispatch();
@@ -279,19 +280,22 @@ const MentalExamination = ({
       chart: Yup.string().required("Chart is required"),
     }),
     onSubmit: (values) => {
+      let action;
       if (editMentalExamination) {
-        dispatch(
-          updateMentalExamination({
-            id: editChartData._id,
-            chartId: editMentalExamination._id,
-            ...values,
-          })
-        );
+        action = updateMentalExamination({
+          id: editChartData._id,
+          chartId: editMentalExamination._id,
+          ...values,
+        });
       } else if (type === "GENERAL") {
-        dispatch(addGeneralMentalExamination(values));
+        action = addGeneralMentalExamination(values);
       } else {
-        dispatch(addMentalExamination(values));
+        action = addMentalExamination(values);
       }
+      dispatch(action)
+        .unwrap()
+        .then(() => onNoteSaved?.())
+        .catch(() => {});
     },
   });
 

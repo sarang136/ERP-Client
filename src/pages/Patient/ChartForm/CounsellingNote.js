@@ -556,6 +556,7 @@ const CounsellingNote = ({
   type,
   patientLatestCounsellingNote,
   //   onSubmitClinicalForm,
+  onNoteSaved,
 }) => {
   const dispatch = useDispatch();
   const [files, setFiles] = useState([]);
@@ -644,15 +645,21 @@ const CounsellingNote = ({
       formData.append("file", actualFile);
     });
 
+    let action;
     if (editClinicalNote) {
       formData.append("id", editChartData._id);
       formData.append("chartId", editClinicalNote._id);
-      dispatch(updateCounsellingNote(formData));
+      action = updateCounsellingNote(formData);
     } else if (type === "GENERAL") {
-      dispatch(addGeneralCounsellingNote(formData));
+      action = addGeneralCounsellingNote(formData);
     } else {
-      dispatch(addCounsellingNote(formData));
+      action = addCounsellingNote(formData);
     }
+
+    dispatch(action)
+      .unwrap()
+      .then(() => onNoteSaved?.())
+      .catch(() => {});
   };
 
   const validation = useFormik({

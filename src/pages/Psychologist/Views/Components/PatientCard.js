@@ -1,12 +1,15 @@
 import { Card, CardBody, CardTitle, CardText, Badge, Button } from "reactstrap";
 import moment from "moment";
-import { CalendarDays, MessageSquareText, ExternalLink } from "lucide-react";
+import { CalendarDays, MessageSquareText, FileText, ExternalLink } from "lucide-react";
 import { capitalizeWords } from "../../../../utils/toCapitalize";
+import { COUNSELLING_NOTE, MENTAL_EXAMINATION } from "../../../../Components/constants/patient";
 
 const statusColors = {
-  urgent: { color: "danger", border: "#ff4d4f" },
-  attention: { color: "warning", border: "#faad14" },
-  stable: { color: "success", border: "#52c41a" },
+  suicidal: { color: "danger", border: "#ffcdd2" },
+  runaway: { color: "warning", border: "#ffe0b2" },
+  serious: { color: "primary", border: "#fff9c4" },
+  aggresive: { color: "secondary", border: "#bbdefb" },
+  normal: { color: "success", border: "#c8e6c9" },
 };
 
 const toTitleCase = (text) => {
@@ -14,8 +17,8 @@ const toTitleCase = (text) => {
   return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const PatientCard = ({ patient, onStartNote }) => {
-  const { color, border } = statusColors[patient.flag] || {
+const PatientCard = ({ patient, onStartChart }) => {
+  const { color, border } = statusColors[patient.patientType] || {
     color: "secondary",
     border: "#d9d9d9",
   };
@@ -35,7 +38,11 @@ const PatientCard = ({ patient, onStartNote }) => {
           className="rounded-0 rounded-bottom-start fw-bold"
           style={{ padding: "4px 10px", fontSize: "0.8rem" }}
         >
-          {toTitleCase(patient.flag)}
+          {toTitleCase(
+            patient.patientType === "serious"
+              ? "Medically Serious"
+              : patient.patientType,
+          )}
         </Badge>
       </div>
 
@@ -57,6 +64,9 @@ const PatientCard = ({ patient, onStartNote }) => {
             <strong>Doctor:</strong> {capitalizeWords(patient.doctorName) || "N/A"}
           </span>
           <span className="d-block text-truncate">
+            <strong>Psychologist:</strong> {capitalizeWords(patient.psychologistName) || "N/A"}
+          </span>
+          <span className="d-block text-truncate">
             <strong>Nurse:</strong> {capitalizeWords(patient.nurseName) || "N/A"}
           </span>
           <span className="d-block text-truncate">
@@ -70,27 +80,49 @@ const PatientCard = ({ patient, onStartNote }) => {
           </span>
         </CardText>
 
-        <div className="d-flex align-items-center gap-2 mb-2">
-          <CalendarDays size={15} className="text-muted" />
-          <span className="fw-semibold" style={{ fontSize: "0.85rem" }}>
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <CalendarDays size={15} className="text-muted flex-shrink-0" />
+          <span className="fw-semibold text-nowrap" style={{ fontSize: "0.85rem" }}>
             {daysAdmitted !== null ? `${daysAdmitted} day${daysAdmitted === 1 ? "" : "s"} admitted` : "N/A"}
           </span>
-          <span className="text-muted" style={{ fontSize: "0.75rem" }}>
+          <span className="text-muted text-nowrap" style={{ fontSize: "0.75rem" }}>
             since {patient.addmissionDate ? moment(patient.addmissionDate).format("DD MMM YY") : "N/A"}
           </span>
         </div>
 
         <div
-          className="mb-2 pt-2 text-muted"
+          className="mb-2 pt-2 text-muted d-flex flex-column gap-2"
           style={{ borderTop: "1px dashed #e0e0e0", fontSize: "0.78rem" }}
         >
           <div>
             Last Counselling Note:{" "}
             <strong className="text-body">
-              {patient.lastSessionDate
-                ? moment(patient.lastSessionDate).format("DD MMM YY")
+              {patient.lastCounsellingNoteDate
+                ? moment(patient.lastCounsellingNoteDate).format("DD MMM YY")
                 : "None yet"}
             </strong>
+          </div>
+
+          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-2">
+            <span>
+              Last Clinical Note:{" "}
+              <strong className="text-body">
+                {patient.lastClinicalNoteDate
+                  ? moment(patient.lastClinicalNoteDate).format("DD MMM YY")
+                  : "None yet"}
+              </strong>
+            </span>
+            <Button
+              outline
+              color="primary"
+              size="sm"
+              className="d-flex align-items-center justify-content-center gap-1 text-nowrap"
+              style={{ fontSize: "0.72rem", padding: "2px 8px" }}
+              onClick={() => onStartChart(patient, MENTAL_EXAMINATION)}
+            >
+              <FileText size={12} />
+              Create Clinical Note
+            </Button>
           </div>
         </div>
 
@@ -99,7 +131,7 @@ const PatientCard = ({ patient, onStartNote }) => {
             color="primary"
             size="sm"
             className="d-flex align-items-center justify-content-center gap-1 fw-semibold flex-grow-1"
-            onClick={() => onStartNote(patient)}
+            onClick={() => onStartChart(patient, COUNSELLING_NOTE)}
           >
             <MessageSquareText size={14} />
             Start Counselling Note
