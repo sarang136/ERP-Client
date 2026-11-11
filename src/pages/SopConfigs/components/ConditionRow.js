@@ -16,7 +16,7 @@ import {
   emptyBand,
   SEVERITY_THRESHOLD_OPTIONS,
   ANY_LAB_TEST_OPTION,
-  RELATIVE_DAY_OPERATORS,
+  RELATIVE_AGE_OPERATORS,
   CHANGE_DIRECTION_OPTIONS,
   CHANGE_COMPARATOR_OPTIONS,
   CHANGE_UNIT_OPTIONS,
@@ -843,16 +843,17 @@ const ConditionRow = ({
       );
     }
 
-    // Relative-date operators (e.g. OLDER_THAN_DAYS) take a plain number of
-    // days, not a date. Stored as a single-element array to match the other
-    // numeric value editors.
-    if (RELATIVE_DAY_OPERATORS.has(condition.operator?.value)) {
+    // Relative-date operators (OLDER_THAN_DAYS / OLDER_THAN_HOURS) take a
+    // plain number of days or hours, not a date. Stored as a single-element
+    // array to match the other numeric value editors.
+    const ageUnit = RELATIVE_AGE_OPERATORS.get(condition.operator?.value);
+    if (ageUnit) {
       return (
         <Input
           type="number"
           min="1"
           step="1"
-          placeholder="days (e.g. 90)"
+          placeholder={ageUnit === "hours" ? "hours (e.g. 24)" : "days (e.g. 90)"}
           value={condition.value?.[0] ?? ""}
           onChange={(e) => onChange(idx, "value", [e.target.value])}
           disabled={isDisabled}

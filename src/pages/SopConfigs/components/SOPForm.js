@@ -639,10 +639,15 @@ const SOPForm = ({
             bErr.conditions[cIdx] = "Pick a severity threshold";
             hasTargetErrors = true;
           }
-        } else if (c.operator?.value === "OLDER_THAN_DAYS") {
-          const days = Number(c.value?.[0]);
-          if (!Number.isFinite(days) || days <= 0) {
-            bErr.conditions[cIdx] = "Enter a positive number of days";
+        } else if (
+          c.operator?.value === "OLDER_THAN_DAYS" ||
+          c.operator?.value === "OLDER_THAN_HOURS"
+        ) {
+          const n = Number(c.value?.[0]);
+          if (!Number.isFinite(n) || n <= 0) {
+            bErr.conditions[cIdx] = `Enter a positive number of ${
+              c.operator.value === "OLDER_THAN_HOURS" ? "hours" : "days"
+            }`;
             hasTargetErrors = true;
           }
         } else if (c.operator?.value === "CONSECUTIVE_LOW") {
