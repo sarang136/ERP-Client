@@ -35,6 +35,7 @@ import {
   ALERT_DAYS_BEFORE_MAX,
   COMPLIANCE_TEMPLATE_HINT,
   hasComplianceCondition,
+  isStateCheckCondition,
 } from "../../../Components/constants/sopConstants";
 import ConditionRow from "./ConditionRow";
 import MainBlock from "./MainBlock";
@@ -78,10 +79,14 @@ const hydrateSchedule = (s) => {
 const hydrateCondition = (c) => ({
   model: findOpt(TARGET_OPTIONS, c.model),
   field: c.field || "",
-  operator: findOpt(OPERATOR_OPTIONS, c.operator) || {
-    value: "EXISTS",
-    label: "EXISTS",
-  },
+  // An operator this version of the app doesn't know is kept as-is and marked,
+  // never swapped for EXISTS — saving that would silently rewrite the rule.
+  // validate() refuses to save while one is present.
+  operator:
+    findOpt(OPERATOR_OPTIONS, c.operator) ||
+    (c.operator
+      ? { value: c.operator, label: `${c.operator} (not recognised)`, unknown: true }
+      : { value: "EXISTS", label: "EXISTS" }),
   triggerType: findOpt(TRIGGER_OPTIONS, c.triggerType) || TRIGGER_OPTIONS[0],
   deadlineHours: c.deadlineHours != null ? String(c.deadlineHours) : "",
   value: Array.isArray(c.value) ? c.value : c.value != null ? [c.value] : [],
@@ -569,6 +574,11 @@ const SOPForm = ({
       };
     }
 
+    // Admission / Patient state checks: the sweep ignores schedules and the
+    // discontinue gate, so neither is saved (the editor hides both). Saving a
+    // stale "Deadline" without hours is what used to make these rules fail.
+    if (isStateCheckCondition(c)) return out;
+
     // Optional discontinue-gate on a DELAYED cadence condition — suppresses the
     // missing-assessment alert once the patient's recent scores are stable.
     if (c.discontinueGate?.criteria?.length) {
@@ -591,6 +601,18 @@ const SOPForm = ({
     return out;
   };
 
+  // Why a condition can't be saved by this version of the app: an operator it
+  // doesn't know, or a field the server's field list for that model lacks.
+  const unrecognised = (c) => {
+    if (!c?.model) return undefined;
+    if (c.operator?.unknown)
+      return `Operator "${c.operator.value}" isn't recognised by this version of the app — refresh before saving`;
+    const fields = modelFieldsCache[c.model.value];
+    if (c.field && fields && !fields.some((f) => f.value === c.field))
+      return `Field "${c.field}" isn't recognised by this version of the app — refresh before saving`;
+    return undefined;
+  };
+
   const validate = () => {
     const errs = {};
     if (!form.ruleName.trim()) errs.ruleName = "Rule name is required";
@@ -607,6 +629,9 @@ const SOPForm = ({
           hasTargetErrors = true;
         } else if (!c.field) {
           bErr.conditions[cIdx] = "Field is required";
+          hasTargetErrors = true;
+        } else if (unrecognised(c)) {
+          bErr.conditions[cIdx] = unrecognised(c);
           hasTargetErrors = true;
         } else if (isComplianceRule && c.model.value !== COMPLIANCE_MODEL) {
           bErr.conditions[cIdx] =
@@ -650,6 +675,17 @@ const SOPForm = ({
             }`;
             hasTargetErrors = true;
           }
+        } else if (c.operator?.value === "AGE_BETWEEN_HOURS") {
+          const from = Number(c.value?.[0]);
+          const to = Number(c.value?.[1]);
+          if (
+            c.value?.[0] === "" || c.value?.[1] === "" ||
+            !Number.isFinite(from) || !Number.isFinite(to) ||
+            from < 0 || from >= to
+          ) {
+            bErr.conditions[cIdx] = "Enter hours from and to, with from smaller than to";
+            hasTargetErrors = true;
+          }
         } else if (c.operator?.value === "CONSECUTIVE_LOW") {
           const threshold = Number(c.value?.[0]);
           if (!Number.isFinite(threshold)) {
@@ -686,6 +722,7 @@ const SOPForm = ({
           }
         } else if (
           c.triggerType?.value === "DELAYED" &&
+          !isStateCheckCondition(c) &&
           c.schedule?.period?.value === "FREQUENCY"
         ) {
           const bands = c.schedule?.bands || [];
@@ -713,7 +750,11 @@ const SOPForm = ({
         // Only validate the gate when it's actually enabled (has ≥1 criterion);
         // an empty {criteria: []} (Mongoose default on every saved condition)
         // means the gate is off and must not raise a false "count" error.
-        if (c.discontinueGate?.criteria?.length && !bErr.conditions[cIdx]) {
+        if (
+          c.discontinueGate?.criteria?.length &&
+          !isStateCheckCondition(c) &&
+          !bErr.conditions[cIdx]
+        ) {
           const gcount = Number(c.discontinueGate.count);
           const criteria = c.discontinueGate.criteria;
           if (!Number.isFinite(gcount) || gcount < 1) {
@@ -769,6 +810,11 @@ const SOPForm = ({
       return bErr;
     });
     if (hasTargetErrors) errs.targetBlocks = targetErrors;
+
+    // Satisfying Criteria using a field or operator this app doesn't know.
+    const scUnrecognised = satisfyingCriteria.conditions.map(unrecognised);
+    if (scUnrecognised.some(Boolean))
+      errs.satisfyingCriteria = { conditions: scUnrecognised };
 
     // Satisfying Criteria on a compliance rule: licence filters only, each
     // with a value. (Empty rows are dropped on submit.)

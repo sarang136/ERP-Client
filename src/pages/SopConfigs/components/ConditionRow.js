@@ -17,6 +17,8 @@ import {
   SEVERITY_THRESHOLD_OPTIONS,
   ANY_LAB_TEST_OPTION,
   RELATIVE_AGE_OPERATORS,
+  ONCE_PER_ADMISSION_FIELDS,
+  isStateCheckCondition,
   CHANGE_DIRECTION_OPTIONS,
   CHANGE_COMPARATOR_OPTIONS,
   CHANGE_UNIT_OPTIONS,
@@ -95,6 +97,16 @@ const ConditionRow = ({
   // so no trigger / schedule controls. Valid till fires "N days before".
   const isCompliance = condition.model?.value === COMPLIANCE_MODEL;
   const isDaysBefore = condition.operator?.value === DAYS_BEFORE_OPERATOR;
+  // Admission / Patient state check in a target block: no Cycle / Deadline /
+  // Grace and no discontinue gate — the sweep doesn't use them.
+  const isStateCheck = !isCriteria && isStateCheckCondition(condition);
+  // A saved field or operator this version of the app doesn't know (e.g. the
+  // rule was saved by a newer build). Shown by its raw name with a warning,
+  // never swapped for a blank / EXISTS; SOPForm refuses to save until fixed.
+  const fieldsLoaded = !!modelFieldsCache[condition.model?.value];
+  const unknownField =
+    fieldsLoaded && !!condition.field && !selectedField && !isCompliance;
+  const unknownOperator = !!condition.operator?.unknown;
   const hasEnum =
     !!fieldEnumOpts && !isGender && !isProvisional && !isBloodGroup;
 
@@ -843,6 +855,34 @@ const ConditionRow = ({
       );
     }
 
+    // Age band: two numbers of hours, [from, to] — from <= age < to.
+    if (condition.operator?.value === "AGE_BETWEEN_HOURS") {
+      const [from = "", to = ""] = Array.isArray(condition.value) ? condition.value : [];
+      return (
+        <div className="d-flex align-items-center gap-1">
+          <Input
+            type="number"
+            min="0"
+            step="1"
+            placeholder="from h"
+            value={from}
+            onChange={(e) => onChange(idx, "value", [e.target.value, to])}
+            disabled={isDisabled}
+          />
+          <span className="text-muted small">to</span>
+          <Input
+            type="number"
+            min="1"
+            step="1"
+            placeholder="to h"
+            value={to}
+            onChange={(e) => onChange(idx, "value", [from, e.target.value])}
+            disabled={isDisabled}
+          />
+        </div>
+      );
+    }
+
     // Relative-date operators (OLDER_THAN_DAYS / OLDER_THAN_HOURS) take a
     // plain number of days or hours, not a date. Stored as a single-element
     // array to match the other numeric value editors.
@@ -982,7 +1022,10 @@ const ConditionRow = ({
           <Select
             options={pickableFieldOptions}
             value={
-              fieldOptions.find((f) => f.value === condition.field) || null
+              fieldOptions.find((f) => f.value === condition.field) ||
+              (unknownField
+                ? { value: condition.field, label: `${condition.field} (not recognised)` }
+                : null)
             }
             onChange={handleFieldChange}
             isDisabled={isDisabled || !condition.model}
@@ -998,7 +1041,9 @@ const ConditionRow = ({
             options={filteredOps}
             value={
               filteredOps.find((o) => o.value === condition.operator?.value) ||
-              null
+              // Keep showing a saved operator the field list doesn't offer
+              // (unknown field / older app) rather than a blank.
+              (unknownField || unknownOperator ? condition.operator : null)
             }
             onChange={(v) => {
               onChange(idx, "operator", v);
@@ -1063,6 +1108,27 @@ const ConditionRow = ({
         </Col>
       </Row>
 
+      {(unknownField || unknownOperator) && (
+        <small className="text-danger d-block mb-2">
+          This condition uses{" "}
+          {unknownField && <strong>field "{condition.field}"</strong>}
+          {unknownField && unknownOperator && " and "}
+          {unknownOperator && (
+            <strong>operator "{condition.operator?.value}"</strong>
+          )}
+          , which this version of the app doesn't recognise. Refresh the page;
+          if it stays, don't save this SOP — saving would change the condition.
+        </small>
+      )}
+
+      {isStateCheck && !unknownField && !unknownOperator && (
+        <small className="text-muted d-block mb-2">
+          {ONCE_PER_ADMISSION_FIELDS.has(condition.field)
+            ? "Checked every day at 2:00 AM — alerts once per admission when this is true."
+            : "Checked every day at 2:00 AM — alerts once a day while this is true, and stops when it isn't."}
+        </small>
+      )}
+
       {isDaysBefore && (
         <small className="text-muted d-block mb-2">
           Checked every morning at 4:00 AM. Each firing day alerts once per
@@ -1073,8 +1139,9 @@ const ConditionRow = ({
       )}
 
       {/* DELAYED-only: schedule controls (Period + Days + Interval + Grace).
-          Not for licence conditions — the compliance sweep has no cadence. */}
-      {isDelayed && !isCompliance && (
+          Not for licence conditions — the compliance sweep has no cadence —
+          nor for Admission / Patient state checks, which ignore it. */}
+      {isDelayed && !isCompliance && !isStateCheck && (
         <Row className="align-items-end mb-3 p-2 border rounded bg-light mx-0">
           <Col md={3}>
             <Label className="small text-muted mb-1">Cycle</Label>
@@ -1217,8 +1284,8 @@ const ConditionRow = ({
 
       {/* DELAYED-only: optional discontinue gate — suppress this "missing
           assessment" reminder once the patient's recent scores are stable
-          (monitoring legitimately discontinued). */}
-      {isDelayed && !isCompliance && (
+          (monitoring legitimately discontinued). Cadence reminders only. */}
+      {isDelayed && !isCompliance && !isStateCheck && (
         <div className="mb-3 p-2 border rounded bg-light mx-0">
           <div className="form-check mb-2">
             <input
