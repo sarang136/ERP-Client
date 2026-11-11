@@ -72,6 +72,9 @@ export const OPERATOR_OPTIONS = [
   // passes when the field is older than that from now.
   { value: "OLDER_THAN_DAYS", label: "Older than (days)" },
   { value: "OLDER_THAN_HOURS", label: "Older than (hours)" },
+  // Age band: value [from, to] hours, passes when from <= age < to — tiers with
+  // an upper bound ("< 24 h", "24-72 h") that don't overlap.
+  { value: "AGE_BETWEEN_HOURS", label: "Age between (hours)" },
   // Streak-based operator for discontinuation rules. Fires when the last N
   // assessments all score below the threshold.
   { value: "CONSECUTIVE_LOW", label: "Consecutive low (discontinue)" },
@@ -139,6 +142,19 @@ export const CHANGE_PERIOD_UNIT_OPTIONS = [
   { value: "MONTH", label: "month(s)" },
 ];
 
+// Target conditions on these models are STATE checks: the 02:00 sweep reads the
+// live admission / patient record and alerts while the condition holds — it
+// never uses a Cycle / Deadline / Grace schedule or the discontinue gate, so the
+// editor hides those and doesn't save them.
+export const STATE_CHECK_MODELS = new Set(["Addmission", "Patient"]);
+// State checks that alert once per admission rather than once a day.
+export const ONCE_PER_ADMISSION_FIELDS = new Set([
+  "patientCategory",
+  "provisional_diagnosis",
+]);
+export const isStateCheckCondition = (c) =>
+  c?.triggerType?.value === "DELAYED" && STATE_CHECK_MODELS.has(c?.model?.value);
+
 // Operators whose value editor is a plain number (of days / hours) against a
 // Date field, mapped to that unit.
 export const RELATIVE_AGE_OPERATORS = new Map([
@@ -166,6 +182,7 @@ export const OPERATORS_BY_TYPE = {
     "NOT_EXISTS",
     "OLDER_THAN_DAYS",
     "OLDER_THAN_HOURS",
+    "AGE_BETWEEN_HOURS",
   ],
   Boolean: ["EQUALS", "NOT_EQUALS", "EXISTS", "NOT_EXISTS"],
   Array: ["EQUALS", "NOT_EQUALS", "EXISTS", "NOT_EXISTS"],
