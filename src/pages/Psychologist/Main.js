@@ -1,57 +1,105 @@
-import { useMemo, useState } from "react";
-import { Row, Col } from "reactstrap";
-import { useDispatch } from "react-redux";
+import { useEffect, useRef, useState } from "react";
+import PropTypes from "prop-types";
+import { Button, Col, Row, Spinner } from "reactstrap";
+import { connect, useDispatch } from "react-redux";
 import PsychBar from "./Views/Components/PsychBar";
 import PatientCard from "./Views/Components/PatientCard";
-import { mockPatients } from "./mockPatients";
+import { getAllPatients, patchPatientNoteDate } from "../../store/features/psychologist/psychologistSlice";
 import { setPatient } from "../../store/features/patient/patientSlice";
 import { IPD, COUNSELLING_NOTE } from "../../Components/constants/patient";
 import ChartDate from "../Patient/Modals/ChartDate";
 import ChartForm from "../Patient/ChartForm";
 
-const Main = () => {
+const Main = ({ loading, data, centerAccess }) => {
   const dispatch = useDispatch();
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [flag, setFlag] = useState("");
   const [scope, setScope] = useState("MY");
+  const [refreshToken, setRefreshToken] = useState(0);
+  const forceRefreshRef = useRef(false);
+  
   const [dateModalOpen, setDateModalOpen] = useState(false);
-  // ChartDate assumes a patient is already loaded into Patient state (true on
-  // the real patient page, which only ever mounts it after fetching one) and
-  // reads patient.center unconditionally. It must stay unmounted here until
-  // the first "Start Counselling Note" click has loaded one, or it crashes
-  // on the dashboard's initial render while Patient state is still empty.
+  const [activeChartType, setActiveChartType] = useState(COUNSELLING_NOTE);
+  const [activePatientId, setActivePatientId] = useState(null);
   const [chartReady, setChartReady] = useState(false);
+  const limit = 12;
 
-  document.title = "Psychologist | Your App Name";
+  document.title = "Psychologist Dashboard";
 
-  const patients = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return mockPatients.filter((p) => {
-      if (scope === "MY" && !p.mine) return false;
-      if (flag && p.nextSessionDue !== flag) return false;
-      if (q && !p.name.toLowerCase().includes(q) && !p.uid.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [search, flag, scope]);
+  const handleNoteSaved = () => {
+    if (!activePatientId) return;
+    dispatch(
+      patchPatientNoteDate({
+        patientId: activePatientId,
+        field:
+          activeChartType === COUNSELLING_NOTE
+            ? "lastCounsellingNoteDate"
+            : "lastClinicalNoteDate",
+        date: new Date().toISOString(),
+      }),
+    );
+  };
 
-  // Same entry point as "Create new Chart" on the patient page: load the
-  // patient into Patient state so ChartDate/ChartForm (both read from redux)
-  // behave exactly as they do there, then open the date picker.
-  const handleStartNote = (patient) => {
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, flag, scope]);
+
+  useEffect(() => {
+    if (!centerAccess || centerAccess.length === 0) return;
+    const forceRefresh = forceRefreshRef.current;
+    forceRefreshRef.current = false;
+    dispatch(
+      getAllPatients({
+        page,
+        limit,
+        search: debouncedSearch,
+        patientType: flag,
+        scope,
+        centerAccess,
+        forceRefresh,
+      }),
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, page, limit, debouncedSearch, flag, scope, centerAccess, refreshToken]);
+
+  const handleRefresh = () => {
+    forceRefreshRef.current = true;
+    setRefreshToken((t) => t + 1);
+  };
+
+  const handlePrev = () => {
+    if (page > 1) setPage(page - 1);
+  };
+
+  const handleNext = () => {
+    if (page < data.pagination?.totalPages) setPage(page + 1);
+  };
+
+  const handleStartChart = (patient, chartType) => {
     dispatch(
       setPatient({
         _id: patient._id,
         name: patient.name,
         isAdmit: true,
-        center: { _id: patient.centerId || "mock-center", title: "Main Centre" },
-      })
+        center: patient.center,
+        addmission: { _id: patient.admissionId },
+      }),
     );
+    setActiveChartType(chartType);
+    setActivePatientId(patient._id);
     setChartReady(true);
     setDateModalOpen(true);
   };
 
   return (
-    <div>
+    <div style={{ background: "#fff", minHeight: "100vh", padding: "1.5rem" }}>
       <PsychBar
         search={search}
         setSearch={setSearch}
@@ -59,13 +107,28 @@ const Main = () => {
         setFlag={setFlag}
         scope={scope}
         setScope={setScope}
+        onRefresh={handleRefresh}
       />
 
-      {patients.length > 0 ? (
+      {centerAccess?.length === 0 ? (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{ height: "50vh", fontSize: "1.2rem", color: "#555" }}
+        >
+          No centers selected.
+        </div>
+      ) : loading ? (
+        <div
+          className="d-flex justify-content-center align-items-center"
+          style={{ height: "50vh" }}
+        >
+          <Spinner color="primary" />
+        </div>
+      ) : data.data && data.data.length > 0 ? (
         <Row className="g-3 mt-1">
-          {patients.map((patient) => (
-            <Col xl={3} lg={4} md={6} sm={6} xs={12} key={patient._id}>
-              <PatientCard patient={patient} onStartNote={handleStartNote} />
+          {data.data.map((patient) => (
+            <Col xl={4} lg={4} md={6} sm={12} xs={12} key={patient._id}>
+              <PatientCard patient={patient} onStartChart={handleStartChart} />
             </Col>
           ))}
         </Row>
@@ -78,19 +141,58 @@ const Main = () => {
         </div>
       )}
 
+      {!loading && data.pagination?.totalPages > 1 && (
+        <Row className="mt-4 justify-content-center align-items-center">
+          <Col xs="auto" className="d-flex justify-content-center">
+            <Button color="secondary" disabled={page === 1} onClick={handlePrev}>
+              ← Previous
+            </Button>
+          </Col>
+          <Col xs="auto" className="text-center text-muted mx-3">
+            Showing {(page - 1) * limit + 1}–
+            {Math.min(page * limit, data.pagination?.totalDocs || 0)} of{" "}
+            {data.pagination?.totalDocs || 0}
+          </Col>
+          <Col xs="auto" className="d-flex justify-content-center">
+            <Button
+              color="secondary"
+              disabled={page === data.pagination?.totalPages}
+              onClick={handleNext}
+            >
+              Next →
+            </Button>
+          </Col>
+        </Row>
+      )}
+
       {chartReady && (
         <>
           <ChartDate
             type={IPD}
-            fixedChart={COUNSELLING_NOTE}
+            fixedChart={activeChartType}
             isOpen={dateModalOpen}
             toggle={() => setDateModalOpen(false)}
           />
-          <ChartForm type={IPD} onSubmitClinicalForm={() => {}} />
+          <ChartForm
+            type={IPD}
+            onNoteSaved={handleNoteSaved}
+          />
         </>
       )}
     </div>
   );
 };
 
-export default Main;
+Main.propTypes = {
+  loading: PropTypes.bool,
+  data: PropTypes.object,
+  centerAccess: PropTypes.array,
+};
+
+const mapStateToProps = (state) => ({
+  loading: state.Psychologist.loading,
+  data: state.Psychologist.data,
+  centerAccess: state.User?.centerAccess,
+});
+
+export default connect(mapStateToProps)(Main);
