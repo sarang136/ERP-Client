@@ -68,9 +68,10 @@ export const OPERATOR_OPTIONS = [
     "NOT_EXISTS",
     "ARRAY_ANY_MATCHES",
   ].map((op) => ({ value: op, label: op.replace(/_/g, " ") })),
-  // Relative-date operator (Date fields). Value is a number of days; passes
-  // when the field is older than that many days from now.
+  // Relative-date operators (Date fields). Value is a number of days / hours;
+  // passes when the field is older than that from now.
   { value: "OLDER_THAN_DAYS", label: "Older than (days)" },
+  { value: "OLDER_THAN_HOURS", label: "Older than (hours)" },
   // Streak-based operator for discontinuation rules. Fires when the last N
   // assessments all score below the threshold.
   { value: "CONSECUTIVE_LOW", label: "Consecutive low (discontinue)" },
@@ -138,8 +139,12 @@ export const CHANGE_PERIOD_UNIT_OPTIONS = [
   { value: "MONTH", label: "month(s)" },
 ];
 
-// Operators whose value editor is a plain number of days against a Date field.
-export const RELATIVE_DAY_OPERATORS = new Set(["OLDER_THAN_DAYS"]);
+// Operators whose value editor is a plain number (of days / hours) against a
+// Date field, mapped to that unit.
+export const RELATIVE_AGE_OPERATORS = new Map([
+  ["OLDER_THAN_DAYS", "days"],
+  ["OLDER_THAN_HOURS", "hours"],
+]);
 
 export const OPERATORS_BY_TYPE = {
   Number: [
@@ -160,6 +165,7 @@ export const OPERATORS_BY_TYPE = {
     "EXISTS",
     "NOT_EXISTS",
     "OLDER_THAN_DAYS",
+    "OLDER_THAN_HOURS",
   ],
   Boolean: ["EQUALS", "NOT_EQUALS", "EXISTS", "NOT_EXISTS"],
   Array: ["EQUALS", "NOT_EQUALS", "EXISTS", "NOT_EXISTS"],

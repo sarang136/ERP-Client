@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
 });
 
 const Body = ({ chart, patient, admission, additionalDiagnosis }) => {
-  const data = chart.detailAdmission;
+  const data = chart?.detailAdmission || {};
   const isOldMentalExamination = Boolean(data?.mentalExamination);
 
   const chartDiagnosis = additionalDiagnosis || null;
