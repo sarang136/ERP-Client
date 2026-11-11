@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { Badge, Button, Spinner } from "reactstrap";
 import PropTypes from "prop-types";
 import CustomModal from "../../../../Components/Common/Modal";
-import { getAllSopAlerts } from "../../../../helpers/backend_helper";
+import { getAllSopAlerts, markSopAlertRead } from "../../../../helpers/backend_helper";
 import {
   SEVERITY_COLOR,
   SEVERITY_HEX,
 } from "../../../Alerts/components/alertConstants";
 import { timeAgo, alertSourceLabel } from "../../../Alerts/components/alertUtils";
+import AlertDetailOffcanvas from "../../../Alerts/components/AlertDetailOffcanvas";
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
 
 const PAGE_SIZE = 10;
@@ -19,6 +20,20 @@ const PatientAlertsModal = ({ isOpen, toggle, patientId, patientName }) => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [selectedId, setSelectedId] = useState(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const selectedAlert = alerts.find((a) => a._id === selectedId) || null;
+
+  const openDetail = (alert) => {
+    setSelectedId(alert._id);
+    setDetailOpen(true);
+    if (!alert.isRead) {
+      setAlerts((prev) =>
+        prev.map((a) => (a._id === alert._id ? { ...a, isRead: true } : a)),
+      );
+      markSopAlertRead(alert._id).catch(() => {});
+    }
+  };
 
   useEffect(() => {
     if (isOpen) setPage(1);
@@ -71,8 +86,16 @@ const PatientAlertsModal = ({ isOpen, toggle, patientId, patientName }) => {
           {alerts.map((alert) => (
             <div
               key={alert._id}
-              className="d-flex gap-2"
-              style={{ borderLeft: `4px solid ${SEVERITY_HEX[alert.severity] || "#6c757d"}`, paddingLeft: 10 }}
+              role="button"
+              tabIndex={0}
+              onClick={() => openDetail(alert)}
+              className="d-flex gap-2 pb-3 border-bottom"
+              style={{
+                borderLeft: `4px solid ${SEVERITY_HEX[alert.severity] || "#6c757d"}`,
+                paddingLeft: 10,
+                cursor: "pointer",
+                opacity: alert.isRead ? 0.7 : 1,
+              }}
             >
               <div className="flex-grow-1">
                 <div className="d-flex align-items-center gap-2 mb-1">
@@ -128,6 +151,12 @@ const PatientAlertsModal = ({ isOpen, toggle, patientId, patientName }) => {
           Open in Alerts inbox (resolve / add notes) →
         </a>
       </div>
+
+      <AlertDetailOffcanvas
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        alert={selectedAlert}
+      />
     </CustomModal>
   );
 };
