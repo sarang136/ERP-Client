@@ -5,8 +5,11 @@ import { toast } from "react-toastify";
 import {
   getStockBalances,
   getStockLedger,
+  getInventoryTransfers,
 } from "../../../../helpers/backend_helper";
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
+import { useReferenceList } from "../../../../Components/Hooks/useReferenceData";
+import { exportInventory } from "./exportInventory";
 import "../../UnitOfMeasurement/uom.scss";
 
 const dateFmt = (d) => (d ? new Date(d).toLocaleString("en-IN") : "—");
@@ -57,12 +60,32 @@ const SummaryCard = ({ label, value, sub, icon }) => (
   </div>
 );
 
+const TABS = [
+  { key: "all", label: "All stock" },
+  { key: "available", label: "Available" },
+  { key: "created", label: "Created" },
+  { key: "in_transit", label: "In transit" },
+];
+
+const STATUS_LABELS = {
+  available: "Available",
+  created: "Created",
+  in_transit: "In transit",
+  difference: "In transit (difference)",
+};
+
+const openDiff = (li) => (li.dispatchedQty || 0) - (li.receivedQty || 0) - (li.resolvedQty || 0);
+
 const StockBalanceList = () => {
   const handleAuthError = useAuthError();
 
   const [balances, setBalances] = useState([]);
+  const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState("all");
+  const [siteId, setSiteId] = useState("");
+  const { items: centers } = useReferenceList("centers");
   const [refreshFlag] = useState(0);
 
   const [ledgerModal, setLedgerModal] = useState(null);
@@ -74,9 +97,14 @@ const StockBalanceList = () => {
     const fetchBalances = async () => {
       setLoading(true);
       try {
-        const res = await getStockBalances({ search });
+        // Everything is fetched once; search, Site and the tabs work on it here so the counts always match the list
+        const [res, transferRes] = await Promise.all([
+          getStockBalances({}),
+          getInventoryTransfers({}).catch(() => ({ data: [] })),
+        ]);
         if (cancelled) return;
         setBalances(res?.data || []);
+        setTransfers(transferRes?.data || []);
       } catch (error) {
         if (cancelled) return;
         if (!handleAuthError(error)) {
@@ -95,7 +123,7 @@ const StockBalanceList = () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, refreshFlag]);
+  }, [refreshFlag]);
 
   const openLedger = async (row) => {
     setLedgerModal(row);
@@ -119,21 +147,124 @@ const StockBalanceList = () => {
     }
   };
 
-  // Summary stats derived from the current balance list
+  // One row per stock counter (Available) and one per transfer line (Created, In transit).
+  // Created = nothing has left the source yet. In transit = dispatched, not yet received.
+  // An open difference (received less than dispatched) stays in In transit until it is resolved.
+  const allRows = useMemo(() => {
+    const rows = balances.map((b) => ({
+      key: `a-${b._id}`,
+      kind: "available",
+      balance: b,
+      itemName: b.itemName,
+      quantity: b.quantity,
+      fromId: b.centerId?._id || b.centerId,
+      fromTitle: b.centerId?.title || "",
+      toId: "",
+      toTitle: "",
+      transferNumber: "",
+      updatedAt: b.updatedAt,
+    }));
+    transfers.forEach((t) => {
+      if (t.flow !== "two_step") return;
+      (t.lineItems || []).forEach((li) => {
+        let kind = "";
+        let quantity = 0;
+        if (t.status === "created") {
+          kind = "created";
+          quantity = li.quantity;
+        } else if (t.status === "in_transit") {
+          kind = "in_transit";
+          quantity = li.dispatchedQty;
+        } else if (t.status === "received_with_difference" && openDiff(li) > 0) {
+          kind = "difference";
+          quantity = openDiff(li);
+        }
+        if (!kind) return;
+        rows.push({
+          key: `t-${t._id}-${li.itemName}`,
+          kind,
+          itemName: li.itemName,
+          quantity,
+          fromId: t.fromCenterId?._id || t.fromCenterId,
+          fromTitle: t.fromCenterId?.title || "",
+          toId: t.toCenterId?._id || t.toCenterId,
+          toTitle: t.toCenterId?.title || "",
+          transferNumber: t.transferNumber,
+          updatedAt: t.dispatchedAt || t.createdAt,
+        });
+      });
+    });
+    return rows.map((r) => ({ ...r, statusLabel: STATUS_LABELS[r.kind] }));
+  }, [balances, transfers]);
+
+  // Search (item name or transfer number) and the Site filter apply to every tab and every count
+  const scopedRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allRows.filter((r) => {
+      if (siteId && r.fromId !== siteId && r.toId !== siteId) return false;
+      if (!q) return true;
+      return (
+        (r.itemName || "").toLowerCase().includes(q) ||
+        (r.transferNumber || "").toLowerCase().includes(q)
+      );
+    });
+  }, [allRows, search, siteId]);
+
+  const inTab = (r, key) =>
+    key === "all" ||
+    (key === "available" && r.kind === "available") ||
+    (key === "created" && r.kind === "created") ||
+    (key === "in_transit" && (r.kind === "in_transit" || r.kind === "difference"));
+
+  const counts = useMemo(
+    () => Object.fromEntries(TABS.map((t) => [t.key, scopedRows.filter((r) => inTab(r, t.key)).length])),
+    [scopedRows],
+  );
+  const shownRows = useMemo(() => scopedRows.filter((r) => inTab(r, tab)), [scopedRows, tab]);
+
+  const handleExport = () => {
+    if (shownRows.length === 0) {
+      toast.error("Nothing to export");
+      return;
+    }
+    const count = exportInventory(shownRows, TABS.find((t) => t.key === tab).label);
+    toast.success(`Exported ${count} rows`);
+  };
+
+  // Summary stats derived from the Available counters in view
   const stats = useMemo(() => {
-    const uniqueItems = new Set(balances.map((b) => b.itemName));
-    const uniqueSites = new Set(
-      balances.map((b) => b.centerId?._id || b.centerId),
-    );
-    const totalQty = balances.reduce((sum, b) => sum + (b.quantity || 0), 0);
-    const zeroCount = balances.filter((b) => b.quantity === 0).length;
+    const avail = scopedRows.filter((r) => r.kind === "available");
     return {
-      items: uniqueItems.size,
-      sites: uniqueSites.size,
-      totalQty,
-      zeroCount,
+      items: new Set(avail.map((r) => r.itemName)).size,
+      sites: new Set(avail.map((r) => r.fromId)).size,
+      totalQty: avail.reduce((sum, r) => sum + (r.quantity || 0), 0),
+      zeroCount: avail.filter((r) => r.quantity === 0).length,
     };
-  }, [balances]);
+  }, [scopedRows]);
+
+  const statusPill = (r) => {
+    const style = {
+      available: { bg: "#ecfdf3", color: "#067647" },
+      created: { bg: "#fffaeb", color: "#b54708" },
+      in_transit: { bg: "#eff8ff", color: "#175cd3" },
+      difference: { bg: "#fef3f2", color: "#b42318" },
+    }[r.kind];
+    return (
+      <span
+        style={{
+          background: style.bg,
+          color: style.color,
+          padding: "3px 10px",
+          borderRadius: 999,
+          fontSize: 12,
+          fontWeight: 600,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {r.statusLabel}
+      </span>
+    );
+  };
 
   const columns = [
     {
@@ -144,27 +275,39 @@ const StockBalanceList = () => {
       cell: (row) => <span className="fw-semibold">{row.itemName}</span>,
     },
     {
+      name: "Status",
+      width: "190px",
+      cell: (row) => statusPill(row),
+    },
+    {
       name: "Site",
       sortable: true,
-      selector: (row) => row.centerId?.title || "—",
+      selector: (row) => row.fromTitle || "—",
       cell: (row) => (
         <span className="d-flex align-items-center gap-1 text-muted">
-          <i className="bx bx-map-pin"></i> {row.centerId?.title || "—"}
+          <i className="bx bx-map-pin"></i>
+          {row.fromTitle || "—"}
+          {row.toTitle ? ` → ${row.toTitle}` : ""}
         </span>
       ),
     },
     {
-      name: "Current Stock",
+      name: "Quantity",
       sortable: true,
       selector: (row) => row.quantity,
       right: true,
       cell: (row) => (
         <span
-          className={`fw-bold fs-6 ${row.quantity === 0 ? "text-danger" : "text-dark"}`}
+          className={`fw-bold fs-6 ${row.kind === "available" && row.quantity === 0 ? "text-danger" : "text-dark"}`}
         >
           {row.quantity}
         </span>
       ),
+    },
+    {
+      name: "Transfer #",
+      width: "160px",
+      cell: (row) => <span className="uom-cell-muted">{row.transferNumber || "—"}</span>,
     },
     {
       name: "Last Updated",
@@ -176,11 +319,12 @@ const StockBalanceList = () => {
       name: "",
       width: "130px",
       right: true,
-      cell: (row) => (
-        <Button size="sm" color="light" onClick={() => openLedger(row)}>
-          <i className="bx bx-history me-1"></i> History
-        </Button>
-      ),
+      cell: (row) =>
+        row.kind === "available" ? (
+          <Button size="sm" color="light" onClick={() => openLedger(row.balance)}>
+            <i className="bx bx-history me-1"></i> History
+          </Button>
+        ) : null,
     },
   ];
 
@@ -190,9 +334,18 @@ const StockBalanceList = () => {
         <div>
           <h4>Inventory / Stock Management</h4>
           <p>
-            A live view of how much of each item is currently held at every site
+            A live view of how much of each item is held at every site, and what is on its way
           </p>
         </div>
+      </div>
+
+      <div
+        className="mb-3 p-3"
+        style={{ background: "#f8f9fb", borderRadius: 8, border: "1px solid #edeff3", fontSize: 13 }}
+      >
+        <strong>Where the value sits.</strong>{" "}
+        <b>Available</b>: held at a site. <b>Created</b>: a transfer is planned but nothing has left the source site yet.{" "}
+        <b>In transit</b>: dispatched and not yet received; it is held by neither site until the destination receives it.
       </div>
 
       {/* Summary strip */}
@@ -220,25 +373,52 @@ const StockBalanceList = () => {
         />
       </div>
 
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <div className="uom-search-wrap mb-0" style={{ maxWidth: 360 }}>
-          <i className="bx bx-search"></i>
+      <div className="im-filter-pills-row mb-3">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            className={`im-filter-pill ${tab === t.key ? "active" : ""}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label} <span className="ms-1">({counts[t.key]})</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div className="d-flex gap-2 flex-wrap align-items-center">
+          <div className="uom-search-wrap mb-0" style={{ minWidth: 280 }}>
+            <i className="bx bx-search"></i>
+            <Input
+              placeholder="Search item name or transfer number..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
           <Input
-            placeholder="Search by item name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+            type="select"
+            style={{ maxWidth: 220 }}
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+          >
+            <option value="">All sites</option>
+            {centers.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.title}
+              </option>
+            ))}
+          </Input>
         </div>
-        <div className="text-muted small">
-          Stock updates automatically from GRN, Issues, Returns, Transfers, and
-          Adjustments
-        </div>
+        <Button color="light" onClick={handleExport} title="Download what is shown on this screen">
+          <i className="bx bx-download me-1"></i> Export
+        </Button>
       </div>
 
       <div className="uom-table-card">
         <DataTable
           columns={columns}
-          data={balances}
+          data={shownRows}
           customStyles={tableCustomStyles}
           progressPending={loading}
           pagination
@@ -246,10 +426,10 @@ const StockBalanceList = () => {
           defaultSortFieldId={1}
           noDataComponent={
             <div className="uom-empty-state">
-              <p className="uom-empty-title">No stock records yet</p>
+              <p className="uom-empty-title">Nothing to show</p>
               <p className="uom-empty-sub">
-                Stock appears here automatically once a Goods Receipt Note (GRN)
-                is created.
+                Stock appears here once a Goods Receipt Note (GRN) is created.
+                Transfers appear in Created and In transit.
               </p>
             </div>
           }

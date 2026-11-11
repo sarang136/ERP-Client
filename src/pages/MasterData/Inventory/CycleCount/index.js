@@ -29,7 +29,7 @@ const CycleCount = () => {
   const token = JSON.parse(localStorage.getItem("micrologin"))?.token;
   const { hasPermission } = usePermissions(token);
   const canCreate = hasPermission("MASTERDATA", "CYCLE_COUNT", "WRITE");
-  const canReconcile = hasPermission("MASTERDATA", "CYCLE_COUNT", "DELETE");
+  const canReconcile = hasPermission("MASTERDATA", "CYCLE_COUNT", "WRITE");
 
   const [counts, setCounts] = useState([]);
   const [loading, setLoading] = useState(false);

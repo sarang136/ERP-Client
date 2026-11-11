@@ -973,6 +973,13 @@ export const UOM_BASE = "/master/uom";
 export const ASSET_CATEGORY_BASE = "/master/asset-category";
 
 export const PAYMENT_TERM_BASE = "/master/payment-term";
+export const CHART_OF_ACCOUNTS_BASE = "/master/chart-of-accounts";
+export const LEDGER_TYPE_BASE = "/master/ledger-type";
+export const LEDGER_SUB_TYPE_BASE = "/master/ledger-sub-type";
+export const LEDGER_BASE = "/master/ledger";
+export const GL_VOUCHER_BASE = "/master/gl-voucher";
+export const GL_ENTRY_BASE = "/master/gl-entry";
+export const TRIAL_BALANCE_BASE = "/master/trial-balance";
 
 export const PR_DEPARTMENT_BASE = "/master/pr-department";
 export const PR_SUB_DEPARTMENT_BASE = "/master/pr-sub-department";

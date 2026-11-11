@@ -59,7 +59,7 @@ const POForm = ({ onSaved, onCancel }) => {
 
   const { items: vendors } = useReferenceList("vendors");
   const { items: departments } = useReferenceList("departments");
-  const { items: uoms } = useReferenceList("uoms");
+  const { items: uoms } = useReferenceList("uomsAll");
   const { items: centers } = useReferenceList("centers");
   const { items: paymentTerms } = useReferenceList("paymentTerms");
   const [budgets, setBudgets] = useState([]);
@@ -111,6 +111,10 @@ const POForm = ({ onSaved, onCancel }) => {
         is: "contract_based",
         then: (schema) => schema.required("Please select a contract"),
       }),
+      departmentId: Yup.string().when("poType", {
+        is: (val) => val !== "pr_based",
+        then: (schema) => schema.required("Department is required"),
+      }),
       budgetId: Yup.string().when("poType", {
         is: (val) => val !== "pr_based",
         then: (schema) => schema.required("Budget is required"),
@@ -148,6 +152,7 @@ const POForm = ({ onSaved, onCancel }) => {
           vendorId: true,
           rfqId: true,
           contractId: true,
+          departmentId: true,
           budgetId: true,
           justification: true,
           lineItems: true,
@@ -217,16 +222,30 @@ const POForm = ({ onSaved, onCancel }) => {
   const e = validation.errors;
   const isPR = v.poType === "pr_based";
 
+  // Direct and contract POs: the budget list is for the chosen center (delivery site) AND department.
+  // A PR-based PO keeps the PR's own budget, so only the department is used there.
+  const budgetCenterId = isPR ? "" : v.deliverySiteId;
+
+  // Changing the center (delivery site) clears a budget chosen for another center
+  const changeSite = (siteId) => {
+    validation.setFieldValue("deliverySiteId", siteId);
+    if (!isPR) validation.setFieldValue("budgetId", "");
+  };
+
   useEffect(() => {
-    if (!v.departmentId) {
+    if (!v.departmentId || (!isPR && !budgetCenterId)) {
       setBudgets([]);
       return;
     }
-    getBudgets({ departmentId: v.departmentId, status: "approved" })
+    getBudgets({
+      departmentId: v.departmentId,
+      ...(budgetCenterId ? { centerId: budgetCenterId } : {}),
+      status: "approved",
+    })
       .then((res) => setBudgets(res?.data || []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [v.departmentId]);
+  }, [v.departmentId, budgetCenterId]);
 
   useEffect(() => {
     if (!v.rfqId) {
@@ -614,8 +633,29 @@ const POForm = ({ onSaved, onCancel }) => {
               </div>
             ) : (
               <Row>
-                <Col md={6} className="mb-3">
-                  <Label>Department</Label>
+                <Col md={4} className="mb-3">
+                  <Label>
+                    Center (Delivery Site) <span className="text-danger">*</span>
+                  </Label>
+                  <Input
+                    type="select"
+                    value={v.deliverySiteId}
+                    onChange={(ev) => changeSite(ev.target.value)}
+                    invalid={t.deliverySiteId && !!e.deliverySiteId}
+                  >
+                    <option value="">Select center</option>
+                    {centers.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.title}
+                      </option>
+                    ))}
+                  </Input>
+                  <FormFeedback>{e.deliverySiteId}</FormFeedback>
+                </Col>
+                <Col md={4} className="mb-3">
+                  <Label>
+                    Department <span className="text-danger">*</span>
+                  </Label>
                   <Input
                     type="select"
                     value={v.departmentId}
@@ -623,6 +663,7 @@ const POForm = ({ onSaved, onCancel }) => {
                       validation.setFieldValue("departmentId", ev.target.value);
                       validation.setFieldValue("budgetId", "");
                     }}
+                    invalid={t.departmentId && !!e.departmentId}
                   >
                     <option value="">Select department</option>
                     {departments.map((d) => (
@@ -631,24 +672,25 @@ const POForm = ({ onSaved, onCancel }) => {
                       </option>
                     ))}
                   </Input>
+                  <FormFeedback>{e.departmentId}</FormFeedback>
                 </Col>
-                <Col md={6} className="mb-3">
+                <Col md={4} className="mb-3">
                   <Label>
                     Budget <span className="text-danger">*</span>
                   </Label>
                   <Input
                     type="select"
                     value={v.budgetId}
-                    disabled={!v.departmentId}
+                    disabled={!v.departmentId || !v.deliverySiteId}
                     onChange={(ev) =>
                       validation.setFieldValue("budgetId", ev.target.value)
                     }
                     invalid={t.budgetId && !!e.budgetId}
                   >
                     <option value="">
-                      {v.departmentId
+                      {v.departmentId && v.deliverySiteId
                         ? "Select budget"
-                        : "Select a department first"}
+                        : "Select center and department first"}
                     </option>
                     {budgets.map((b) => (
                       <option key={b._id} value={b._id}>
@@ -659,6 +701,11 @@ const POForm = ({ onSaved, onCancel }) => {
                     ))}
                   </Input>
                   <FormFeedback>{e.budgetId}</FormFeedback>
+                  {v.departmentId && v.deliverySiteId && budgets.length === 0 && (
+                    <div className="text-muted small mt-1">
+                      No approved budgets found for this center and department.
+                    </div>
+                  )}
                 </Col>
               </Row>
             )}
@@ -692,9 +739,7 @@ const POForm = ({ onSaved, onCancel }) => {
                 <Input
                   type="select"
                   value={v.deliverySiteId}
-                  onChange={(ev) =>
-                    validation.setFieldValue("deliverySiteId", ev.target.value)
-                  }
+                  onChange={(ev) => changeSite(ev.target.value)}
                   invalid={t.deliverySiteId && !!e.deliverySiteId}
                 >
                   <option value="">Select site</option>

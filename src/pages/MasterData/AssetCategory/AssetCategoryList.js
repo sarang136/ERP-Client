@@ -6,6 +6,7 @@ import {
   getAssetCategories,
   deleteAssetCategory,
 } from "../../../helpers/backend_helper.js";
+import { exportCategories } from "./exportCategories.js";
 import { useAuthError } from "../../../Components/Hooks/useAuthError.js";
 import { usePermissions } from "../../../Components/Hooks/useRoles.js";
 import "../UnitOfMeasurement/uom.scss";
@@ -52,6 +53,7 @@ const CURRENT_LABELS = {
   4: "Model (L4)",
 };
 
+// What sits directly under a category of each level
 // Walks up the populated parentCategoryId chain and returns names ordered L1 -> L(level-1)
 const getAncestorChain = (row) => {
   const chain = [];
@@ -75,6 +77,30 @@ const AssetCategoryList = ({ level, onAdd, onEdit }) => {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [refreshFlag, setRefreshFlag] = useState(0);
+  const [exporting, setExporting] = useState(false);
+
+  // The export has the whole tree (every level), whichever level page you are on.
+  // It is fetched only when you click Export.
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const res = await getAssetCategories({});
+      const all = res?.data || [];
+      if (all.length === 0) {
+        toast.error("No categories to export");
+        return;
+      }
+      const count = exportCategories(all);
+      toast.success(`Exported ${count} rows`);
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error?.response?.data?.message || error?.message || "Couldn't export categories.");
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -183,11 +209,16 @@ const AssetCategoryList = ({ level, onAdd, onEdit }) => {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        {canCreate && (
-          <Button color="primary" onClick={onAdd}>
-            <i className="bx bx-plus me-1"></i> Add Asset Category L{level}
+        <div className="d-flex gap-2">
+          <Button color="light" onClick={handleExport} disabled={exporting} title="Download the full category tree (all levels)">
+            <i className="bx bx-download me-1"></i> {exporting ? "Exporting..." : "Export"}
           </Button>
-        )}
+          {canCreate && (
+            <Button color="primary" onClick={onAdd}>
+              <i className="bx bx-plus me-1"></i> Add Asset Category L{level}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="uom-table-card">

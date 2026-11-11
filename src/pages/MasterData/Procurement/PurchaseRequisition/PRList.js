@@ -57,13 +57,13 @@ const StatusPill = ({ status }) => {
 
 const money = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
-const PRList = ({ onAdd, onEdit }) => {
+const PRList = ({ onAdd, onEdit, onOpen }) => {
   const handleAuthError = useAuthError();
   const token = JSON.parse(localStorage.getItem("micrologin"))?.token;
   const { hasPermission } = usePermissions(token);
   const canCreate = hasPermission("MASTERDATA", "PR", "WRITE");
   const canEdit = hasPermission("MASTERDATA", "PR", "WRITE");
-  const canApprove = hasPermission("MASTERDATA", "PR", "DELETE");
+  const canApprove = hasPermission("MASTERDATA", "PR", "WRITE");
   const canDelete = hasPermission("MASTERDATA", "PR", "DELETE");
 
   const [prs, setPrs] = useState([]);
@@ -230,10 +230,13 @@ const PRList = ({ onAdd, onEdit }) => {
     },
     {
       name: "Actions",
-      width: "220px",
+      width: "260px",
       right: true,
       cell: (row) => (
         <div className="d-flex gap-2 flex-wrap justify-content-end">
+          <Button size="sm" color="light" title="View" onClick={() => onOpen(row)}>
+            <i className="bx bx-show"></i>
+          </Button>
           {row.status === "draft" && canEdit && (
             <Button size="sm" color="light" onClick={() => onEdit(row)}>
               <i className="bx bx-edit-alt"></i>

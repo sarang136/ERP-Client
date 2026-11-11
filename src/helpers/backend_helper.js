@@ -6233,6 +6233,11 @@ export const getPRs = (params = {}) => {
     headers: { "X-No-Cookie-Token": "true" },
   });
 };
+export const getPRById = (id) => {
+  return axios.get(`${url.PR_BASE}/${id}`, {
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+};
 export const createPR = (data) => {
   return axios.post(url.PR_BASE, data, {
     headers: { "X-No-Cookie-Token": "true" },
@@ -6574,8 +6579,25 @@ export const getPOsForGRN = (params = {}) => {
     headers: { "X-No-Cookie-Token": "true" },
   });
 };
-export const getInventoryTransfers = () =>
+export const getInventoryTransfers = (params = {}) =>
   axios.get("/master/inventory-transfer", {
+    params,
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+export const dispatchInventoryTransfer = (id) =>
+  axios.patch(`/master/inventory-transfer/${id}/dispatch`, {}, {
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+export const acknowledgeInventoryTransfer = (id, data) =>
+  axios.patch(`/master/inventory-transfer/${id}/acknowledge`, data, {
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+export const resolveInventoryTransferDifference = (id, data) =>
+  axios.patch(`/master/inventory-transfer/${id}/resolve`, data, {
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+export const cancelInventoryTransfer = (id, data = {}) =>
+  axios.patch(`/master/inventory-transfer/${id}/cancel`, data, {
     headers: { "X-No-Cookie-Token": "true" },
   });
 export const createInventoryTransfer = (data) =>
@@ -7007,3 +7029,51 @@ export const adjustBudgetAmount = (id, data) =>
   axios.patch(`/master/budget/${id}/adjust`, data, {
     headers: { "X-No-Cookie-Token": "true" },
   });
+
+// ---------- Chart of accounts: ledger types, sub types and ledgers ----------
+const noCookie = { "X-No-Cookie-Token": "true" };
+export const getChartOfAccounts = () =>
+  axios.get(url.CHART_OF_ACCOUNTS_BASE, { headers: noCookie });
+export const getLedgerTypes = (params = {}) =>
+  axios.get(url.LEDGER_TYPE_BASE, { params, headers: noCookie });
+export const createLedgerType = (data) =>
+  axios.post(url.LEDGER_TYPE_BASE, data, { headers: noCookie });
+export const updateLedgerType = (id, data) =>
+  axios.put(`${url.LEDGER_TYPE_BASE}/${id}`, data, { headers: noCookie });
+export const updateLedgerTypeStatus = (id, status) =>
+  axios.patch(`${url.LEDGER_TYPE_BASE}/${id}/status`, { status }, { headers: noCookie });
+export const getLedgerSubTypes = (params = {}) =>
+  axios.get(url.LEDGER_SUB_TYPE_BASE, { params, headers: noCookie });
+export const createLedgerSubType = (data) =>
+  axios.post(url.LEDGER_SUB_TYPE_BASE, data, { headers: noCookie });
+export const updateLedgerSubType = (id, data) =>
+  axios.put(`${url.LEDGER_SUB_TYPE_BASE}/${id}`, data, { headers: noCookie });
+export const updateLedgerSubTypeStatus = (id, status) =>
+  axios.patch(`${url.LEDGER_SUB_TYPE_BASE}/${id}/status`, { status }, { headers: noCookie });
+export const getLedgers = (params = {}) =>
+  axios.get(url.LEDGER_BASE, { params, headers: noCookie });
+export const getLedgerById = (id) =>
+  axios.get(`${url.LEDGER_BASE}/${id}`, { headers: noCookie });
+export const getNextLedgerCode = (params = {}) =>
+  axios.get(`${url.LEDGER_BASE}/next-code`, { params, headers: noCookie });
+export const createLedger = (data) =>
+  axios.post(url.LEDGER_BASE, data, { headers: noCookie });
+export const updateLedger = (id, data) =>
+  axios.put(`${url.LEDGER_BASE}/${id}`, data, { headers: noCookie });
+export const updateLedgerStatus = (id, status) =>
+  axios.patch(`${url.LEDGER_BASE}/${id}/status`, { status }, { headers: noCookie });
+
+// ---------- General ledger: journal vouchers, entries, trial balance ----------
+export const getGlVouchers = (params = {}) =>
+  axios.get(url.GL_VOUCHER_BASE, { params, headers: noCookie });
+export const getGlVoucherById = (id) =>
+  axios.get(`${url.GL_VOUCHER_BASE}/${id}`, { headers: noCookie });
+export const createJournalVoucher = (data) =>
+  axios.post(`${url.GL_VOUCHER_BASE}/journal`, data, { headers: noCookie });
+export const reverseGlVoucher = (id, data) =>
+  axios.post(`${url.GL_VOUCHER_BASE}/${id}/reverse`, data, { headers: noCookie });
+export const getGlEntries = (params = {}) =>
+  axios.get(url.GL_ENTRY_BASE, { params, headers: noCookie });
+export const getTrialBalance = (params = {}) =>
+  axios.get(url.TRIAL_BALANCE_BASE, { params, headers: noCookie });
+
