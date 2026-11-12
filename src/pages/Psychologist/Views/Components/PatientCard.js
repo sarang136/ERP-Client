@@ -145,7 +145,8 @@ const PatientCard = ({ patient, onStartChart, onViewAlerts, canWrite }) => {
               <Button
                 color="primary"
                 size="sm"
-                className="d-flex align-items-center justify-content-center gap-1 fw-semibold flex-grow-1 text-nowrap"
+                className="d-flex align-items-center justify-content-center gap-1 fw-semibold flex-grow-1 text-nowrap text-truncate"
+                style={{ minWidth: 0 }}
                 onClick={() => onStartChart(patient, COUNSELLING_NOTE)}
               >
                 <MessageSquareText size={14} />
@@ -154,7 +155,8 @@ const PatientCard = ({ patient, onStartChart, onViewAlerts, canWrite }) => {
               <Button
                 color="success"
                 size="sm"
-                className="d-flex align-items-center justify-content-center gap-1 fw-semibold flex-grow-1 text-nowrap"
+                className="d-flex align-items-center justify-content-center gap-1 fw-semibold flex-grow-1 text-nowrap text-truncate"
+                style={{ minWidth: 0 }}
                 onClick={() => onStartChart(patient, MENTAL_EXAMINATION)}
               >
                 <FileText size={14} />
