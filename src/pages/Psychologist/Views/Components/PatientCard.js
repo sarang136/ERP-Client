@@ -85,12 +85,17 @@ const PatientCard = ({ patient, onStartChart, onViewAlerts, canWrite }) => {
 
         {SEVERITY_ORDER.some((sev) => patient.alertCounts?.[sev]) && (
           <div className="d-flex flex-wrap align-items-center gap-1 mb-2">
+            <span style={{ fontSize: "0.75rem" }}>
+              <strong>Unresolved Alerts:</strong>
+            </span>
             {SEVERITY_ORDER.filter((sev) => patient.alertCounts?.[sev]).map((sev) => (
               <Badge
                 key={sev}
                 color={SEVERITY_COLOR[sev]}
                 pill
-                style={{ fontSize: "0.7rem" }}
+                role="button"
+                style={{ fontSize: "0.7rem", cursor: "pointer" }}
+                onClick={() => onViewAlerts(patient)}
               >
                 {patient.alertCounts[sev]} {toTitleCase(sev)}
               </Badge>
