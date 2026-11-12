@@ -28,7 +28,28 @@ const validationSchema = Yup.object().shape({
         .required("Details are required"),
     date: Yup.date()
         .typeError("Invalid date")
-        .required("Date is required"),
+        .when("type", {
+            is: "BONUS_ADJUSTMENT",
+            then: (schema) => schema.notRequired(),
+            otherwise: (schema) => schema.required("Date is required"),
+        }),
+    startMonth: Yup.date()
+        .typeError("Invalid start month")
+        .when("type", {
+            is: "BONUS_ADJUSTMENT",
+            then: (schema) => schema.required("Start month is required"),
+            otherwise: (schema) => schema.notRequired(),
+        }),
+    endMonth: Yup.date()
+        .typeError("Invalid end month")
+        .when("type", {
+            is: "BONUS_ADJUSTMENT",
+            then: (schema) =>
+                schema
+                    .required("End month is required")
+                    .min(Yup.ref("startMonth"), "End month cannot be before start month"),
+            otherwise: (schema) => schema.notRequired(),
+        }),
 });
 
 const PayrollAdjustmentsForm = ({ initialData, onSuccess, onCancel }) => {
@@ -50,6 +71,8 @@ const PayrollAdjustmentsForm = ({ initialData, onSuccess, onCancel }) => {
             amount: initialData?.amount || "",
             details: initialData?.details || "",
             date: initialData?.date ? endOfMonth(new Date(initialData.date)) : "",
+            startMonth: initialData?.startMonth ? endOfMonth(new Date(initialData.startMonth)) : "",
+            endMonth: initialData?.endMonth ? endOfMonth(new Date(initialData.endMonth)) : "",
         },
         validationSchema,
         onSubmit: async (values) => {
@@ -58,7 +81,12 @@ const PayrollAdjustmentsForm = ({ initialData, onSuccess, onCancel }) => {
                 formData.append("type", values.type);
                 formData.append("amount", values.amount);
                 formData.append("details", values.details);
-                formData.append("date", endOfMonth(new Date(values.date)).toISOString());
+                if (values.type === "BONUS_ADJUSTMENT") {
+                    formData.append("startMonth", endOfMonth(new Date(values.startMonth)).toISOString());
+                    formData.append("endMonth", endOfMonth(new Date(values.endMonth)).toISOString());
+                } else {
+                    formData.append("date", endOfMonth(new Date(values.date)).toISOString());
+                }
                 formData.append("removeFilePaths", JSON.stringify(removedPaths));
                 newFiles.forEach((file) => formData.append("files", file));
 
@@ -123,26 +151,71 @@ const PayrollAdjustmentsForm = ({ initialData, onSuccess, onCancel }) => {
                 )}
             </FormGroup>
 
-            <FormGroup className="mb-3">
-                <Label for="date">
-                    Adjustment for the month of <span className="text-danger">*</span>
-                </Label>
-                <Flatpickr
-                    id="date"
-                    name="date"
-                    value={form.values.date}
-                    options={monthPickerOptions}
-                    onChange={([date]) => {
-                        form.setFieldValue("date", date ? endOfMonth(date) : "");
-                        form.setFieldTouched("date", true, false);
-                    }}
-                    className={`form-control${form.touched.date && form.errors.date ? " is-invalid" : ""}`}
-                    placeholder="Select month"
-                />
-                {form.touched.date && form.errors.date && (
-                    <div className="text-danger small">{form.errors.date}</div>
-                )}
-            </FormGroup>
+            {form.values.type === "BONUS_ADJUSTMENT" ? (
+                <div className="d-flex gap-3">
+                    <FormGroup className="mb-3 flex-grow-1">
+                        <Label for="startMonth">
+                            Start Month <span className="text-danger">*</span>
+                        </Label>
+                        <Flatpickr
+                            id="startMonth"
+                            name="startMonth"
+                            value={form.values.startMonth}
+                            options={monthPickerOptions}
+                            onChange={([date]) => {
+                                form.setFieldValue("startMonth", date ? endOfMonth(date) : "");
+                                form.setFieldTouched("startMonth", true, false);
+                            }}
+                            className={`form-control${form.touched.startMonth && form.errors.startMonth ? " is-invalid" : ""}`}
+                            placeholder="Select month"
+                        />
+                        {form.touched.startMonth && form.errors.startMonth && (
+                            <div className="text-danger small">{form.errors.startMonth}</div>
+                        )}
+                    </FormGroup>
+                    <FormGroup className="mb-3 flex-grow-1">
+                        <Label for="endMonth">
+                            End Month <span className="text-danger">*</span>
+                        </Label>
+                        <Flatpickr
+                            id="endMonth"
+                            name="endMonth"
+                            value={form.values.endMonth}
+                            options={monthPickerOptions}
+                            onChange={([date]) => {
+                                form.setFieldValue("endMonth", date ? endOfMonth(date) : "");
+                                form.setFieldTouched("endMonth", true, false);
+                            }}
+                            className={`form-control${form.touched.endMonth && form.errors.endMonth ? " is-invalid" : ""}`}
+                            placeholder="Select month"
+                        />
+                        {form.touched.endMonth && form.errors.endMonth && (
+                            <div className="text-danger small">{form.errors.endMonth}</div>
+                        )}
+                    </FormGroup>
+                </div>
+            ) : (
+                <FormGroup className="mb-3">
+                    <Label for="date">
+                        Adjustment for the month of <span className="text-danger">*</span>
+                    </Label>
+                    <Flatpickr
+                        id="date"
+                        name="date"
+                        value={form.values.date}
+                        options={monthPickerOptions}
+                        onChange={([date]) => {
+                            form.setFieldValue("date", date ? endOfMonth(date) : "");
+                            form.setFieldTouched("date", true, false);
+                        }}
+                        className={`form-control${form.touched.date && form.errors.date ? " is-invalid" : ""}`}
+                        placeholder="Select month"
+                    />
+                    {form.touched.date && form.errors.date && (
+                        <div className="text-danger small">{form.errors.date}</div>
+                    )}
+                </FormGroup>
+            )}
 
             <FormGroup className="mb-3">
                 <Label for="amount">Amount <span className="text-danger">*</span></Label>

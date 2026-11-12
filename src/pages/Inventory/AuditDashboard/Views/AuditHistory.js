@@ -6,13 +6,13 @@ import Select from "react-select";
 import { endOfDay, format, startOfDay } from "date-fns";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { downloadAuditFailedMedicines, getAuditDetails } from "../../../../helpers/backend_helper";
+import { downloadAuditFailedMedicines, downloadAuditReport, getAuditDetails } from "../../../../helpers/backend_helper";
 // import { appendAuditList, getAudits } from "../../../../store/features/pharmacy/pharmacySlice";
 import { getAudits } from "../../../../store/features/pharmacy/pharmacySlice";
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
 import PerfectScrollbar from "react-perfect-scrollbar";
 import "react-perfect-scrollbar/dist/css/styles.css";
-import { Menu, Trash } from "lucide-react";
+import { Menu, Trash, FileSpreadsheet } from "lucide-react";
 import { useMediaQuery } from "../../../../Components/Hooks/useMediaQuery";
 import AuditDeleteModal from "../../Components/AuditDeleteModal";
 import CheckPermission from "../../../../Components/HOC/CheckPermission";
@@ -57,6 +57,7 @@ const AuditHistory = ({ activeTab, hasUserPermission, roles }) => {
     const [search, setSearch] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
     const [failedDownloading, setFailedDownloading] = useState(false);
+    const [reportDownloading, setReportDownloading] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedCenter, setSelectedCenter] = useState("ALL");
     const [showSidebar, setShowSidebar] = useState(true);
@@ -207,6 +208,40 @@ const AuditHistory = ({ activeTab, hasUserPermission, roles }) => {
             toast.error("Failed to download failed medicines file");
         } finally {
             setFailedDownloading(false);
+        }
+    };
+
+    const downloadAuditReportFile = async (auditId) => {
+        if (!auditId) return;
+
+        setReportDownloading(true);
+
+        try {
+            const res = await downloadAuditReport({ auditId, search });
+
+            const disposition = res.headers["content-disposition"];
+            let filename = `AuditReport_${auditId}.xlsx`;
+
+            if (disposition) {
+                const match = disposition.match(/filename="?([^"]+)"?/);
+                if (match?.[1]) filename = match[1];
+            }
+
+            const blob = new Blob([res.data], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            toast.error("Failed to export audit report");
+        } finally {
+            setReportDownloading(false);
         }
     };
 
@@ -478,6 +513,29 @@ const AuditHistory = ({ activeTab, hasUserPermission, roles }) => {
                                                     )}
                                                 </Button>
                                             )}
+
+                                            <Button
+                                                size="sm"
+                                                color="success"
+                                                className="text-white d-flex align-items-center justify-content-center gap-1"
+                                                style={{
+                                                    width: isMobile ? "100%" : "auto",
+                                                }}
+                                                onClick={() =>
+                                                    downloadAuditReportFile(
+                                                        selectedAuditDetails?.auditId
+                                                    )
+                                                }
+                                            >
+                                                {reportDownloading ? (
+                                                    <Spinner size="sm" />
+                                                ) : (
+                                                    <>
+                                                        <FileSpreadsheet size={16} />
+                                                        Export Excel
+                                                    </>
+                                                )}
+                                            </Button>
 
                                             <Button
                                                 size="sm"

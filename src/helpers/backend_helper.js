@@ -2009,10 +2009,26 @@ export const getEmployeePayslipById = (id) => {
   });
 };
 
+export const getEmployeePayslipsByIds = (ids) => {
+  return api.create(
+    `${url.GET_EMPLOYEE_PAYSLIPS}/bulk`,
+    { ids },
+    { headers: { "X-No-Cookie-Token": "true" } },
+  );
+};
+
 export const getMyPayslipById = (id) => {
   return api.get(`${url.GET_MY_PAYSLIPS}/${id}`, {
     headers: { "X-No-Cookie-Token": "true" },
   });
+};
+
+export const getMyPayslipsByIds = (ids) => {
+  return api.create(
+    `${url.GET_MY_PAYSLIPS}/bulk`,
+    { ids },
+    { headers: { "X-No-Cookie-Token": "true" } },
+  );
 };
 
 export const getMySalaryData = (params) => {
@@ -2276,6 +2292,19 @@ export const downloadAuditFailedMedicines = (id) => {
   return api.get(`${url.DOWNLOAD_AUDIT_FAILED_MEDICINES}/${id}`, {
     headers: {
       "X-No-Cookie-Token": "true",
+    },
+    responseType: "blob",
+  });
+};
+
+export const downloadAuditReport = (params) => {
+  return api.get(url.DOWNLOAD_AUDIT_REPORT, {
+    params,
+    headers: {
+      "X-No-Cookie-Token": "true",
+    },
+    paramsSerializer: (params) => {
+      return qs.stringify(params, { arrayFormat: "repeat" });
     },
     responseType: "blob",
   });

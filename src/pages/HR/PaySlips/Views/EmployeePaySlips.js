@@ -3,7 +3,7 @@ import { Button, CardBody, Input, Spinner } from "reactstrap";
 import Select from "react-select";
 import { useDispatch, useSelector } from "react-redux";
 import { endOfMonth, startOfMonth } from "date-fns";
-import { Calendar, Eye } from "lucide-react";
+import { Calendar, Download, Eye } from "lucide-react";
 import Flatpickr from "react-flatpickr";
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect";
 import "flatpickr/dist/themes/material_blue.css";
@@ -18,12 +18,13 @@ import {
   buildPayslipPreviewFile,
   displayMoney,
   displayValue,
+  downloadPayslipsBulk,
   monthLabel,
   readStickyFilters,
   useDebouncedValue,
   writeStickyFilters,
 } from "../payslipUtils";
-import { getEmployeePayslipById } from "../../../../helpers/backend_helper";
+import { getEmployeePayslipById, getEmployeePayslips, getEmployeePayslipsByIds } from "../../../../helpers/backend_helper";
 import PreviewFile from "../../../../Components/Common/PreviewFile";
 import RefreshButton from "../../../../Components/Common/RefreshButton";
 import {capitalizeWords} from "../../../../utils/toCapitalize";
@@ -57,6 +58,15 @@ const EmployeePaySlipsTab = () => {
   const [limit, setLimit] = useState(10);
   const [downloadingId, setDownloadingId] = useState("");
   const [previewFile, setPreviewFile] = useState(null);
+  // Keyed by payslip _id so selections survive page changes (react-data-table-component
+  // only renders/controls the current page's rows; this map is the source of truth
+  // across all pages until filters change or a download runs).
+  const [selectedRowsMap, setSelectedRowsMap] = useState({});
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [selectAllMatching, setSelectAllMatching] = useState(false);
+  const [fetchingAllMatching, setFetchingAllMatching] = useState(false);
+
+  const selectedRows = useMemo(() => Object.values(selectedRowsMap), [selectedRowsMap]);
 
   const debouncedSearch = useDebouncedValue(search);
 
@@ -123,6 +133,15 @@ const EmployeePaySlipsTab = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setPage(1);
+  }, [selectedCenter, selectedMonth, limit, debouncedSearch]);
+
+  // Filters change the underlying result set, so the selection no longer makes sense —
+  // clear it. Page changes are intentionally excluded: selections should persist as the
+  // user browses pages within the same filters.
+  useEffect(() => {
+    setSelectedRowsMap({});
+    setSelectAllMatching(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCenter, selectedMonth, limit, debouncedSearch]);
 
   const fetchPayslips = async () => {
@@ -204,8 +223,129 @@ const EmployeePaySlipsTab = () => {
     setPreviewFile(null);
   };
 
+  const handleBulkDownload = async () => {
+    if (!selectedRows.length) return;
+    setBulkDownloading(true);
+    try {
+      const { failures } = await downloadPayslipsBulk(selectedRows, getEmployeePayslipsByIds, { handleAuthError });
+      if (failures) {
+        toast.error(`${failures} of ${selectedRows.length} payslips failed to download`);
+      }
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error?.message || "Failed to download payslips");
+      }
+    } finally {
+      setBulkDownloading(false);
+      setSelectedRowsMap({});
+      setSelectAllMatching(false);
+    }
+  };
+
+  // Selecting all rows on the visible page only selects that page (react-data-table-component's
+  // default). This fetches every payslip id matching the current center/search/month filters —
+  // across all pages — so "select all" can actually mean all, not just this page.
+  const handleSelectAllMatching = async () => {
+    const total = pagination?.totalDocs || 0;
+    if (!total || !centers?.length) return;
+
+    setFetchingAllMatching(true);
+    try {
+      const res = await getEmployeePayslips({
+        centers,
+        page: 1,
+        limit: total,
+        startDate: format(startOfMonth(selectedMonth), "yyyy-MM-dd"),
+        endDate: format(endOfMonth(selectedMonth), "yyyy-MM-dd"),
+        ...(debouncedSearch.trim() && { search: debouncedSearch.trim() }),
+      });
+      if (!res?.success) throw new Error("Failed to fetch all matching payslips");
+      const map = {};
+      (res.data || []).forEach((row) => {
+        map[row._id] = { _id: row._id };
+      });
+      setSelectedRowsMap(map);
+      setSelectAllMatching(true);
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error?.message || "Failed to select all matching payslips");
+      }
+    } finally {
+      setFetchingAllMatching(false);
+    }
+  };
+
+  const toggleRow = (row) => {
+    const isSelected = !!selectedRowsMap[row._id];
+
+    const next = { ...selectedRowsMap };
+    if (isSelected) {
+      delete next[row._id];
+      // No longer every matching row, even if "select all matching" fetched the rest —
+      // drop the flag so the download label/clear-on-untick logic reflects a partial set.
+      if (selectAllMatching) setSelectAllMatching(false);
+    } else {
+      next[row._id] = row;
+    }
+    setSelectedRowsMap(next);
+
+    if (!isSelected) {
+      const allPageSelected = data.every((r) => next[r._id]);
+      if (allPageSelected && (pagination?.totalDocs || 0) > data.length) {
+        handleSelectAllMatching();
+      }
+    }
+  };
+
+  const headerChecked = data.length > 0 && data.every((row) => !!selectedRowsMap[row._id]);
+
+  const toggleHeader = () => {
+    if (headerChecked) {
+      if (selectAllMatching) {
+        setSelectedRowsMap({});
+        setSelectAllMatching(false);
+      } else {
+        setSelectedRowsMap((prev) => {
+          const next = { ...prev };
+          data.forEach((row) => delete next[row._id]);
+          return next;
+        });
+      }
+      return;
+    }
+
+    const next = { ...selectedRowsMap };
+    data.forEach((row) => {
+      next[row._id] = row;
+    });
+    setSelectedRowsMap(next);
+
+    if ((pagination?.totalDocs || 0) > data.length) {
+      handleSelectAllMatching();
+    }
+  };
+
   const columns = useMemo(
     () => [
+      {
+        name: (
+          <Input
+            type="checkbox"
+            checked={headerChecked}
+            onChange={toggleHeader}
+            disabled={fetchingAllMatching}
+          />
+        ),
+        cell: (row) => (
+          <Input
+            type="checkbox"
+            checked={!!selectedRowsMap[row._id]}
+            onChange={() => toggleRow(row)}
+            disabled={fetchingAllMatching}
+          />
+        ),
+        width: "50px",
+      },
       {
         name: "S No.",
         cell: (_, index) => (page - 1) * limit + index + 1,
@@ -300,7 +440,7 @@ const EmployeePaySlipsTab = () => {
         minWidth: "110px",
       },
     ],
-    [data, downloadingId, limit, page], // eslint-disable-line
+    [data, downloadingId, limit, page, selectedRowsMap, selectAllMatching, fetchingAllMatching, pagination], // eslint-disable-line
   );
 
   if (!permissionLoader && !hasUserPermission) return null;
@@ -312,7 +452,27 @@ const EmployeePaySlipsTab = () => {
     >
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h4 className="fw-bold text-primary mb-0">EMPLOYEES PAY SLIPS</h4>
-        <RefreshButton loading={loading} onRefresh={fetchPayslips} />
+        <div className="d-flex align-items-center gap-2">
+          {fetchingAllMatching && (
+            <span className="d-inline-flex align-items-center gap-1 text-muted">
+              <Spinner size="sm" /> Selecting all matching payslips…
+            </span>
+          )}
+          {selectedRows.length > 0 && (
+            <Button
+              color="primary"
+              size="sm"
+              className="d-inline-flex align-items-center gap-1"
+              onClick={handleBulkDownload}
+              disabled={bulkDownloading || fetchingAllMatching}
+            >
+              {bulkDownloading ? <Spinner size="sm" /> : <Download size={16} />}
+              Download Selected ({selectedRows.length}
+              {selectAllMatching ? " — all filtered" : ""})
+            </Button>
+          )}
+          <RefreshButton loading={loading} onRefresh={fetchPayslips} />
+        </div>
       </div>
 
       <div className="d-flex flex-column flex-lg-row gap-2 align-items-stretch align-items-lg-center mb-3">
@@ -366,6 +526,7 @@ const EmployeePaySlipsTab = () => {
         setLimit={setLimit}
         loading={loading || permissionLoader}
         pagination={pagination}
+        keyField="_id"
         noDataComponent="No payslips found"
       />
 
