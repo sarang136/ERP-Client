@@ -30,6 +30,7 @@ const pages = [
   {
     id: "psychologist",
     label: "Psychologist",
+    displayLabel: "Psychologist Dashboard",
     name: "Psychologist",
     link: "/psychologist",
     icon: "bx bx-comment-detail",
@@ -2156,6 +2157,44 @@ export const MASTER_DATA = [
         label: "Vendor Invoices",
         link: "/vendor-management/vendor-invoice",
         permissionModule: "VENDOR_INVOICE",
+      },
+    ],
+  },
+  {
+    id: "accounting-core",
+    label: "Accounting Core",
+    icon: "bx bx-library",
+    isAccordion: true,
+    children: [
+      {
+        id: "accounting-chart-of-accounts",
+        label: "Chart of Accounts",
+        link: "/vendor-management/chart-of-accounts",
+        permissionModule: "LEDGER",
+      },
+      {
+        id: "accounting-ledger",
+        label: "Ledgers",
+        link: "/vendor-management/ledger",
+        permissionModule: "LEDGER",
+      },
+      {
+        id: "accounting-ledger-type",
+        label: "Ledger Types",
+        link: "/vendor-management/ledger-type",
+        permissionModule: "LEDGER_TYPE",
+      },
+      {
+        id: "accounting-ledger-sub-type",
+        label: "Ledger Sub Types",
+        link: "/vendor-management/ledger-sub-type",
+        permissionModule: "LEDGER_TYPE",
+      },
+      {
+        id: "accounting-gl-entry",
+        label: "GL Entries",
+        link: "/vendor-management/gl-entry",
+        permissionModule: "GL_ENTRY",
       },
     ],
   },

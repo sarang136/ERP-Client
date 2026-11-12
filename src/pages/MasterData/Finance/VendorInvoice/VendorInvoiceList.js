@@ -66,7 +66,7 @@ const VendorInvoiceList = ({ onAdd }) => {
   const token = JSON.parse(localStorage.getItem("micrologin"))?.token;
   const { hasPermission } = usePermissions(token);
   const canCreate = hasPermission("MASTERDATA", "VENDOR_INVOICE", "WRITE");
-  const canProcess = hasPermission("MASTERDATA", "VENDOR_INVOICE", "DELETE");
+  const canProcess = hasPermission("MASTERDATA", "VENDOR_INVOICE", "WRITE");
 
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);

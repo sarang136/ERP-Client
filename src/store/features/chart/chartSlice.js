@@ -2432,11 +2432,16 @@ export const chartSlice = createSlice({
             const findIndex = state.data.findIndex(
               (el) => el._id === payload.addmission,
             );
-            state.data[findIndex].totalCharts += 1;
-            state.data[findIndex].charts = [
-              payload.payload,
-              ...(state.data[findIndex].charts || []),
-            ];
+            // findIndex is -1 whenever this admission's charts were never
+            // loaded into state.data (e.g. the Psychologist dashboard, which
+            // never fetches addmissionsCharts) — nothing to merge into there.
+            if (findIndex !== -1) {
+              state.data[findIndex].totalCharts += 1;
+              state.data[findIndex].charts = [
+                payload.payload,
+                ...(state.data[findIndex].charts || []),
+              ];
+            }
           } else {
             state.data = [...payload.payload, ...state.data];
           }
@@ -2505,10 +2510,14 @@ export const chartSlice = createSlice({
           const findIndex = state.data.findIndex(
             (el) => el._id === payload.payload.addmission,
           );
-          const findChartIndex = state.data[findIndex].charts.findIndex(
-            (chart) => chart._id === payload.payload._id,
-          );
-          state.data[findIndex].charts[findChartIndex] = payload.payload;
+          if (findIndex !== -1) {
+            const findChartIndex = state.data[findIndex].charts.findIndex(
+              (chart) => chart._id === payload.payload._id,
+            );
+            if (findChartIndex !== -1) {
+              state.data[findIndex].charts[findChartIndex] = payload.payload;
+            }
+          }
         }
       })
       .addCase(updateClinicalNote.rejected, (state) => {
@@ -2525,11 +2534,16 @@ export const chartSlice = createSlice({
           const findIndex = state.data.findIndex(
             (el) => el._id === payload.addmission,
           );
-          state.data[findIndex].totalCharts += 1;
-          state.data[findIndex].charts = [
-            payload.payload,
-            ...(state.data[findIndex].charts || []),
-          ];
+          // findIndex is -1 whenever this admission's charts were never
+          // loaded into state.data (e.g. the Psychologist dashboard, which
+          // never fetches addmissionsCharts) — nothing to merge into there.
+          if (findIndex !== -1) {
+            state.data[findIndex].totalCharts += 1;
+            state.data[findIndex].charts = [
+              payload.payload,
+              ...(state.data[findIndex].charts || []),
+            ];
+          }
         } else {
           state.data = [...payload.payload, ...state.data];
         }
@@ -2547,10 +2561,14 @@ export const chartSlice = createSlice({
         const findIndex = state.data.findIndex(
           (el) => el._id === payload.payload.addmission,
         );
-        const findChartIndex = state.data[findIndex].charts.findIndex(
-          (chart) => chart._id === payload.payload._id,
-        );
-        state.data[findIndex].charts[findChartIndex] = payload.payload;
+        if (findIndex !== -1) {
+          const findChartIndex = state.data[findIndex].charts.findIndex(
+            (chart) => chart._id === payload.payload._id,
+          );
+          if (findChartIndex !== -1) {
+            state.data[findIndex].charts[findChartIndex] = payload.payload;
+          }
+        }
       })
       .addCase(updateCounsellingNote.rejected, (state) => {
         state.loading = false;
@@ -3012,28 +3030,17 @@ export const chartSlice = createSlice({
             const findIndex = state.data.findIndex(
               (el) => el._id === payload.addmission,
             );
-            state.data[findIndex].totalCharts += 1;
-            state.data[findIndex].charts = [
-              payload.payload,
-              ...(state.data[findIndex].charts || []),
-            ];
+            if (findIndex !== -1) {
+              state.data[findIndex].totalCharts += 1;
+              state.data[findIndex].charts = [
+                payload.payload,
+                ...(state.data[findIndex].charts || []),
+              ];
+            }
           } else {
             state.data = [...payload.payload, ...state.data];
           }
         }
-
-        // if (payload.isAddmissionAvailable) {
-        //   const findIndex = state.data.findIndex(
-        //     (el) => el._id === payload.addmission
-        //   );
-        //   state.data[findIndex].totalCharts += 1;
-        //   state.data[findIndex].charts = [
-        //     payload.payload,
-        //     ...(state.data[findIndex].charts || []),
-        //   ];
-        // } else {
-        //   state.data = [...payload.payload, ...state.data];
-        // }
       })
       .addCase(addMentalExamination.rejected, (state) => {
         state.loading = false;
@@ -3062,16 +3069,21 @@ export const chartSlice = createSlice({
           const findIndex = state.charts.findIndex(
             (el) => el._id === payload.payload._id,
           );
-          state.charts[findIndex] = payload.payload;
+          if (findIndex !== -1) {
+            state.charts[findIndex] = payload.payload;
+          }
         } else if (payload.type !== "OPD" && !payload.appointment) {
-          // } else {
           const findIndex = state.data.findIndex(
             (el) => el._id === payload.payload.addmission,
           );
-          const findChartIndex = state.data[findIndex].charts.findIndex(
-            (chart) => chart._id === payload.payload._id,
-          );
-          state.data[findIndex].charts[findChartIndex] = payload.payload;
+          if (findIndex !== -1) {
+            const findChartIndex = state.data[findIndex].charts.findIndex(
+              (chart) => chart._id === payload.payload._id,
+            );
+            if (findChartIndex !== -1) {
+              state.data[findIndex].charts[findChartIndex] = payload.payload;
+            }
+          }
         }
       })
       .addCase(updateMentalExamination.rejected, (state) => {

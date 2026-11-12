@@ -16,6 +16,11 @@ export const permissionList = [
     ],
   },
   {
+    key: "PSYCHOLOGIST_DASHBOARD",
+    label: "Psychologist Dashboard",
+    subModules: [],
+  },
+  {
     key: "EMERGENCY",
     label: "Emergency",
     subModules: [],
@@ -709,6 +714,9 @@ export const permissionList = [
       { name: "DEPARTMENT", label: "Departments" },
       { name: "AUDIT_LOG", label: "Audit Logs" },
       { name: "BUDGET", label: "Budget Management" },
+      { name: "LEDGER", label: "Ledgers and Chart of Accounts" },
+      { name: "LEDGER_TYPE", label: "Ledger Types and Sub Types" },
+      { name: "GL_ENTRY", label: "GL Entries (view and post journals)" },
       { name: "PR", label: "Purchase Requisition" },
       { name: "RFQ", label: "Request for Quotation" },
       { name: "PO", label: "Purchase Order" },

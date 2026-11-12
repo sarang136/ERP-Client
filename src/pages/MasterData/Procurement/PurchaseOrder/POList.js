@@ -129,7 +129,7 @@ const POList = ({ onAdd, onOpen }) => {
   const token = JSON.parse(localStorage.getItem("micrologin"))?.token;
   const { hasPermission } = usePermissions(token);
   const canCreate = hasPermission("MASTERDATA", "PO", "WRITE");
-  const canApprove = hasPermission("MASTERDATA", "PO", "DELETE");
+  const canApprove = hasPermission("MASTERDATA", "PO", "WRITE");
   const canClose = canApprove;
 
   const [pos, setPos] = useState([]);

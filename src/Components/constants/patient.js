@@ -36,6 +36,14 @@ const CLINIC_TEST = "CLINICTEST";
 const CURRENT_MEDICINES = "CURRENT_MEDICINES";
 export const GENERAL = "GENERAL";
 export const NOTES = "NOTES";
+
+export const PATIENT_TYPE_OPTIONS = [
+  { value: "suicidal", label: "Suicidal" },
+  { value: "runaway", label: "Runaway" },
+  { value: "serious", label: "Medically Serious" },
+  { value: "aggresive", label: "Aggresive" },
+  { value: "normal", label: "Normal" },
+];
 //Admit Discharge
 const ADMIT_PATIENT = "ADMIT_PATIENT";
 const DISCHARGE_PATIENT = "DISCHARGE_PATIENT";

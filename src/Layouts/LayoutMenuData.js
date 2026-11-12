@@ -23,6 +23,7 @@ const Navdata = () => {
       "centerDashboard",
       "misMaster",
       "nurse",
+      "psychologist",
       "emergency",
       "lead",
       "booking",

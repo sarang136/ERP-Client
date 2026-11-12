@@ -10,7 +10,7 @@ import AlertDetailOffcanvas from "./components/AlertDetailOffcanvas";
 import ResolveAlertModal from "./components/ResolveAlertModal";
 import AddNoteModal from "./components/AddNoteModal";
 import { usePermissions } from "../../Components/Hooks/useRoles";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { exportSopAlerts } from "../../helpers/backend_helper";
 
 // Export params are the inbox's own params minus pagination. Built by REUSING
@@ -39,8 +39,26 @@ const filenameFromResponse = (response) => {
 
 const Alerts = () => {
   const isMobile = useMediaQuery("(max-width: 1000px)");
-  const inbox = useAlertsInbox();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // A dashboard card can deep-link here for one patient's unresolved alerts
+  // (see Psychologist/Views/Components/PatientCard.js, opened in a new tab)
+  // — pre-seed the patient filter and switch off the default "today only"
+  // window so older alerts for that patient aren't hidden. Query params
+  // (not router state) so this survives a fresh-tab window.open, not just
+  // an in-app navigate.
+  const patientId = searchParams.get("patientId");
+  const patientName = searchParams.get("patientName");
+  const inboxOverrides = patientId
+    ? {
+        patients: [{ value: patientId, label: patientName || "Patient" }],
+        resolvedState: "unresolved",
+        dateFrom: null,
+        dateTo: null,
+      }
+    : undefined;
+  const inbox = useAlertsInbox(inboxOverrides);
 
   const microUser = localStorage.getItem("micrologin");
   const token = microUser ? JSON.parse(microUser).token : null;
@@ -242,6 +260,8 @@ const Alerts = () => {
           isOpen={detailOpen}
           onClose={closeDetail}
           alert={selected}
+          canResolve={hasWritePermission}
+          onResolve={() => openResolve(selected)}
         />
 
         <ResolveAlertModal
