@@ -58,6 +58,7 @@ const MasterData = React.lazy(() => import("../pages/MasterData"));
 const CenterDashboard = React.lazy(() => import("../pages/CenterDashboard"));
 const MISMaster = React.lazy(() => import("../pages/MISMaster"));
 const Compliance = React.lazy(() => import("../pages/Compliance"));
+const TherapyLectures = React.lazy(() => import("../pages/TherapyLectures"));
 const allElements = [
   { element: Register, label: "User" },
   { element: Center, label: "Center" },
@@ -96,6 +97,7 @@ const allElements = [
   { element: CenterDashboard, label: "Center Dashboard" },
   { element: MISMaster, label: "MIS Master" },
   { element: Compliance, label: "Compliance" },
+  { element: TherapyLectures, label: "Therapy Lectures" },
 ];
 
 const authProtectedRoutes = [
@@ -143,6 +145,7 @@ const authProtectedRoutes = [
   { path: "/center-dashboard", component: CenterDashboard },
   { path: "/mis-master", component: MISMaster },
   { path: "/compliance/*", component: Compliance },
+  { path: "/therapy-lectures/*", component: TherapyLectures },
   {
     path: "/",
     exact: true,

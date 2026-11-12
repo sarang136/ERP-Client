@@ -349,6 +349,13 @@ const pages = [
     icon: "bx bx-shield-alt-2",
   },
   {
+    id: "therapylectures",
+    label: "Therapy Lectures",
+    name: "Therapy Lectures",
+    link: "/therapy-lectures",
+    icon: "bx bx-chalkboard",
+  },
+  {
     id: "masterdata",
     label: "Vendor Management",
     name: "Vendor Management",
