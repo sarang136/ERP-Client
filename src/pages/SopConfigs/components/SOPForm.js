@@ -55,6 +55,8 @@ const hydrateSchedule = (s) => {
       intervalHours: "",
       graceHours: 0,
       bands: [],
+      repeat: "ONCE",
+      checkEvery3Hours: false,
     };
   }
   return {
@@ -63,6 +65,9 @@ const hydrateSchedule = (s) => {
     daysOnwards: !!s.daysOnwards,
     intervalHours: s.intervalHours != null ? String(s.intervalHours) : "",
     graceHours: s.graceHours != null ? Number(s.graceHours) : 0,
+    // DEADLINE only: alert once / every day until done; 3-hourly check.
+    repeat: s.repeat === "DAILY" ? "DAILY" : "ONCE",
+    checkEvery3Hours: !!s.checkEvery3Hours,
     // FREQUENCY bands → UI rows (toDay null = "onwards").
     bands: Array.isArray(s.bands)
       ? s.bands.map((b) => ({
@@ -454,8 +459,10 @@ const SOPForm = ({
     const out = { period, graceHours: grace };
 
     if (period === "DEADLINE") {
-      // One-shot: admission + intervalHours = check window.
+      // Due at admission + intervalHours. Then once, or every 24 h until done.
       if (interval != null && interval > 0) out.intervalHours = interval;
+      if (s.repeat === "DAILY") out.repeat = "DAILY";
+      if (s.checkEvery3Hours) out.checkEvery3Hours = true;
     } else if (period === "CONTINUOUS") {
       // Recurring: every intervalHours from admission until discharge/now.
       if (interval != null && interval > 0) out.intervalHours = interval;

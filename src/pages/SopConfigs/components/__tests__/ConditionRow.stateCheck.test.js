@@ -43,7 +43,7 @@ const ADMISSION = { value: "Addmission", label: "Admission" };
 const DELAYED = { value: "DELAYED", label: "DELAYED" };
 const IMMEDIATE = { value: "IMMEDIATE", label: "IMMEDIATE" };
 // What SOPForm hydrates a saved condition with no schedule to: the default
-// "Deadline (one-time)" cycle — the box the screenshots showed.
+// "Deadline" cycle — the box the screenshots showed.
 const DEFAULT_SCHEDULE = { period: PERIOD_OPTIONS[0], days: [], daysOnwards: false, intervalHours: "", graceHours: 0, bands: [] };
 
 const row = (condition, props = {}) =>
@@ -81,7 +81,7 @@ describe("Emergency Admission Type Change — target blocks", () => {
     expect(screen.getByPlaceholderText("to h")).toHaveValue(Number(value[1]));
     expect(screen.getByText(NOTE_DAILY)).toBeInTheDocument();
     expect(screen.queryByText("Cycle")).not.toBeInTheDocument();
-    expect(screen.queryByText("Deadline (one-time)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Deadline (N hours after admission)")).not.toBeInTheDocument();
     expect(screen.queryByText(/Suppress this reminder/)).not.toBeInTheDocument();
     expect(screen.queryByText(/not recognised/)).not.toBeInTheDocument();
   });
