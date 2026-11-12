@@ -965,6 +965,7 @@ export const GET_VISIT_LOGS = "/marketing/visit-log";
 
 export const GET_VENDORS = "/master/vendor";
 export const VENDOR_BASE = "/master/vendor";
+export const CENTRAL_PAYMENT_VENDOR_REQUEST = "/master/vendor/central-payment-request";
 export const GET_ITEM_TYPES = "/master/item-type";
 export const ITEM_TYPE_BASE = "/master/item-type";
 
