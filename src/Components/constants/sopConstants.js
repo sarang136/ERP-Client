@@ -256,14 +256,16 @@ export const BOOLEAN_OPTIONS = [
 ];
 
 // Period drives how the cron expands a DELAYED condition into checkpoints:
-//   - DEADLINE   : single one-time check at admission + `intervalHours`.
+//   - DEADLINE   : due at admission + `intervalHours`. Alerts once (repeat
+//                  "ONCE") or every 24 h until done ("DAILY"); optionally also
+//                  checked every 3 hours (checkEvery3Hours), not only at 2 AM.
 //   - CONTINUOUS : every `intervalHours` from admission until discharge/now.
 //   - DAYS       : on each listed day; if intervalHours is also set, sub-divide
 //                  each day by that interval.
 //   - FREQUENCY  : "N documents per period over a day-range" — a `bands` table
 //                  (e.g. 2/week between admission day 5–30).
 export const PERIOD_OPTIONS = [
-  { value: "DEADLINE", label: "Deadline (one-time)" },
+  { value: "DEADLINE", label: "Deadline (N hours after admission)" },
   { value: "CONTINUOUS", label: "Continuous (every N hours)" },
   { value: "DAYS", label: "Days (specific days)" },
   { value: "FREQUENCY", label: "Frequency (N per period)" },
@@ -300,6 +302,8 @@ export const emptyConditionItem = () => ({
     intervalHours: "", // optional integer (every N hours)
     graceHours: 0, // tolerance window in hours
     bands: [], // FREQUENCY only: [{ fromDay, toDay, times, per, onwards }]
+    repeat: "ONCE", // DEADLINE only: "ONCE" | "DAILY" (every 24 h until done)
+    checkEvery3Hours: false, // DEADLINE only: also checked by the 3-hourly run
   },
   // Populated only when operator is ARRAY_ANY_MATCHES (today: LabReport
   // flagged-items conditions).
