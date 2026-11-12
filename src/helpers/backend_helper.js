@@ -4785,6 +4785,7 @@ export const deleteUtilityBill = (id) => {
   });
 };
 
+
 // Submit assessment form
 
 export const submitAssessment = (id, payload) => {
@@ -5575,6 +5576,12 @@ export const postEmployeeDocsConfiguration = (data) => {
 
 export const createVendor = (data) => {
   return axios.post(url.VENDOR_BASE, data, {
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+};
+
+export const createCentralPaymentVendorRequest = (data) => {
+  return axios.post(url.CENTRAL_PAYMENT_VENDOR_REQUEST, data, {
     headers: { "X-No-Cookie-Token": "true" },
   });
 };
