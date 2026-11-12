@@ -1279,6 +1279,57 @@ const ConditionRow = ({
           )}
 
           {isFrequency && renderFrequencyBands()}
+
+          {/* DEADLINE only: what happens after the deadline, and how often it's checked. */}
+          {condition.schedule?.period?.value === "DEADLINE" && (
+            <Col md={5}>
+              <Label className="small text-muted mb-1 d-block">After the deadline</Label>
+              {[
+                { value: "ONCE", label: "Alert once" },
+                { value: "DAILY", label: "Alert every day until done" },
+              ].map((o) => (
+                <div className="form-check form-check-inline" key={o.value}>
+                  <input
+                    type="radio"
+                    className="form-check-input"
+                    id={`deadlineRepeat-${o.value}-${idx}`}
+                    name={`deadlineRepeat-${idx}`}
+                    checked={(condition.schedule?.repeat || "ONCE") === o.value}
+                    disabled={isDisabled}
+                    onChange={() => onChange(idx, "schedule", { ...condition.schedule, repeat: o.value })}
+                  />
+                  <label className="form-check-label small" htmlFor={`deadlineRepeat-${o.value}-${idx}`}>
+                    {o.label}
+                  </label>
+                </div>
+              ))}
+              <div className="form-check mt-1">
+                <input
+                  type="checkbox"
+                  className="form-check-input"
+                  id={`checkEvery3Hours-${idx}`}
+                  checked={!!condition.schedule?.checkEvery3Hours}
+                  disabled={isDisabled}
+                  onChange={(e) =>
+                    onChange(idx, "schedule", { ...condition.schedule, checkEvery3Hours: e.target.checked })
+                  }
+                />
+                <label className="form-check-label small" htmlFor={`checkEvery3Hours-${idx}`}>
+                  Check every 3 hours (not only at 2 AM)
+                </label>
+              </div>
+            </Col>
+          )}
+          {condition.schedule?.period?.value === "DEADLINE" && (
+            <Col xs={12}>
+              <small className="text-muted">
+                {condition.schedule?.repeat === "DAILY"
+                  ? "Alerts once the deadline passes with nothing recorded since admission, then every 24 hours until something is recorded."
+                  : "Alerts once if nothing has been recorded since admission when the deadline passes."}{" "}
+                A record made late, before the check runs, counts as done.
+              </small>
+            </Col>
+          )}
         </Row>
       )}
 

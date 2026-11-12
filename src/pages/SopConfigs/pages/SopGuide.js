@@ -404,7 +404,8 @@ const SopGuide = () => {
               </CardHeader>
               <CardBody>
                 <p>
-                  Runs once a day on a cron. Best for <em>deadline</em> rules:
+                  Checked daily at 2 AM (Deadline rules can also be checked every
+                  3 hours). Best for <em>deadline</em> rules:
                   "must have happened by hour X — if not, alert".
                 </p>
                 <small className="text-muted">
@@ -429,9 +430,13 @@ const SopGuide = () => {
           </thead>
           <tbody>
             <tr>
-              <td><strong>Deadline</strong> (one-time)</td>
-              <td>Admission + <Kbd>intervalHours</Kbd>. Single checkpoint.</td>
-              <td>"Baseline labs within 24h of admission."</td>
+              <td><strong>Deadline</strong> (N hours after admission)</td>
+              <td>
+                Due at admission + <Kbd>intervalHours</Kbd>. Alerts once, or — with{" "}
+                <em>Alert every day until done</em> — every 24 h until the record
+                exists. Tick <em>Check every 3 hours</em> for short deadlines.
+              </td>
+              <td>"Baseline labs within 24h of admission." "Prescription within 2h, then daily until written."</td>
             </tr>
             <tr>
               <td><strong>Continuous</strong> (every N hours)</td>
