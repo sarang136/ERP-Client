@@ -550,6 +550,9 @@ export const COMPLIANCE_SUBMISSIONS = "/compliance/submissions";
 
 export const COMPLIANCE_RECORDS = "/compliance/records";
 
+// THERAPY LECTURES
+export const THERAPY_LECTURES = "/therapy-lectures";
+
 // PHARMACY ACTIVITY LOG
 export const PHARMACY_ACTIVITY = "/pharmacy/activity";
 

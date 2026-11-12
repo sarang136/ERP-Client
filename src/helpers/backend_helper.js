@@ -6888,3 +6888,44 @@ export const adjustBudgetAmount = (id, data) =>
   axios.patch(`/master/budget/${id}/adjust`, data, {
     headers: { "X-No-Cookie-Token": "true" },
   });
+
+// THERAPY LECTURES
+const TL = url.THERAPY_LECTURES;
+const tlHeaders = { "X-No-Cookie-Token": "true" };
+export const getLectureProgramme = () => axios.get(`${TL}/programme`, { headers: tlHeaders });
+export const getLectureHostOptions = (center) =>
+  axios.get(`${TL}/hosts`, { params: { center }, headers: tlHeaders });
+export const getLectureSeriesList = (params) =>
+  axios.get(`${TL}/series`, { params, headers: tlHeaders });
+export const createLectureSeries = (data) => axios.post(`${TL}/series`, data, { headers: tlHeaders });
+export const getLectureSeries = (id) => axios.get(`${TL}/series/${id}`, { headers: tlHeaders });
+export const updateLectureSeries = (id, data) =>
+  axios.patch(`${TL}/series/${id}`, data, { headers: tlHeaders });
+export const deleteLectureSeries = (id) => axios.delete(`${TL}/series/${id}`, { headers: tlHeaders });
+export const getLectureEligiblePatients = (id, search) =>
+  axios.get(`${TL}/series/${id}/eligible-patients`, { params: { search }, headers: tlHeaders });
+export const addLectureMember = (id, data) =>
+  axios.post(`${TL}/series/${id}/members`, data, { headers: tlHeaders });
+export const moveLectureMember = (membershipId, series) =>
+  axios.post(`${TL}/members/${membershipId}/move`, { series }, { headers: tlHeaders });
+export const removeLectureMember = (membershipId) =>
+  axios.delete(`${TL}/members/${membershipId}`, { headers: tlHeaders });
+export const getLecturePatientProgress = (patientId) =>
+  axios.get(`${TL}/patients/${patientId}/progress`, { headers: tlHeaders });
+export const updateLectureSessionHosts = (sessionId, hosts) =>
+  axios.patch(`${TL}/sessions/${sessionId}/hosts`, { hosts }, { headers: tlHeaders });
+export const markLectureSessionDone = (sessionId, activityDay) =>
+  axios.post(`${TL}/sessions/${sessionId}/done`, { activityDay }, { headers: tlHeaders });
+export const undoLectureSessionDone = (sessionId) =>
+  axios.delete(`${TL}/sessions/${sessionId}/done`, { headers: tlHeaders });
+export const saveLectureAttendance = (sessionId, entries) =>
+  axios.put(`${TL}/sessions/${sessionId}/attendance`, { entries }, { headers: tlHeaders });
+export const uploadLectureEvidence = (sessionId, file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return axios.post(`${TL}/sessions/${sessionId}/evidence`, form, {
+    headers: { ...tlHeaders, "Content-Type": "multipart/form-data" },
+  });
+};
+export const deleteLectureEvidence = (sessionId, evidenceId) =>
+  axios.delete(`${TL}/sessions/${sessionId}/evidence/${evidenceId}`, { headers: tlHeaders });

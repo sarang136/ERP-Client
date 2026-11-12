@@ -47,6 +47,7 @@ const Navdata = () => {
       "hr",
       "audit",
       "compliance",
+      "therapylectures",
       "issues",
       "marketing",
       "recordings",
