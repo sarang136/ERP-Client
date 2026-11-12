@@ -1,20 +1,32 @@
 import { useEffect, useState } from "react";
 import { Badge, Button, Spinner } from "reactstrap";
+import { toast } from "react-toastify";
 import PropTypes from "prop-types";
 import CustomModal from "../../../../Components/Common/Modal";
-import { getAllSopAlerts, markSopAlertRead } from "../../../../helpers/backend_helper";
+import {
+  getAllSopAlerts,
+  markSopAlertRead,
+  resolveSopAlert,
+} from "../../../../helpers/backend_helper";
 import {
   SEVERITY_COLOR,
   SEVERITY_HEX,
 } from "../../../Alerts/components/alertConstants";
 import { timeAgo, alertSourceLabel } from "../../../Alerts/components/alertUtils";
 import AlertDetailOffcanvas from "../../../Alerts/components/AlertDetailOffcanvas";
+import ResolveAlertModal from "../../../Alerts/components/ResolveAlertModal";
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
+import { usePermissions } from "../../../../Components/Hooks/useRoles";
 
 const PAGE_SIZE = 10;
 
 const PatientAlertsModal = ({ isOpen, toggle, patientId, patientName }) => {
   const handleAuthError = useAuthError();
+  const microUser = localStorage.getItem("micrologin");
+  const token = microUser ? JSON.parse(microUser).token : null;
+  const { hasPermission } = usePermissions(token);
+  const canResolve = hasPermission("ALERT", null, "WRITE");
+
   const [loading, setLoading] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [page, setPage] = useState(1);
@@ -24,6 +36,10 @@ const PatientAlertsModal = ({ isOpen, toggle, patientId, patientName }) => {
   const [detailOpen, setDetailOpen] = useState(false);
   const selectedAlert = alerts.find((a) => a._id === selectedId) || null;
 
+  // Resolve flow — mirrors Alerts/index.js's openResolve/submitResolve.
+  const [resolveTarget, setResolveTarget] = useState(null);
+  const [resolving, setResolving] = useState(false);
+
   const openDetail = (alert) => {
     setSelectedId(alert._id);
     setDetailOpen(true);
@@ -32,6 +48,30 @@ const PatientAlertsModal = ({ isOpen, toggle, patientId, patientName }) => {
         prev.map((a) => (a._id === alert._id ? { ...a, isRead: true } : a)),
       );
       markSopAlertRead(alert._id).catch(() => {});
+    }
+  };
+
+  const closeResolve = () => {
+    if (resolving) return;
+    setResolveTarget(null);
+  };
+
+  // The list here only ever shows unresolved alerts, so a successful resolve
+  // removes the row entirely rather than patching its resolution in place.
+  const submitResolve = async (text) => {
+    if (!resolveTarget) return;
+    setResolving(true);
+    try {
+      await resolveSopAlert(resolveTarget._id, text);
+      toast.success("Alert resolved");
+      setAlerts((prev) => prev.filter((a) => a._id !== resolveTarget._id));
+      setTotal((t) => Math.max(0, t - 1));
+      setResolveTarget(null);
+      setDetailOpen(false);
+    } catch (err) {
+      toast.error(err?.message || "Failed to resolve alert");
+    } finally {
+      setResolving(false);
     }
   };
 
@@ -93,26 +133,56 @@ const PatientAlertsModal = ({ isOpen, toggle, patientId, patientName }) => {
               style={{
                 borderLeft: `4px solid ${SEVERITY_HEX[alert.severity] || "#6c757d"}`,
                 paddingLeft: 10,
+                paddingTop: 8,
+                paddingRight: 8,
+                paddingBottom: 8,
                 cursor: "pointer",
-                opacity: alert.isRead ? 0.7 : 1,
+                background: alert.isRead ? "#fff" : "rgba(13, 110, 253, 0.06)",
               }}
             >
               <div className="flex-grow-1">
                 <div className="d-flex align-items-center gap-2 mb-1">
+                  {!alert.isRead && (
+                    <span
+                      className="rounded-circle flex-shrink-0"
+                      style={{ width: 8, height: 8, background: "#0d6efd" }}
+                    />
+                  )}
                   <Badge color={SEVERITY_COLOR[alert.severity] || "secondary"}>
                     {alert.severity}
                   </Badge>
                   <span className="text-muted" style={{ fontSize: "0.75rem" }}>
                     {alertSourceLabel(alert)} · {timeAgo(alert.createdAt)}
                   </span>
+                  {!alert.isRead && (
+                    <Badge color="primary" pill className="ms-auto">
+                      New
+                    </Badge>
+                  )}
                 </div>
-                <div style={{ fontSize: "0.85rem" }}>{alert.message}</div>
+                <div style={{ fontSize: "0.85rem", fontWeight: alert.isRead ? 400 : 600 }}>
+                  {alert.message}
+                </div>
                 {alert.actionGuidance && (
                   <div className="text-muted mt-1" style={{ fontSize: "0.78rem" }}>
                     <strong>Action:</strong> {alert.actionGuidance}
                   </div>
                 )}
               </div>
+              {canResolve && (
+                <Button
+                  size="sm"
+                  color="success"
+                  className="flex-shrink-0 align-self-center"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setResolveTarget(alert);
+                  }}
+                >
+                  <i className="bx bx-check-circle me-1" />
+                  Resolve
+                </Button>
+              )}
             </div>
           ))}
         </div>
@@ -156,6 +226,16 @@ const PatientAlertsModal = ({ isOpen, toggle, patientId, patientName }) => {
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
         alert={selectedAlert}
+        canResolve={canResolve}
+        onResolve={() => setResolveTarget(selectedAlert)}
+      />
+
+      <ResolveAlertModal
+        isOpen={!!resolveTarget}
+        alert={resolveTarget}
+        submitting={resolving}
+        onClose={closeResolve}
+        onSubmit={submitResolve}
       />
     </CustomModal>
   );

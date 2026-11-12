@@ -1,5 +1,6 @@
 import {
   Badge,
+  Button,
   Offcanvas,
   OffcanvasBody,
   OffcanvasHeader,
@@ -34,7 +35,7 @@ const sectionLabel = (icon, text) => (
   </small>
 );
 
-const AlertDetailOffcanvas = ({ isOpen, onClose, alert }) => {
+const AlertDetailOffcanvas = ({ isOpen, onClose, alert, canResolve, onResolve }) => {
   const phase = alert
     ? PHASE_META[alert.phase] || PHASE_META.IMMEDIATE
     : PHASE_META.IMMEDIATE;
@@ -241,6 +242,15 @@ const AlertDetailOffcanvas = ({ isOpen, onClose, alert }) => {
                 </div>
               )}
             </div>
+
+            {canResolve && onResolve && !alert.resolution?.resolved && (
+              <div className="p-3 border-top">
+                <Button color="success" block onClick={onResolve}>
+                  <i className="bx bx-check-circle me-1" />
+                  Resolve Alert
+                </Button>
+              </div>
+            )}
           </>
         ) : (
           <div className="text-center text-muted py-5">

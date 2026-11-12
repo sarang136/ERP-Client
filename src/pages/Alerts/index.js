@@ -260,6 +260,8 @@ const Alerts = () => {
           isOpen={detailOpen}
           onClose={closeDetail}
           alert={selected}
+          canResolve={hasWritePermission}
+          onResolve={() => openResolve(selected)}
         />
 
         <ResolveAlertModal

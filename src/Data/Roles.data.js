@@ -16,6 +16,11 @@ export const permissionList = [
     ],
   },
   {
+    key: "PSYCHOLOGIST_DASHBOARD",
+    label: "Psychologist Dashboard",
+    subModules: [],
+  },
+  {
     key: "EMERGENCY",
     label: "Emergency",
     subModules: [],

@@ -3,6 +3,9 @@ import moment from "moment";
 import { CalendarDays, MessageSquareText, FileText, ExternalLink, TriangleAlert } from "lucide-react";
 import { capitalizeWords } from "../../../../utils/toCapitalize";
 import { COUNSELLING_NOTE, MENTAL_EXAMINATION } from "../../../../Components/constants/patient";
+import { SEVERITY_COLOR } from "../../../Alerts/components/alertConstants";
+
+const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
 
 const statusColors = {
   suicidal: { color: "danger", border: "#ffcdd2" },
@@ -17,7 +20,7 @@ const toTitleCase = (text) => {
   return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const PatientCard = ({ patient, onStartChart, onViewAlerts }) => {
+const PatientCard = ({ patient, onStartChart, onViewAlerts, canWrite }) => {
   const { color, border } = statusColors[patient.patientType] || {
     color: "secondary",
     border: "#d9d9d9",
@@ -64,7 +67,7 @@ const PatientCard = ({ patient, onStartChart, onViewAlerts }) => {
             <strong>Doctor:</strong> {capitalizeWords(patient.doctorName) || "N/A"}
           </span>
           <span className="d-block text-truncate">
-            <strong>Psychologist:</strong> {capitalizeWords(patient.psychologistName) || "N/A"}
+            <strong className="text-success">Psychologist:</strong> {capitalizeWords(patient.psychologistName) || "N/A"}
           </span>
           <span className="d-block text-truncate">
             <strong>Nurse:</strong> {capitalizeWords(patient.nurseName) || "N/A"}
@@ -80,6 +83,21 @@ const PatientCard = ({ patient, onStartChart, onViewAlerts }) => {
           </span>
         </CardText>
 
+        {SEVERITY_ORDER.some((sev) => patient.alertCounts?.[sev]) && (
+          <div className="d-flex flex-wrap align-items-center gap-1 mb-2">
+            {SEVERITY_ORDER.filter((sev) => patient.alertCounts?.[sev]).map((sev) => (
+              <Badge
+                key={sev}
+                color={SEVERITY_COLOR[sev]}
+                pill
+                style={{ fontSize: "0.7rem" }}
+              >
+                {patient.alertCounts[sev]} {toTitleCase(sev)}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
           <CalendarDays size={15} className="text-muted flex-shrink-0" />
           <span className="fw-semibold text-nowrap" style={{ fontSize: "0.85rem" }}>
@@ -91,56 +109,59 @@ const PatientCard = ({ patient, onStartChart, onViewAlerts }) => {
         </div>
 
         <div
-          className="mb-2 pt-2 text-muted d-flex flex-column gap-2"
+          className="mb-2 pt-2 text-muted d-flex flex-column gap-1"
           style={{ borderTop: "1px dashed #e0e0e0", fontSize: "0.78rem" }}
         >
-          <div>
-            Last Counselling Note:{" "}
-            <strong className="text-body">
-              {patient.lastCounsellingNoteDate
-                ? moment(patient.lastCounsellingNoteDate).format("DD MMM YY")
-                : "None yet"}
-            </strong>
-          </div>
-
-          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-2">
-            <span>
-              Last Clinical Note:{" "}
+          <div className="d-flex align-items-center justify-content-between">
+            <span>Last Counselling Note:</span>
+            {patient.lastCounsellingNoteDate ? (
               <strong className="text-body">
-                {patient.lastClinicalNoteDate
-                  ? moment(patient.lastClinicalNoteDate).format("DD MMM YY")
-                  : "None yet"}
+                {moment(patient.lastCounsellingNoteDate).format("DD MMM YY")}
               </strong>
-            </span>
-            <Button
-              outline
-              color="primary"
-              size="sm"
-              className="d-flex align-items-center justify-content-center gap-1 text-nowrap"
-              style={{ fontSize: "0.72rem", padding: "2px 8px" }}
-              onClick={() => onStartChart(patient, MENTAL_EXAMINATION)}
-            >
-              <FileText size={12} />
-              Create Clinical Note
-            </Button>
+            ) : (
+              <strong className="text-warning">None yet</strong>
+            )}
+          </div>
+          <div className="d-flex align-items-center justify-content-between">
+            <span>Last Clinical Note:</span>
+            {patient.lastClinicalNoteDate ? (
+              <strong className="text-body">
+                {moment(patient.lastClinicalNoteDate).format("DD MMM YY")}
+              </strong>
+            ) : (
+              <strong className="text-warning">None yet</strong>
+            )}
           </div>
         </div>
 
         <div className="d-flex gap-2 mt-auto">
-          <Button
-            color="primary"
-            size="sm"
-            className="d-flex align-items-center justify-content-center gap-1 fw-semibold flex-grow-1"
-            onClick={() => onStartChart(patient, COUNSELLING_NOTE)}
-          >
-            <MessageSquareText size={14} />
-            Start Counselling Note
-          </Button>
+          {canWrite && (
+            <>
+              <Button
+                color="primary"
+                size="sm"
+                className="d-flex align-items-center justify-content-center gap-1 fw-semibold flex-grow-1 text-nowrap"
+                onClick={() => onStartChart(patient, COUNSELLING_NOTE)}
+              >
+                <MessageSquareText size={14} />
+                Counselling Note
+              </Button>
+              <Button
+                color="success"
+                size="sm"
+                className="d-flex align-items-center justify-content-center gap-1 fw-semibold flex-grow-1 text-nowrap"
+                onClick={() => onStartChart(patient, MENTAL_EXAMINATION)}
+              >
+                <FileText size={14} />
+                Clinical Note
+              </Button>
+            </>
+          )}
           <Button
             outline
             color="danger"
             size="sm"
-            className="d-flex align-items-center justify-content-center"
+            className="d-flex align-items-center justify-content-center flex-shrink-0"
             title="View unresolved alerts"
             onClick={() => onViewAlerts(patient)}
           >
@@ -150,7 +171,7 @@ const PatientCard = ({ patient, onStartChart, onViewAlerts }) => {
             outline
             color="secondary"
             size="sm"
-            className="d-flex align-items-center justify-content-center"
+            className="d-flex align-items-center justify-content-center flex-shrink-0"
             title="Open patient in a new tab"
             onClick={() => window.open(`/patient/${patient._id}`, "_blank", "noopener,noreferrer")}
           >
