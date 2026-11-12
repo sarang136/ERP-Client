@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import CustomModal from "../../../Components/Common/Modal";
 import Flatpickr from "react-flatpickr";
@@ -9,6 +9,7 @@ import { setChartDate } from "../../../store/actions";
 import { getLatestAdmission } from "../../../utils/admissions";
 import Select from "react-select";
 import { toast } from "react-toastify";
+import { getProceduresByCenterid } from "../../../helpers/backend_helper";
 
 const ConsentFormModal = ({
   isOpen,
@@ -19,14 +20,48 @@ const ConsentFormModal = ({
   details,
   setDetails,
   setOpenform,
-  invoiceProcedures,
 }) => {
   const dispatch = useDispatch();
+  const [roomTypeOptions, setRoomTypeOptions] = useState([]);
 
   // `admissions` is the raw, session-wide state.Chart.data — reading [0] off it
   // printed whichever patient's admission happened to be first, which after a
   // patient switch could be the previous patient's. See utils/admissions.js.
   const currentAdmission = getLatestAdmission(admissions, patient);
+
+  useEffect(() => {
+    const centerId = patient?.center?._id;
+    if (!centerId) {
+      setRoomTypeOptions([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await getProceduresByCenterid({ centerId });
+        const procedures = response?.data || [];
+        const options = procedures
+          .filter(
+            (proc) => proc?.category?.name?.toLowerCase() === "room charges"
+          )
+          .filter((proc) =>
+            (proc?.center?.[0]?.prices || []).some(
+              (p) => Number(p?.price) > 0
+            )
+          )
+          .map((proc) => ({
+            label: proc.name.replace(/\b\w/g, (l) => l.toUpperCase()),
+            value: proc.name,
+          }));
+        if (!cancelled) setRoomTypeOptions(options);
+      } catch (err) {
+        if (!cancelled) setRoomTypeOptions([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [patient?.center?._id]);
 
   useEffect(() => {
     if (!chartDate) {
@@ -172,17 +207,7 @@ const ConsentFormModal = ({
                   roomtype: opt ? opt.value : "",
                 }))
               }
-              options={
-                invoiceProcedures
-                  ?.filter(
-                    (proc) =>
-                      proc?.category?.name?.toLowerCase() === "room charges"
-                  )
-                  ?.map((proc) => ({
-                    label: proc.name.replace(/\b\w/g, (l) => l.toUpperCase()),
-                    value: proc.name,
-                  })) || []
-              }
+              options={roomTypeOptions}
               placeholder="Select Room Type"
               isClearable
             />
@@ -270,7 +295,6 @@ const mapStateToProps = (state) => ({
   patient: state.Patient.patient,
   doctors: state.User?.doctor,
   psychologists: state.User?.counsellors,
-  invoiceProcedures: state.Setting.invoiceProcedures,
   admissions: state.Chart.data,
 });
 
