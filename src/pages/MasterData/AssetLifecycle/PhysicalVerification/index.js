@@ -51,7 +51,7 @@ const PhysicalVerification = () => {
   const canReview = hasPermission(
     "MASTERDATA",
     "PHYSICAL_VERIFICATION",
-    "DELETE",
+    "WRITE",
   );
 
   const [records, setRecords] = useState([]);

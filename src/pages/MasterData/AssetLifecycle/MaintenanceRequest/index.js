@@ -55,7 +55,7 @@ const MaintenanceRequest = () => {
   const canApprove = hasPermission(
     "MASTERDATA",
     "MAINTENANCE_REQUEST",
-    "DELETE",
+    "WRITE",
   );
 
   const [requests, setRequests] = useState([]);
