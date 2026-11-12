@@ -46,7 +46,7 @@ const CapitalizationRequest = () => {
   const canApprove = hasPermission(
     "MASTERDATA",
     "CAPITALIZATION_REQUEST",
-    "DELETE",
+    "WRITE",
   );
 
   const [requests, setRequests] = useState([]);
@@ -156,7 +156,7 @@ const CapitalizationRequest = () => {
 
     setSubmitting(true);
     try {
-      await createCapitalizationRequest({
+      const res = await createCapitalizationRequest({
         grnId,
         itemName,
         quantity: Number(quantity),
@@ -166,6 +166,8 @@ const CapitalizationRequest = () => {
         centerId: grnSiteId || siteId,
       });
       toast.success("Capitalization request created successfully");
+      // e.g. the item could not be checked in the Item Master: the request is made, but the user is told
+      (res?.warnings || []).forEach((w) => toast.warn(w, { autoClose: 9000 }));
       setModalOpen(false);
       setRefreshFlag((f) => f + 1);
     } catch (error) {

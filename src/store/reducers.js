@@ -82,6 +82,9 @@ import Nurse from "./features/nurse/nurseSlice";
 // for emergency
 import Emergency from "./features/emergency/emergencySlice";
 
+// for psychologist dashboard
+import Psychologist from "./features/psychologist/psychologistSlice";
+
 // for cash management
 import Cash from "./features/cashManagement/cashSlice";
 
@@ -146,6 +149,7 @@ const rootReducer = combineReducers({
   Offers,
   Nurse,
   Emergency,
+  Psychologist,
   Cash,
   Taxes,
   HubspotContacts,

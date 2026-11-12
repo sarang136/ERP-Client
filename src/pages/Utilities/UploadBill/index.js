@@ -38,6 +38,9 @@ const makeEmptyRow = (id) => ({
   month: null,
   year: CURRENT_YEAR,
   comment: "",
+  amount: "",
+  meterNumber: "",
+  unitUsed: "",
   files: [],
 });
 
@@ -163,7 +166,10 @@ const UploadBill = () => {
     !!row.month &&
     !!row.year &&
     row.files.length > 0 &&
-    isDateAllowed(row);
+    isDateAllowed(row) &&
+    Number(row.amount) > 0 &&
+    row.meterNumber.trim() !== "" &&
+    row.unitUsed !== "" && Number(row.unitUsed) >= 0;
 
   const canSubmit =
     canUpload &&
@@ -195,6 +201,9 @@ const UploadBill = () => {
         formData.append(`bills[${index}][month]`, row.month);
         formData.append(`bills[${index}][year]`, row.year);
         formData.append(`bills[${index}][comment]`, row.comment || "");
+        formData.append(`bills[${index}][amount]`, row.amount);
+        formData.append(`bills[${index}][meterNumber]`, row.meterNumber);
+        formData.append(`bills[${index}][unitUsed]`, row.unitUsed);
         row.files.forEach((file) => {
           formData.append(`billFile_${index}`, file);
         });
@@ -239,6 +248,13 @@ const UploadBill = () => {
                 const yearMissing = submitAttempted && !row.year;
                 const fileMissing =
                   submitAttempted && row.files.length === 0;
+                const amountInvalid =
+                  submitAttempted && Number(row.amount) <= 0;
+                const meterNumberMissing =
+                  submitAttempted && !row.meterNumber.trim();
+                const unitUsedInvalid =
+                  submitAttempted &&
+                  (row.unitUsed === "" || Number(row.unitUsed) < 0);
                 const apiError = rowErrors[row.id];
                 const hasRowError =
                   !!apiError ||
@@ -368,6 +384,88 @@ const UploadBill = () => {
                               style={{ fontSize: 13 }}
                             >
                               Duplicate center, month and year
+                            </div>
+                          )}
+                        </FormGroup>
+                      </Col>
+                    </Row>
+
+                    <Row>
+                      <Col md={4} className="mb-3">
+                        <FormGroup className="mb-0">
+                          <Label className="fw-semibold">
+                            Amount <span className="text-danger">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={row.amount}
+                            onChange={(e) =>
+                              updateRow(row.id, "amount", e.target.value)
+                            }
+                            disabled={uploading}
+                            placeholder="e.g. 1234.50"
+                          />
+                          {amountInvalid && (
+                            <div
+                              className="text-danger mt-1"
+                              style={{ fontSize: 13 }}
+                            >
+                              Amount must be greater than 0
+                            </div>
+                          )}
+                        </FormGroup>
+                      </Col>
+
+                      <Col md={4} className="mb-3">
+                        <FormGroup className="mb-0">
+                          <Label className="fw-semibold">
+                            Meter Number{" "}
+                            <span className="text-danger">*</span>
+                          </Label>
+                          <Input
+                            type="text"
+                            value={row.meterNumber}
+                            onChange={(e) =>
+                              updateRow(row.id, "meterNumber", e.target.value)
+                            }
+                            disabled={uploading}
+                            placeholder="e.g. MN-00123"
+                            maxLength={50}
+                          />
+                          {meterNumberMissing && (
+                            <div
+                              className="text-danger mt-1"
+                              style={{ fontSize: 13 }}
+                            >
+                              Meter number is required
+                            </div>
+                          )}
+                        </FormGroup>
+                      </Col>
+
+                      <Col md={4} className="mb-3">
+                        <FormGroup className="mb-0">
+                          <Label className="fw-semibold">
+                            Unit Used Per Month{" "}
+                            <span className="text-danger">*</span>
+                          </Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={row.unitUsed}
+                            onChange={(e) =>
+                              updateRow(row.id, "unitUsed", e.target.value)
+                            }
+                            disabled={uploading}
+                            placeholder="e.g. 45.5"
+                          />
+                          {unitUsedInvalid && (
+                            <div
+                              className="text-danger mt-1"
+                              style={{ fontSize: 13 }}
+                            >
+                              Unit used must be 0 or greater
                             </div>
                           )}
                         </FormGroup>

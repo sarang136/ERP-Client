@@ -44,6 +44,11 @@ import AddScan from "./AssetLifecycle/AddScan";
 import LocationStock from "./Inventory/LocationStock";
 import AssetTransferRequest from "./AssetLifecycle/AssetTransfer";
 import VendorInvoice from "./Finance/VendorInvoice";
+import ChartOfAccounts from "./Finance/Accounting/ChartOfAccounts";
+import Ledgers from "./Finance/Accounting/Ledgers";
+import LedgerTypes from "./Finance/Accounting/LedgerTypes";
+import LedgerSubTypes from "./Finance/Accounting/LedgerSubTypes";
+import GlEntries from "./Finance/Accounting/GlEntries";
 import AuditLogs from "./AuditLog";
 import Basic404 from "../AuthenticationInner/Errors/Basic404";
 import { usePermissions } from "../../Components/Hooks/useRoles.js";
@@ -70,6 +75,11 @@ const ROUTES = [
     element: <AssetCategory />,
   },
   { path: "budget/*", perm: "BUDGET", element: <BudgetManagement /> },
+  { path: "chart-of-accounts/*", perm: "LEDGER", element: <ChartOfAccounts /> },
+  { path: "ledger/*", perm: "LEDGER", element: <Ledgers /> },
+  { path: "ledger-type/*", perm: "LEDGER_TYPE", element: <LedgerTypes /> },
+  { path: "ledger-sub-type/*", perm: "LEDGER_TYPE", element: <LedgerSubTypes /> },
+  { path: "gl-entry/*", perm: "GL_ENTRY", element: <GlEntries /> },
   {
     path: "purchase-requisition/*",
     perm: "PR",

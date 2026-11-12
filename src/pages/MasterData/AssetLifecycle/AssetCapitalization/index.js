@@ -106,7 +106,7 @@ const AssetCapitalization = () => {
 
   const columns = [
     { name: "Capitalization #", selector: (row) => row.capitalizationNumber, sortable: true, width: "170px" },
-    { name: "Asset Tag", width: "150px", selector: (row) => row.fixedAssetId?.assetTag || "—" },
+    { name: "Asset Tag", width: "200px", selector: (row) => (row.fixedAssetId?.assetTag ? `${row.fixedAssetId.assetTag}${(row.fixedAssetIds || []).length > 1 ? ` +${row.fixedAssetIds.length - 1} more` : ""}` : "—") },
     { name: "Item", selector: (row) => row.itemName, wrap: true },
     {
       name: "Total Cost",

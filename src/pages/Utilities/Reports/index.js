@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { CardBody, Spinner, UncontrolledTooltip } from "reactstrap";
+import { CardBody, Spinner } from "reactstrap";
 import Select from "react-select";
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -16,6 +16,12 @@ import {
 import ViewFileModal from "./ViewFileModal";
 import EditBillModal from "./EditBillModal";
 import DeleteBillModal from "./DeleteBillModal";
+
+const fileSortOptions = [
+  { value: null, label: "Sort by Files" },
+  { value: "asc", label: "Fewest Files First" },
+  { value: "desc", label: "Most Files First" },
+];
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_RANGE_END = 2076;
@@ -69,6 +75,8 @@ const Reports = () => {
   const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(false);
 
+  const [fileSort, setFileSort] = useState(null);
+
   const [viewFile, setViewFile] = useState(null);
   const [editBill, setEditBill] = useState(null);
   const [savingBillId, setSavingBillId] = useState(null);
@@ -99,6 +107,7 @@ const Reports = () => {
       if (centersParam) params.centers = centersParam;
       if (debouncedMonth !== "ALL") params.month = Number(debouncedMonth);
       if (debouncedYear !== "ALL") params.year = Number(debouncedYear);
+      if (fileSort) { params.sortBy = "filesCount"; params.sortOrder = fileSort; }
 
       const response = await getUtilityBills(params);
 
@@ -120,6 +129,7 @@ const Reports = () => {
     page,
     limit,
     hasReadPermission,
+    fileSort,
   ]);
 
   useEffect(() => {
@@ -153,14 +163,17 @@ const Reports = () => {
   const columns = [
     {
       name: "Author",
+      minWidth: "150px",
       selector: (row) => row?.author?.name || "N/A",
     },
     {
       name: "Center",
+      minWidth: "150px",
       selector: (row) => row?.center?.title || "—",
     },
     {
       name: "Month",
+      minWidth: "120px",
       selector: (row) =>
         row?.month
           ? new Date(2026, row.month - 1, 1).toLocaleString("en-US", {
@@ -170,32 +183,59 @@ const Reports = () => {
     },
     {
       name: "Year",
+      minWidth: "80px",
       selector: (row) => row?.year || "—",
     },
     {
+      name: "Amount",
+      minWidth: "120px",
+      selector: (row) =>
+        row?.amount != null
+          ? Number(row.amount).toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })
+          : "—",
+    },
+    {
+      name: "Meter Number",
+      minWidth: "150px",
+      selector: (row) => row?.meterNumber || "—",
+    },
+    {
+      name: "Unit Used Per Month",
+      minWidth: "170px",
+      selector: (row) =>
+        row?.unitUsed != null
+          ? Number(row.unitUsed).toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })
+          : "—",
+    },
+    {
       name: "Comment",
+      minWidth: "220px",
+      wrap: true,
       cell: (row) => {
         const comment = row?.comment || "";
         if (!comment) return "—";
-        const tooltipId = `utility-bill-comment-${row._id}`;
         return (
-          <>
-            <span
-              id={tooltipId}
-              className="text-truncate d-inline-block"
-              style={{ maxWidth: 160 }}
-            >
-              {comment}
-            </span>
-            <UncontrolledTooltip target={tooltipId} placement="top">
-              {comment}
-            </UncontrolledTooltip>
-          </>
+          <span
+            style={{
+              whiteSpace: "normal",
+              wordBreak: "break-word",
+              paddingBlock: "6px",
+            }}
+          >
+            {comment}
+          </span>
         );
       },
     },
     {
       name: "Date Uploaded",
+      minWidth: "140px",
       selector: (row) =>
         row?.createdAt
           ? new Date(row.createdAt).toLocaleDateString("en-IN", {
@@ -323,6 +363,16 @@ const Reports = () => {
                 setPage(1);
               }}
               placeholder="Year..."
+            />
+          </div>
+          <div style={{ minWidth: 190 }}>
+            <Select
+              options={fileSortOptions}
+              value={fileSortOptions.find((opt) => opt.value === fileSort) || fileSortOptions[0]}
+              onChange={(opt) => {
+                setFileSort(opt?.value ?? null);
+                setPage(1);
+              }}
             />
           </div>
         </div>

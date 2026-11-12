@@ -13,6 +13,10 @@ import {
     ButtonGroup,
     Spinner,
     Badge,
+    Modal,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
 } from "reactstrap";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthError } from '../../../Components/Hooks/useAuthError';
@@ -24,7 +28,7 @@ import Select from "react-select";
 import { getExitEmployeesBySearch } from '../../../store/features/HR/hrSlice';
 import AsyncSelect from "react-select/async";
 import { formatCurrency } from '../../../utils/formatCurrency';
-import { getSearchPatients, getEmployeesBySearch, getVendors, getCentralPaymentVendorPan } from '../../../helpers/backend_helper';
+import { getSearchPatients, getEmployeesBySearch, getVendors, getCentralPaymentVendorPan, createCentralPaymentVendorRequest, uploadVendorDocument } from '../../../helpers/backend_helper';
 
 const transactionMethodOptions = [
     { value: "UPI", label: "UPI" },
@@ -87,6 +91,89 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
             }
             : null
     );
+
+    const PAN_REGEX_MODAL = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    const IFSC_REGEX_MODAL = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+
+    const emptyVendorModal = {
+        tradeName: "",
+        ifsc: "",
+        accountHolderName: "",
+        accountNo: "",
+        pan: "",
+        panCardFile: null,
+    };
+
+    const [vendorModalOpen, setVendorModalOpen] = useState(false);
+    const [vendorModalFields, setVendorModalFields] = useState(emptyVendorModal);
+    const [vendorModalTouched, setVendorModalTouched] = useState({});
+    const [vendorModalErrors, setVendorModalErrors] = useState({});
+    const [vendorModalSubmitting, setVendorModalSubmitting] = useState(false);
+    const panCardInputRef = useRef(null);
+
+    const validateVendorModal = (fields) => {
+        const errs = {};
+        if (!fields.tradeName.trim()) errs.tradeName = "Vendor Name is required";
+        if (!fields.ifsc.trim()) errs.ifsc = "Bank IFSC Code is required";
+        else if (!IFSC_REGEX_MODAL.test(fields.ifsc.trim())) errs.ifsc = "Enter a valid IFSC, e.g. SBIN0001234";
+        if (!fields.accountHolderName.trim()) errs.accountHolderName = "Account Holder Name is required";
+        if (!fields.accountNo.trim()) errs.accountNo = "Account No. is required";
+        if (!fields.pan.trim()) errs.pan = "PAN Card No. is required";
+        else if (!PAN_REGEX_MODAL.test(fields.pan.trim())) errs.pan = "Enter a valid PAN, e.g. ABCDE1234F";
+        if (!fields.panCardFile) errs.panCardFile = "PAN Card upload is required";
+        return errs;
+    };
+
+    const handleVendorModalChange = (field, value) => {
+        setVendorModalFields((prev) => ({ ...prev, [field]: value }));
+        setVendorModalErrors((prev) => ({ ...prev, [field]: undefined }));
+    };
+
+    const handleVendorModalSubmit = async () => {
+        const allTouched = { tradeName: true, ifsc: true, accountHolderName: true, accountNo: true, pan: true, panCardFile: true };
+        setVendorModalTouched(allTouched);
+        const errs = validateVendorModal(vendorModalFields);
+        if (Object.keys(errs).length > 0) {
+            setVendorModalErrors(errs);
+            return;
+        }
+        setVendorModalSubmitting(true);
+        try {
+            const res = await createCentralPaymentVendorRequest({
+                vendorCategory: "central_payment",
+                tradeName: vendorModalFields.tradeName.trim(),
+                pan: vendorModalFields.pan.trim().toUpperCase(),
+                bankDetails: {
+                    ifsc: vendorModalFields.ifsc.trim().toUpperCase(),
+                    accountHolderName: vendorModalFields.accountHolderName.trim(),
+                    accountNo: vendorModalFields.accountNo.trim(),
+                },
+            });
+            const newVendorId = res?.data?._id;
+            if (newVendorId && vendorModalFields.panCardFile) {
+                const formData = new FormData();
+                formData.append("file", vendorModalFields.panCardFile);
+                formData.append("docType", "pan_card");
+                try {
+                    await uploadVendorDocument(newVendorId, formData);
+                } catch {
+                    toast.warn("Vendor request created but PAN card upload failed. Please upload it via Vendor Management.");
+                }
+            }
+            setVendorModalOpen(false);
+            setVendorModalFields(emptyVendorModal);
+            setVendorModalTouched({});
+            setVendorModalErrors({});
+            toast.success("Vendor Request raised successfully, please reach out to the ops team for approval.");
+        } catch (error) {
+            if (!handleAuthError(error)) {
+                const msg = error?.response?.data?.message || error?.message || "Failed to submit vendor request";
+                setVendorModalErrors((prev) => ({ ...prev, _form: msg }));
+            }
+        } finally {
+            setVendorModalSubmitting(false);
+        }
+    };
 
     const validationSchema = Yup.object({
         center: Yup.string().required("Center is required"),
@@ -1071,20 +1158,30 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                             }`}
                     />
                 ) : (
-                    <AsyncSelect
-                        inputId="vendor"
-                        isClearable
-                        cacheOptions
-                        defaultOptions
-                        loadOptions={(text) => searchVendors(text)}
-                        placeholder="Select vendor"
-                        noOptionsMessage={() => "No active vendor found. Create it in Vendor Management first."}
-                        value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
-                        onChange={handleVendorSelect}
-                        onBlur={() => form.setFieldTouched("vendor", true)}
-                        classNamePrefix="react-select"
-                        styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
-                    />
+                    <>
+                        <AsyncSelect
+                            inputId="vendor"
+                            isClearable
+                            cacheOptions
+                            defaultOptions
+                            loadOptions={(text) => searchVendors(text)}
+                            placeholder="Select vendor"
+                            noOptionsMessage={() => "No active vendor found."}
+                            value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
+                            onChange={handleVendorSelect}
+                            onBlur={() => form.setFieldTouched("vendor", true)}
+                            classNamePrefix="react-select"
+                            styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
+                        />
+                        <button
+                            type="button"
+                            className="btn btn-link btn-sm p-0 mt-1"
+                            style={{ fontSize: "0.8rem", textDecoration: "none" }}
+                            onClick={() => setVendorModalOpen(true)}
+                        >
+                            + Add new vendor <i className="bx bx-right-arrow-alt"></i>
+                        </button>
+                    </>
                 )}
                 {form.touched.vendor && form.errors.vendor && (
                     <div className="invalid-feedback d-block">
@@ -1476,20 +1573,30 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                             }`}
                     />
                 ) : (
-                    <AsyncSelect
-                        inputId="vendor"
-                        isClearable
-                        cacheOptions
-                        defaultOptions
-                        loadOptions={(text) => searchVendors(text)}
-                        placeholder="Select vendor"
-                        noOptionsMessage={() => "No active vendor found. Create it in Vendor Management first."}
-                        value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
-                        onChange={handleVendorSelect}
-                        onBlur={() => form.setFieldTouched("vendor", true)}
-                        classNamePrefix="react-select"
-                        styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
-                    />
+                    <>
+                        <AsyncSelect
+                            inputId="vendor"
+                            isClearable
+                            cacheOptions
+                            defaultOptions
+                            loadOptions={(text) => searchVendors(text)}
+                            placeholder="Select vendor"
+                            noOptionsMessage={() => "No active vendor found."}
+                            value={form.values.vendor ? { value: form.values.vendor, label: form.values.vendor } : null}
+                            onChange={handleVendorSelect}
+                            onBlur={() => form.setFieldTouched("vendor", true)}
+                            classNamePrefix="react-select"
+                            styles={form.touched.vendor && form.errors.vendor ? { control: (b) => ({ ...b, borderColor: "#dc3545" }) } : undefined}
+                        />
+                        <button
+                            type="button"
+                            className="btn btn-link btn-sm p-0 mt-1"
+                            style={{ fontSize: "0.8rem", textDecoration: "none" }}
+                            onClick={() => setVendorModalOpen(true)}
+                        >
+                            + Add new vendor <i className="bx bx-right-arrow-alt"></i>
+                        </button>
+                    </>
                 )}
                 {form.touched.vendor && form.errors.vendor && (
                     <div className="invalid-feedback d-block">
@@ -1927,6 +2034,125 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                 </Button>
             )}
 
+            <Modal isOpen={vendorModalOpen} toggle={() => { if (!vendorModalSubmitting) { setVendorModalOpen(false); setVendorModalFields(emptyVendorModal); setVendorModalTouched({}); setVendorModalErrors({}); } }} size="md">
+                <ModalHeader toggle={() => { if (!vendorModalSubmitting) { setVendorModalOpen(false); setVendorModalFields(emptyVendorModal); setVendorModalTouched({}); setVendorModalErrors({}); } }}>
+                    Request New Vendor
+                </ModalHeader>
+                <ModalBody>
+                    {vendorModalErrors._form && (
+                        <div className="alert alert-danger py-2 mb-3" role="alert">
+                            {vendorModalErrors._form}
+                        </div>
+                    )}
+                    <FormGroup>
+                        <Label className="fw-medium">Vendor Name <span className="text-danger">*</span></Label>
+                        <Input
+                            value={vendorModalFields.tradeName}
+                            onChange={(e) => handleVendorModalChange("tradeName", e.target.value)}
+                            onBlur={() => setVendorModalTouched((p) => ({ ...p, tradeName: true }))}
+                            invalid={vendorModalTouched.tradeName && !!vendorModalErrors.tradeName}
+                        />
+                        {vendorModalTouched.tradeName && vendorModalErrors.tradeName && (
+                            <div className="invalid-feedback d-block">{vendorModalErrors.tradeName}</div>
+                        )}
+                    </FormGroup>
+                    <FormGroup>
+                        <Label className="fw-medium">Bank IFSC Code <span className="text-danger">*</span></Label>
+                        <Input
+                            value={vendorModalFields.ifsc}
+                            onChange={(e) => handleVendorModalChange("ifsc", e.target.value.toUpperCase().replace(/\s/g, ""))}
+                            onBlur={() => setVendorModalTouched((p) => ({ ...p, ifsc: true }))}
+                            invalid={vendorModalTouched.ifsc && !!vendorModalErrors.ifsc}
+                            placeholder="e.g. SBIN0001234"
+                        />
+                        {vendorModalTouched.ifsc && vendorModalErrors.ifsc && (
+                            <div className="invalid-feedback d-block">{vendorModalErrors.ifsc}</div>
+                        )}
+                    </FormGroup>
+                    <FormGroup>
+                        <Label className="fw-medium">Account Holder Name <span className="text-danger">*</span></Label>
+                        <Input
+                            value={vendorModalFields.accountHolderName}
+                            onChange={(e) => handleVendorModalChange("accountHolderName", e.target.value)}
+                            onBlur={() => setVendorModalTouched((p) => ({ ...p, accountHolderName: true }))}
+                            invalid={vendorModalTouched.accountHolderName && !!vendorModalErrors.accountHolderName}
+                        />
+                        {vendorModalTouched.accountHolderName && vendorModalErrors.accountHolderName && (
+                            <div className="invalid-feedback d-block">{vendorModalErrors.accountHolderName}</div>
+                        )}
+                    </FormGroup>
+                    <FormGroup>
+                        <Label className="fw-medium">Account No. <span className="text-danger">*</span></Label>
+                        <Input
+                            value={vendorModalFields.accountNo}
+                            onChange={(e) => handleVendorModalChange("accountNo", e.target.value.replace(/\s/g, ""))}
+                            onBlur={() => setVendorModalTouched((p) => ({ ...p, accountNo: true }))}
+                            invalid={vendorModalTouched.accountNo && !!vendorModalErrors.accountNo}
+                        />
+                        {vendorModalTouched.accountNo && vendorModalErrors.accountNo && (
+                            <div className="invalid-feedback d-block">{vendorModalErrors.accountNo}</div>
+                        )}
+                    </FormGroup>
+                    <FormGroup>
+                        <Label className="fw-medium">PAN Card No. <span className="text-danger">*</span></Label>
+                        <Input
+                            value={vendorModalFields.pan}
+                            onChange={(e) => handleVendorModalChange("pan", e.target.value.toUpperCase().replace(/\s/g, ""))}
+                            onBlur={() => setVendorModalTouched((p) => ({ ...p, pan: true }))}
+                            invalid={vendorModalTouched.pan && !!vendorModalErrors.pan}
+                            placeholder="e.g. ABCDE1234F"
+                            maxLength={10}
+                        />
+                        {vendorModalTouched.pan && vendorModalErrors.pan && (
+                            <div className="invalid-feedback d-block">{vendorModalErrors.pan}</div>
+                        )}
+                    </FormGroup>
+                    <FormGroup>
+                        <Label className="fw-medium">PAN Card Upload <span className="text-danger">*</span></Label>
+                        <div
+                            className="border rounded p-3 text-center"
+                            style={{ cursor: "pointer", background: vendorModalFields.panCardFile ? "#f0fdf4" : "#f8fafc", borderColor: vendorModalTouched.panCardFile && vendorModalErrors.panCardFile ? "#dc3545" : vendorModalFields.panCardFile ? "#16a34a" : "#cbd5e1" }}
+                            onClick={() => panCardInputRef.current && panCardInputRef.current.click()}
+                        >
+                            <input
+                                ref={panCardInputRef}
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                style={{ display: "none" }}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0] || null;
+                                    handleVendorModalChange("panCardFile", file);
+                                    setVendorModalTouched((p) => ({ ...p, panCardFile: true }));
+                                    e.target.value = "";
+                                }}
+                            />
+                            {vendorModalFields.panCardFile ? (
+                                <div className="d-flex align-items-center justify-content-center gap-2">
+                                    <i className="bx bx-check-circle text-success" style={{ fontSize: 18 }}></i>
+                                    <span className="small text-success fw-medium">{vendorModalFields.panCardFile.name}</span>
+                                    <button type="button" className="btn btn-sm btn-link text-danger p-0 ms-1" onClick={(e) => { e.stopPropagation(); handleVendorModalChange("panCardFile", null); }}>Remove</button>
+                                </div>
+                            ) : (
+                                <div>
+                                    <i className="bx bx-cloud-upload d-block mb-1" style={{ fontSize: 20 }}></i>
+                                    <span className="small text-muted">Click to upload — PDF, JPG, PNG, max 10 MB</span>
+                                </div>
+                            )}
+                        </div>
+                        {vendorModalTouched.panCardFile && vendorModalErrors.panCardFile && (
+                            <div className="invalid-feedback d-block">{vendorModalErrors.panCardFile}</div>
+                        )}
+                    </FormGroup>
+                </ModalBody>
+                <ModalFooter>
+                    <Button color="light" onClick={() => { if (!vendorModalSubmitting) { setVendorModalOpen(false); setVendorModalFields(emptyVendorModal); setVendorModalTouched({}); setVendorModalErrors({}); } }} disabled={vendorModalSubmitting}>
+                        Cancel
+                    </Button>
+                    <Button color="primary" onClick={handleVendorModalSubmit} disabled={vendorModalSubmitting}>
+                        {vendorModalSubmitting ? <><Spinner size="sm" className="me-1" /> Submitting…</> : "Submit Request"}
+                    </Button>
+                </ModalFooter>
+            </Modal>
         </Form>
     )
 }

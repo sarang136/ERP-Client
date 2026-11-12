@@ -9,7 +9,7 @@ const Psychologist = () => {
     <React.Fragment>
       <div className="page-content">
         <Container fluid>
-          <BreadCrumb title="Psychologist" pageTitle="Psychologist" />
+          <BreadCrumb title="Psychologist Dashboard" pageTitle="Psychologist Dashboard" />
           <Routes>
             <Route path="/" element={<Main />} />
           </Routes>
