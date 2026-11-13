@@ -15,6 +15,7 @@ import HostsModal from "../components/HostsModal";
 import AddPatientModal from "../components/AddPatientModal";
 import MoveModal from "../components/MoveModal";
 import ProgressModal from "../components/ProgressModal";
+import { useLecturePermissions } from "../permissions";
 import {
   LEAVE_TEXT,
   activityText,
@@ -22,6 +23,7 @@ import {
   formatDate,
   formatDay,
   hostNames,
+  seriesHalfTag,
   seriesStatus,
   wasMemberOn,
 } from "../helpers";
@@ -32,6 +34,8 @@ const SeriesDetail = () => {
   const { seriesId } = useParams();
   const navigate = useNavigate();
   const handleAuthError = useAuthError();
+  // The role's level (WRITE / DELETE) on top of being a host of this series.
+  const { canWrite, canDelete } = useLecturePermissions();
 
   const [data, setData] = useState(null);
   const [programme, setProgramme] = useState(programmeCache);
@@ -104,7 +108,10 @@ const SeriesDetail = () => {
   }
   if (!data) return null;
 
-  const { series, canManage, isAdmin, today } = data;
+  const { series, isAdmin, today } = data;
+  const isHost = data.canManage; // a host or the creator of this series (or an admin)
+  const canManage = isHost && canWrite; // edit hosts, add and move patients, session hosts
+  const canRemove = isHost && canDelete; // delete the series, remove patients
   const status = seriesStatus(series);
   const canEditSessions = !series.locked || isAdmin;
   const totalDays = programme?.seriesDays || 45;
@@ -153,7 +160,7 @@ const SeriesDetail = () => {
           <div className="d-flex flex-wrap justify-content-between gap-3">
             <div>
               <div className="text-muted small text-uppercase fw-semibold">
-                {series.center?.title || "Centre"} · {totalDays}-day series
+                {series.center?.title || "Centre"} · {seriesHalfTag(series.startKey)} · {totalDays}-day series
               </div>
               <h4 className="mb-1">
                 {series.label} <Badge color={status.color} className="fs-12 align-middle">{status.text}</Badge>
@@ -163,12 +170,14 @@ const SeriesDetail = () => {
             <div className="text-md-end">
               <div className="small text-muted">Hosts</div>
               <div className="fw-medium text-capitalize">{hostNames(series.hosts) || "—"}</div>
-              {canManage && (
+              {(canManage || (canRemove && nothingRecorded)) && (
                 <div className="mt-2 d-flex gap-2 justify-content-md-end">
-                  <Button size="sm" color="light" className="border" onClick={() => setHostsOpen(true)} disabled={series.locked && !isAdmin}>
-                    <i className="bx bx-edit me-1" />Edit hosts
-                  </Button>
-                  {nothingRecorded && (
+                  {canManage && (
+                    <Button size="sm" color="light" className="border" onClick={() => setHostsOpen(true)} disabled={series.locked && !isAdmin}>
+                      <i className="bx bx-edit me-1" />Edit hosts
+                    </Button>
+                  )}
+                  {canRemove && nothingRecorded && (
                     <Button size="sm" color="danger" outline onClick={() => setConfirmDelete(true)}>
                       <i className="bx bx-trash me-1" />Delete
                     </Button>
@@ -190,10 +199,16 @@ const SeriesDetail = () => {
           This series has ended. Hosts can still mark its sessions for {programme?.editGraceDays ?? 2} days.
         </Alert>
       )}
-      {!canManage && (
+      {!canWrite ? (
         <Alert color="light" className="py-2 border">
-          You're viewing this series. Only its hosts can change it.
+          You have view-only access to Therapy Lectures.
         </Alert>
+      ) : (
+        !isHost && (
+          <Alert color="light" className="py-2 border">
+            You're viewing this series. Only its hosts can change it.
+          </Alert>
+        )
       )}
 
       <Nav tabs className="nav-tabs-custom mb-3">
@@ -364,10 +379,10 @@ const SeriesDetail = () => {
                         Progress
                       </Button>
                       {canManage && m.active && !m.completed && (
-                        <>
-                          <Button size="sm" color="link" className="p-0 me-3" onClick={() => setMoveFor(m)}>Move</Button>
-                          <Button size="sm" color="link" className="p-0 text-danger" onClick={() => setRemoveFor(m)}>Remove</Button>
-                        </>
+                        <Button size="sm" color="link" className="p-0 me-3" onClick={() => setMoveFor(m)}>Move</Button>
+                      )}
+                      {canRemove && m.active && !m.completed && (
+                        <Button size="sm" color="link" className="p-0 text-danger" onClick={() => setRemoveFor(m)}>Remove</Button>
                       )}
                     </td>
                   </tr>
@@ -387,7 +402,9 @@ const SeriesDetail = () => {
         programme={programme}
         today={today}
         canManage={canManage}
-        canEdit={Boolean(session?.canRun) && canEditSessions && !session?.isFuture}
+        canEdit={canWrite && Boolean(session?.canRun) && canEditSessions && !session?.isFuture}
+        canDeletePhotos={canDelete}
+        viewOnly={!canWrite}
         suggestedActivity={session ? Math.min(Math.max(session.seriesDay, 1), totalDays) : 1}
         onSessionChange={replaceSession}
       />
