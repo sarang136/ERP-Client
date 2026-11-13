@@ -120,7 +120,6 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         if (!fields.accountNo.trim()) errs.accountNo = "Account No. is required";
         if (!fields.pan.trim()) errs.pan = "PAN Card No. is required";
         else if (!PAN_REGEX_MODAL.test(fields.pan.trim())) errs.pan = "Enter a valid PAN, e.g. ABCDE1234F";
-        if (!fields.panCardFile) errs.panCardFile = "PAN Card upload is required";
         return errs;
     };
 
@@ -130,7 +129,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
     };
 
     const handleVendorModalSubmit = async () => {
-        const allTouched = { tradeName: true, ifsc: true, accountHolderName: true, accountNo: true, pan: true, panCardFile: true };
+        const allTouched = { tradeName: true, ifsc: true, accountHolderName: true, accountNo: true, pan: true };
         setVendorModalTouched(allTouched);
         const errs = validateVendorModal(vendorModalFields);
         if (Object.keys(errs).length > 0) {
@@ -2108,7 +2107,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                         )}
                     </FormGroup>
                     <FormGroup>
-                        <Label className="fw-medium">PAN Card Upload <span className="text-danger">*</span></Label>
+                        <Label className="fw-medium">PAN Card Upload <span className="text-muted fs-12">(optional)</span></Label>
                         <div
                             className="border rounded p-3 text-center"
                             style={{ cursor: "pointer", background: vendorModalFields.panCardFile ? "#f0fdf4" : "#f8fafc", borderColor: vendorModalTouched.panCardFile && vendorModalErrors.panCardFile ? "#dc3545" : vendorModalFields.panCardFile ? "#16a34a" : "#cbd5e1" }}
@@ -2139,9 +2138,6 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                                 </div>
                             )}
                         </div>
-                        {vendorModalTouched.panCardFile && vendorModalErrors.panCardFile && (
-                            <div className="invalid-feedback d-block">{vendorModalErrors.panCardFile}</div>
-                        )}
                     </FormGroup>
                 </ModalBody>
                 <ModalFooter>
