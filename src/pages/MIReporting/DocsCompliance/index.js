@@ -39,7 +39,7 @@ const METRICS = [
     { label: "Daily Invoice",        key: "daily_invoice",        description: "Percentage of daily invoices generated and updated for admitted patients." },
     { label: "Vital Signs",          key: "vital_signs",          description: "Percentage of daily vital signs recorded on a daily basis" },
     { label: "Clinical Notes",       key: "clinical_notes",       description: "Percentage of patients with clinical notes updated everyday" },
-    // { label: "Counselling Sessions", key: "counselling_sessions", description: "Percentage of scheduled counselling sessions completed and documented. 2 in a day per Psycologist" },
+    { label: "Counselling Sessions", key: "counselling_sessions", description: "Percentage of scheduled counselling sessions completed and documented. 2 in a day per Psycologist" },
     // { label: "Counselling Recording",key: "counselling_recording",description: "Percentage of scheduled counselling Recording completed and documented. (2 in a week per patient) 2 in a day per Psycologist" },
     { label: "Counselling Sessions Patients",  key: "counselling_sessions_patients", description: "Percentage of scheduled counselling sessions completed and documented. (2 in a week per patient)" },
     { label: "Round Notes",          key: "round_notes",          description: "Percentage of doctor/clinical round notes completed as per schedule. (12 rounds in a day 24 hours)" },
