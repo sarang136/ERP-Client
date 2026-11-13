@@ -254,6 +254,11 @@ export const permissionList = [
     ],
   },
   {
+    key: "THERAPY_LECTURES",
+    label: "Therapy Lectures",
+    subModules: [],
+  },
+  {
     key: "GUIDELINES",
     label: "Guidelines",
     subModules: [

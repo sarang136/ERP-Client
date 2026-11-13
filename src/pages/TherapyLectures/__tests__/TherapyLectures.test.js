@@ -8,7 +8,17 @@ import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import SessionModal from "../components/SessionModal";
 import AddPatientModal from "../components/AddPatientModal";
-import { seriesDayOn, seriesEndKey, seriesLabel, seriesStatus, wasMemberOn } from "../helpers";
+import {
+  halfLongText,
+  halfRange,
+  seriesDayOn,
+  seriesEndKey,
+  seriesHalf,
+  seriesHalfTag,
+  seriesLabel,
+  seriesStatus,
+  wasMemberOn,
+} from "../helpers";
 import * as api from "../../../helpers/backend_helper";
 
 jest.mock("../../../helpers/backend_helper", () => ({
@@ -69,10 +79,15 @@ beforeEach(() => {
   api.addLectureMember.mockResolvedValue({ message: "Patient moved to this series" });
 });
 
-test("helpers: 45-day series from the 1st or 16th", () => {
+test("helpers: 45-day series from any day; 1st–15th is the month's 1st half, 16th on the 2nd", () => {
   expect(seriesEndKey("2026-10-01")).toBe("2026-11-14");
   expect(seriesLabel("2026-10-16")).toBe("16 Oct – 29 Nov 2026");
   expect(seriesLabel("2026-12-16")).toBe("16 Dec 2026 – 29 Jan 2027");
+  expect(seriesLabel("2026-11-25")).toBe("25 Nov 2026 – 8 Jan 2027");
+  expect(["2026-11-01", "2026-11-15", "2026-11-16", "2026-11-25"].map(seriesHalf)).toEqual([1, 1, 2, 2]);
+  expect(seriesHalfTag("2026-11-25")).toBe("Nov · 2nd half");
+  expect(halfRange("2027-02", 2)).toEqual({ fromKey: "2027-02-16", toKey: "2027-02-28" });
+  expect(halfLongText("2026-11", 1)).toBe("1st half of November (1–15 Nov)");
   expect(seriesDayOn("2026-10-01", "2026-10-20")).toBe(20);
   expect(seriesStatus({ started: true, day: 12 }).text).toBe("Day 12 of 45");
   expect(seriesStatus({ ended: true, locked: true }).text).toBe("Closed");
@@ -114,6 +129,22 @@ test("someone who isn't a host of the session sees it read-only", () => {
   expect(screen.getByText("Absent")).toBeInTheDocument();
   expect(screen.getByTestId("photo-input")).toBeInTheDocument(); // hidden input exists, but no add button
   expect(screen.queryByText("Add photos")).not.toBeInTheDocument();
+});
+
+test("photos: removing one needs the DELETE level; adding needs only WRITE", () => {
+  const withPhoto = { ...baseSession, done: true, activityDay: 3, evidence: [{ _id: "e1", url: "u", uploadedBy: { name: "asha" } }] };
+  const { unmount } = openSession(withPhoto);
+  expect(screen.getByText("Add photos")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Remove photo")).not.toBeInTheDocument();
+  unmount();
+  openSession(withPhoto, { canDeletePhotos: true });
+  expect(screen.getByLabelText("Remove photo")).toBeInTheDocument();
+});
+
+test("view-only role: says so instead of the host message", () => {
+  openSession(baseSession, { canEdit: false, viewOnly: true });
+  expect(screen.getByText("You have view-only access to Therapy Lectures.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Mark done" })).not.toBeInTheDocument();
 });
 
 test("photos: files over 5 MB are skipped, others uploaded one by one", async () => {

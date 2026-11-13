@@ -4,6 +4,8 @@ const BILLING_VIEW = "BILLING";
 const TIMELINE_VIEW = "TIMELINE";
 const BELONGINGS_VIEW = "BELONGINGS";
 const OPD_VIEW = "OPD";
+// Not a Patient sub-page: shown to users who have the "Therapy Lectures" page.
+const THERAPY_LECTURES_VIEW = "THERAPY_LECTURES";
 export const ADMISSION_SUMMARY = "ADMISSION_SUMMARY";
 export const BIO_DATA = "BIO_DATA";
 //Charts
@@ -3403,6 +3405,7 @@ export {
   TIMELINE_VIEW,
   OPD_VIEW,
   BELONGINGS_VIEW,
+  THERAPY_LECTURES_VIEW,
   //INVOICE CATEGORIES
   categoryUnitOptions,
   //PATIENT CHARTS

@@ -7,15 +7,20 @@ import { getLectureSeriesList } from "../../../helpers/backend_helper";
 import { useAuthError } from "../../../Components/Hooks/useAuthError";
 import { useCenterOptions } from "../../../Components/Hooks/useCenterOptions";
 import CreateSeriesModal from "../components/CreateSeriesModal";
+import { useLecturePermissions } from "../permissions";
 import {
-  START_DAYS,
+  HALVES,
   currentMonth,
   errorMessage,
   formatDate,
+  halfDaysText,
+  halfRange,
+  halfTag,
   hostNames,
   monthLabel,
   seriesEndKey,
-  seriesLabel,
+  seriesHalf,
+  seriesHalfTag,
   seriesStatus,
   shiftMonth,
   todayKey,
@@ -30,7 +35,9 @@ const SeriesCard = ({ s, onOpen }) => {
       <CardBody>
         <div className="d-flex justify-content-between align-items-start mb-2">
           <div>
-            <div className="text-muted small text-uppercase fw-semibold">{startsText(s.startKey)}</div>
+            <div className="text-muted small text-uppercase fw-semibold">
+              <span data-testid="series-half">{seriesHalfTag(s.startKey)}</span> · {startsText(s.startKey)}
+            </div>
             <h5 className="mb-0">{s.label}</h5>
           </div>
           <Badge color={status.color} className="fs-12">{status.text}</Badge>
@@ -48,16 +55,19 @@ const SeriesCard = ({ s, onOpen }) => {
   );
 };
 
-// A start day of the month (the 1st or 16th) with no series yet.
-const EmptySlot = ({ startKey, onCreate }) => {
-  const ended = seriesEndKey(startKey) < todayKey();
+// A half of the month (1st–15th or 16th–end) with no series started in it yet.
+// It can still take one while a series started on its last day would not have ended.
+const EmptySlot = ({ month, half, onCreate, canCreate }) => {
+  const ended = seriesEndKey(halfRange(month, half).toKey) < todayKey();
   return (
-    <Card className="h-100 shadow-none mb-0" style={{ border: "1px dashed var(--vz-border-color)" }}>
+    <Card className="h-100 shadow-none mb-0" style={{ border: "1px dashed var(--vz-border-color)" }} data-testid="empty-slot">
       <CardBody className="d-flex flex-column justify-content-center align-items-center text-center">
-        <div className="text-muted small text-uppercase fw-semibold">{startsText(startKey)}</div>
-        <div className="mb-2">{seriesLabel(startKey)}</div>
+        <div className="text-muted small text-uppercase fw-semibold">{halfTag(month, half)}</div>
+        <div className="mb-2">Start on any day, {halfDaysText(month, half)}</div>
         {ended ? (
           <span className="text-muted small">No series was run</span>
+        ) : !canCreate ? (
+          <span className="text-muted small">No series yet</span>
         ) : (
           <Button size="sm" color="primary" outline onClick={onCreate}>
             <i className="bx bx-plus me-1" />Create series
@@ -71,6 +81,7 @@ const EmptySlot = ({ startKey, onCreate }) => {
 const SeriesList = () => {
   const navigate = useNavigate();
   const handleAuthError = useAuthError();
+  const { canWrite } = useLecturePermissions();
   const [params, setParams] = useSearchParams();
   const centreOptionsAll = useCenterOptions({ includeAll: true });
   const centreOptions = useMemo(() => centreOptionsAll.filter((o) => o.value !== "ALL"), [centreOptionsAll]);
@@ -124,11 +135,12 @@ const SeriesList = () => {
   }, [list, centre, centreOptions]);
 
   // A centre's cards: every series running in the month (some started in an
-  // earlier month), plus an empty slot for this month's 1st or 16th if it has none.
+  // earlier month), plus an empty slot for each half of this month that has no
+  // series started in it (1st–15th, 16th–end).
   const slotsOf = (row) => {
-    const taken = new Set(row.series.map((s) => s.startKey));
-    const empty = START_DAYS.map((d) => `${month}-${d}`).filter((k) => !taken.has(k)).map((startKey) => ({ startKey, empty: true }));
-    return [...row.series, ...empty].sort((a, b) => a.startKey.localeCompare(b.startKey));
+    const taken = new Set(row.series.filter((s) => s.startKey.slice(0, 7) === month).map((s) => seriesHalf(s.startKey)));
+    const empty = HALVES.filter((h) => !taken.has(h)).map((half) => ({ empty: true, half, startKey: halfRange(month, half).fromKey }));
+    return [...row.series, ...empty].sort((a, b) => a.startKey.localeCompare(b.startKey) || (a.empty ? 1 : -1));
   };
 
   return (
@@ -136,11 +148,16 @@ const SeriesList = () => {
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
           <h4 className="mb-0">Therapy Lectures</h4>
-          <small className="text-muted">45-Day De-addiction Lecture Programme · a new 45-day series can start on the 1st and 16th</small>
+          <small className="text-muted">
+            45-Day De-addiction Lecture Programme · a series runs 45 days from the day it starts · one series per half-month
+            (started 1st–15th or 16th onwards)
+          </small>
         </div>
-        <Button color="primary" onClick={() => setCreating({ center: centre !== "ALL" ? centre : "", month })}>
-          <i className="bx bx-plus me-1" />New series
-        </Button>
+        {canWrite && (
+          <Button color="primary" onClick={() => setCreating({ center: centre !== "ALL" ? centre : "", month })}>
+            <i className="bx bx-plus me-1" />New series
+          </Button>
+        )}
       </div>
 
       <Card className="mb-3">
@@ -177,7 +194,7 @@ const SeriesList = () => {
       {!loading && rows.length === 0 && (
         <Card>
           <CardBody className="text-center text-muted py-5">
-            No lecture series running in {monthLabel(month)}. Pick a centre to create one.
+            No lecture series running in {monthLabel(month)}.{canWrite ? " Pick a centre to create one." : ""}
           </CardBody>
         </Card>
       )}
@@ -187,11 +204,13 @@ const SeriesList = () => {
           <h6 className="text-muted text-uppercase mb-2">{row.title}</h6>
           <Row className="g-3">
             {slotsOf(row).map((slot) => (
-              <Col md={6} xl={3} key={slot.startKey}>
+              <Col md={6} xl={3} key={slot.empty ? `empty-${slot.half}` : slot._id}>
                 {slot.empty ? (
                   <EmptySlot
-                    startKey={slot.startKey}
-                    onCreate={() => setCreating({ center: row.id, month, startDay: slot.startKey.slice(8) })}
+                    month={month}
+                    half={slot.half}
+                    canCreate={canWrite}
+                    onCreate={() => setCreating({ center: row.id, month, half: slot.half })}
                   />
                 ) : (
                   <SeriesCard s={slot} onOpen={() => navigate(`/therapy-lectures/${slot._id}`)} />
@@ -203,7 +222,7 @@ const SeriesList = () => {
       ))}
 
       <CreateSeriesModal
-        isOpen={Boolean(creating)}
+        isOpen={canWrite && Boolean(creating)}
         toggle={() => setCreating(null)}
         centreOptions={centreOptions}
         initial={creating}
