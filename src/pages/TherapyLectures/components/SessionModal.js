@@ -54,6 +54,8 @@ const SessionModal = ({
   programme,
   canManage,
   canEdit,
+  canDeletePhotos = false, // the role's DELETE level, on top of canEdit
+  viewOnly = false, // the role has no WRITE: nothing here can be changed
   suggestedActivity,
   onSessionChange,
 }) => {
@@ -178,7 +180,11 @@ const SessionModal = ({
         )}
         {!canEdit && !session.isFuture && (
           <div className="alert alert-light border py-2">
-            {session.canRun ? "This series has closed, so this session can't be changed." : "Only this session's hosts can mark it."}
+            {viewOnly
+              ? "You have view-only access to Therapy Lectures."
+              : session.canRun
+                ? "This series has closed, so this session can't be changed."
+                : "Only this session's hosts can mark it."}
           </div>
         )}
 
@@ -287,7 +293,7 @@ const SessionModal = ({
                 <a href={p.url} target="_blank" rel="noreferrer" title={`Added by ${p.uploadedBy?.name || "a host"}`}>
                   <img src={p.url} alt={p.originalName || "Session photo"} className="rounded border w-100 h-100" style={{ objectFit: "cover" }} />
                 </a>
-                {canEdit && (
+                {canEdit && canDeletePhotos && (
                   <button
                     type="button"
                     className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1 px-1 py-0"

@@ -8,6 +8,7 @@ import {
   OPD_VIEW,
   FORMS_VIEW,
   BELONGINGS_VIEW,
+  THERAPY_LECTURES_VIEW,
 } from "../../../Components/constants/patient";
 import SopPanel from "./Components/SopPanel";
 import SpecialRequirementsSummary from "./Components/SpecialRequirementsSummary";
@@ -31,6 +32,9 @@ import RamsayQuestion from "./Components/Ramsayquestion";
 import GCSQuestion from "./Components/Gcsquestion";
 import Morsefallquestion from "./Components/Morsefallquestion";
 import Belongings from "./Belongings";
+import TherapyLectures from "./TherapyLectures";
+import { usePermissions } from "../../../Components/Hooks/useRoles";
+import { PERMISSION_MODULE as LECTURES_MODULE } from "../../TherapyLectures/permissions";
 import CGISQuestion from "./Components/CGISQuestion";
 import COWSQuestion from "./Components/COWSQuestion";
 import AUDITQuestion from "./Components/AUDITQuestion";
@@ -52,15 +56,22 @@ const Views = (props) => {
   };
 
   const patientPage = props?.pageAccess?.find((pg) => pg.name === "Patient");
+  // The Therapy Lectures tab isn't a Patient sub-page: it needs READ on the
+  // THERAPY_LECTURES role module, as the lecture API does.
+  const microUser = localStorage.getItem("micrologin");
+  const token = microUser ? JSON.parse(microUser).token : null;
+  const { hasPermission } = usePermissions(token);
+  const hasLectures = hasPermission(LECTURES_MODULE, null, "READ");
 
   // ?view=BILLING lets another page deep-link straight to a tab — the POS
   // dashboard uses it to drop the cashier on the patient's billing. Only
   // honoured for tabs this user actually has access to.
   const [searchParams] = useSearchParams();
   const requestedView = (searchParams.get("view") || "").toUpperCase();
-  const allowedViews = (patientPage?.subAccess || []).map(
-    (sub) => vws[sub?.name],
-  );
+  const allowedViews = [
+    ...(patientPage?.subAccess || []).map((sub) => vws[sub?.name]),
+    ...(hasLectures ? [THERAPY_LECTURES_VIEW] : []),
+  ];
 
   const [view, setView] = useState(
     requestedView && allowedViews.includes(requestedView)
@@ -117,6 +128,7 @@ const Views = (props) => {
                                   : "";
                       return (
                         <Button
+                          key={sub.name}
                           outline={view !== vw}
                           onClick={() => handleView(vw)}
                         >
@@ -124,6 +136,14 @@ const Views = (props) => {
                         </Button>
                       );
                     })}
+                  {hasLectures && (
+                    <Button
+                      outline={view !== THERAPY_LECTURES_VIEW}
+                      onClick={() => handleView(THERAPY_LECTURES_VIEW)}
+                    >
+                      Therapy Lectures
+                    </Button>
+                  )}
                 </ButtonGroup>
                 <SpecialRequirementsSummary />
                 <AdmissionTypeSummary />
@@ -140,6 +160,7 @@ const Views = (props) => {
               {view === TIMELINE_VIEW && <Timeline view={view} />}
               {view === FORMS_VIEW && <AddmissionForms view={view} />}
               {view === BELONGINGS_VIEW && <Belongings view={view} />}
+              {view === THERAPY_LECTURES_VIEW && hasLectures && <TherapyLectures />}
             </div>
           </div>
         ) : (
