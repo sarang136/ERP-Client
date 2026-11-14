@@ -198,23 +198,53 @@ const MedicineChart = ({
         </div>
       ),
 
-      selector: (row) => (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            width: "100px",
-            margin: "0 auto",
-            textAlign: "center",
-          }}
-        >
-          <span>{formatDosage(row.dosageAndFrequency?.morning, row.dosageAndFrequency?.unit) || "-"}</span>
-          <span>-</span>
-          <span>{formatDosage(row.dosageAndFrequency?.evening, row.dosageAndFrequency?.unit) || "-"}</span>
-          <span>-</span>
-          <span>{formatDosage(row.dosageAndFrequency?.night, row.dosageAndFrequency?.unit) || "-"}</span>
-        </div>
-      ),
+      selector: (row) => {
+        const periods = row.schedules?.length ? row.schedules : null;
+        if (!periods) {
+          return (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                width: "100px",
+                margin: "0 auto",
+                textAlign: "center",
+              }}
+            >
+              <span>{formatDosage(row.dosageAndFrequency?.morning, row.dosageAndFrequency?.unit) || "-"}</span>
+              <span>-</span>
+              <span>{formatDosage(row.dosageAndFrequency?.evening, row.dosageAndFrequency?.unit) || "-"}</span>
+              <span>-</span>
+              <span>{formatDosage(row.dosageAndFrequency?.night, row.dosageAndFrequency?.unit) || "-"}</span>
+            </div>
+          );
+        }
+        return (
+          <div style={{ width: "100%" }}>
+            {periods.map((p, i) => (
+              <div
+                key={i}
+                style={{
+                  fontSize: "12px",
+                  lineHeight: "20px",
+                  padding: "1px 0",
+                  borderTop: i > 0 ? "1px dashed #dde3ee" : "none",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  width: "100px",
+                  margin: "0 auto",
+                }}
+              >
+                <span>{formatDosage(p.dosageAndFrequency?.morning, p.dosageAndFrequency?.unit) || "0"}</span>
+                <span>-</span>
+                <span>{formatDosage(p.dosageAndFrequency?.evening, p.dosageAndFrequency?.unit) || "0"}</span>
+                <span>-</span>
+                <span>{formatDosage(p.dosageAndFrequency?.night, p.dosageAndFrequency?.unit) || "0"}</span>
+              </div>
+            ))}
+          </div>
+        );
+      },
 
       wrap: true,
       center: true,
@@ -222,8 +252,29 @@ const MedicineChart = ({
     },
     {
       name: "Duration",
-      selector: (row, idx) =>
-        `${row?.duration} ${row?.unit} - ${getMedicineFrequencyLabel(row)}`,
+      selector: (row) => {
+        const periods = row.schedules?.length ? row.schedules : null;
+        if (!periods) {
+          return `${row?.duration} ${row?.unit} - ${getMedicineFrequencyLabel(row)}`;
+        }
+        return (
+          <div>
+            {periods.map((p, i) => (
+              <div
+                key={i}
+                style={{
+                  fontSize: "12px",
+                  lineHeight: "20px",
+                  padding: "1px 0",
+                  borderTop: i > 0 ? "1px dashed #dde3ee" : "none",
+                }}
+              >
+                {p.duration} {p.unit} - {getMedicineFrequencyLabel(p)}
+              </div>
+            ))}
+          </div>
+        );
+      },
       wrap: true,
     },
     ...(showDates
@@ -231,18 +282,58 @@ const MedicineChart = ({
         {
           name: "From",
           selector: (row) => {
-            const from = row?.startDate || baseDate;
-            return from ? moment(from).format("DD MMM, YYYY") : "-";
+            const periods = row.schedules?.length ? row.schedules : null;
+            if (!periods) {
+              const from = row?.startDate || baseDate;
+              return from ? moment(from).format("DD MMM, YYYY") : "-";
+            }
+            return (
+              <div>
+                {periods.map((p, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      fontSize: "12px",
+                      lineHeight: "20px",
+                      padding: "1px 0",
+                      borderTop: i > 0 ? "1px dashed #dde3ee" : "none",
+                    }}
+                  >
+                    {p.startDate ? moment(p.startDate).format("DD MMM, YYYY") : "-"}
+                  </div>
+                ))}
+              </div>
+            );
           },
           wrap: true,
         },
         {
           name: "To",
           selector: (row) => {
-            const from = row?.startDate || baseDate;
-            const to =
-              row?.endDate || (from ? getMedicineEndDate(from, row) : null);
-            return to ? moment(to).format("DD MMM, YYYY") : "Ongoing";
+            const periods = row.schedules?.length ? row.schedules : null;
+            if (!periods) {
+              const from = row?.startDate || baseDate;
+              const to =
+                row?.endDate || (from ? getMedicineEndDate(from, row) : null);
+              return to ? moment(to).format("DD MMM, YYYY") : "Ongoing";
+            }
+            return (
+              <div>
+                {periods.map((p, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      fontSize: "12px",
+                      lineHeight: "20px",
+                      padding: "1px 0",
+                      borderTop: i > 0 ? "1px dashed #dde3ee" : "none",
+                    }}
+                  >
+                    {p.endDate ? moment(p.endDate).format("DD MMM, YYYY") : "Ongoing"}
+                  </div>
+                ))}
+              </div>
+            );
           },
           wrap: true,
         },

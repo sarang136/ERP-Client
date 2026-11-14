@@ -44,7 +44,12 @@ import MedicineDropdown from "../Dropdowns/Medicine";
 import MedicineTable from "../Tables/MedicineForm";
 import SopSuggestedMedicines from "./SopSuggestedMedicines";
 import CurrentMedicinesPanel from "./CurrentMedicinesPanel";
-import { getCurrentUserId, getMedicineEndDate, drugIdentity } from "../../../helpers/currentMedicines";
+import {
+  getCurrentUserId,
+  getMedicineEndDate,
+  drugIdentity,
+  validateSchedulesSequential,
+} from "../../../helpers/currentMedicines";
 import { connect, useDispatch } from "react-redux";
 import {
   addGeneralPrescription,
@@ -459,6 +464,16 @@ const Prescription = ({
         ),
     }),
     onSubmit: async (values) => {
+      for (const med of medicines) {
+        if (med.schedules?.length > 1) {
+          const error = validateSchedulesSequential(med.schedules);
+          if (error) {
+            toast.error(`${error} (${med.medicine?.name || "a medicine"})`);
+            return;
+          }
+        }
+      }
+
       const formattedICD2 = Array.isArray(values.icdCode2)
         ? values.icdCode2.map((item) => ({
           code_id: item?.value,

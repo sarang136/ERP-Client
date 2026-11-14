@@ -99,6 +99,74 @@ export const buildCurrentMedicinesList = (charts, referenceDate = new Date()) =>
   );
 };
 
+// Normalizes a medicine's dosage periods: when it has `schedules` (2+
+// periods), returns them as-is; otherwise wraps its own flat fields as a
+// single-period list, so every consumer can iterate periods uniformly
+// without special-casing legacy/single-period medicines.
+export const getScheduleList = (medicine) => {
+  if (medicine?.schedules?.length) return medicine.schedules;
+  return [
+    {
+      startDate: medicine?.startDate,
+      endDate: medicine?.endDate,
+      duration: medicine?.duration,
+      unit: medicine?.unit,
+      dosageAndFrequency: medicine?.dosageAndFrequency,
+      frequency: medicine?.frequency,
+      frequencyType: medicine?.frequencyType,
+      monthlyDate: medicine?.monthlyDate,
+      intake: medicine?.intake,
+      instructions: medicine?.instructions,
+    },
+  ];
+};
+
+// Overall From/To span across every period — falls back to the medicine's
+// own flat dates for a legacy/single-period medicine.
+export const getMedicineOverallRange = (medicine) => {
+  const periods = getScheduleList(medicine);
+  const starts = periods.map((p) => p.startDate).filter(Boolean);
+  const ends = periods.map((p) => p.endDate).filter(Boolean);
+  return {
+    startDate: starts.length
+      ? starts.reduce((min, d) => (new Date(d) < new Date(min) ? d : min))
+      : null,
+    endDate:
+      ends.length === periods.length
+        ? ends.reduce((max, d) => (new Date(d) > new Date(max) ? d : max))
+        : null, // an open-ended period anywhere in the course keeps the whole thing open-ended
+  };
+};
+
+// Validates that a medicine's periods are sequential and non-overlapping:
+// sorted by startDate, every period but possibly the last needs an endDate,
+// and each next period must start strictly after the previous one ends.
+// Returns an error message, or null when valid. Mirrors the server-side
+// check of the same name so the two can never disagree.
+export const validateSchedulesSequential = (schedules) => {
+  const list = Array.isArray(schedules) ? schedules : [];
+  if (list.length < 2) return null;
+
+  const sorted = [...list].sort(
+    (a, b) => new Date(a.startDate) - new Date(b.startDate),
+  );
+
+  for (let i = 0; i < sorted.length; i += 1) {
+    const period = sorted[i];
+    const isLast = i === sorted.length - 1;
+    if (!period.startDate) return `Period ${i + 1} is missing a From date.`;
+    if (!isLast && !period.endDate) return `Period ${i + 1} is missing a To date.`;
+    if (!isLast) {
+      const next = sorted[i + 1];
+      if (new Date(next.startDate) <= new Date(period.endDate)) {
+        return `Period ${i + 2} must start after period ${i + 1} ends.`;
+      }
+    }
+  }
+
+  return null;
+};
+
 export const getCurrentUserId = () => {
   try {
     return JSON.parse(localStorage.getItem("micrologin"))?.user?._id || null;

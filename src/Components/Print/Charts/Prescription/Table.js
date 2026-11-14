@@ -59,7 +59,20 @@ const PrescriptionTable = ({ medicines }) => {
         {(medicines || []).map((item, index) => {
           const medicine = item?.medicine || {};
           const freq = item?.dosageAndFrequency || {};
+          const multiplePeriods = item?.schedules?.length > 1 ? item.schedules : null;
           const key = safe(item?._id?.$oid || item?._id || index);
+
+          const drugName = (
+            <Text style={{ ...styles.col5, textTransform: "capitalize" }}>
+              <Text style={{ textTransform: "uppercase" }}>
+                {medicine?.type ? `${safe(medicine.type)} ` : ""}
+              </Text>
+              {safe(medicine?.name)} {safe(medicine?.strength)}{" "}
+              <Text style={{ textTransform: "uppercase" }}>
+                {safe(medicine?.unit)}
+              </Text>
+            </Text>
+          );
 
           return (
           <View
@@ -70,24 +83,45 @@ const PrescriptionTable = ({ medicines }) => {
               paddingBottom: 5,
             }}
           >
-            <View style={styles.row}>
-              <Text style={{ ...styles.col5, textTransform: "capitalize" }}>
-                <Text style={{ textTransform: "uppercase" }}>
-                  {medicine?.type ? `${safe(medicine.type)} ` : ""}
+            {!multiplePeriods ? (
+              <View style={styles.row}>
+                {drugName}
+                <Text style={styles.col4}>
+                  {safe(formatDosage(freq?.morning, freq?.unit))}-{safe(formatDosage(freq?.evening, freq?.unit))}-{safe(formatDosage(freq?.night, freq?.unit))}
                 </Text>
-                {safe(medicine?.name)} {safe(medicine?.strength)}{" "}
-                <Text style={{ textTransform: "uppercase" }}>
-                  {safe(medicine?.unit)}
+                <Text style={styles.col4}>
+                  {safe(item?.duration)} {safe(item?.unit)}
                 </Text>
-              </Text>
-              <Text style={styles.col4}>
-                {safe(formatDosage(freq?.morning, freq?.unit))}-{safe(formatDosage(freq?.evening, freq?.unit))}-{safe(formatDosage(freq?.night, freq?.unit))}
-              </Text>
-              <Text style={styles.col4}>
-                {safe(item?.duration)} {safe(item?.unit)}
-              </Text>
-              <Text style={styles.col4}>{safe(item?.intake)}</Text>
-            </View>
+                <Text style={styles.col4}>{safe(item?.intake)}</Text>
+              </View>
+            ) : (
+              <>
+                {drugName}
+                {multiplePeriods.map((period, pIdx) => {
+                  const periodFreq = period?.dosageAndFrequency || {};
+                  return (
+                    <View
+                      key={pIdx}
+                      style={{
+                        ...styles.row,
+                        borderTop: pIdx > 0 ? "1px dashed #999" : "none",
+                        paddingTop: pIdx > 0 ? 2 : 0,
+                        marginTop: pIdx > 0 ? 2 : 0,
+                      }}
+                    >
+                      <Text style={styles.col5}></Text>
+                      <Text style={styles.col4}>
+                        {safe(formatDosage(periodFreq?.morning, periodFreq?.unit))}-{safe(formatDosage(periodFreq?.evening, periodFreq?.unit))}-{safe(formatDosage(periodFreq?.night, periodFreq?.unit))}
+                      </Text>
+                      <Text style={styles.col4}>
+                        {safe(period?.duration)} {safe(period?.unit)}
+                      </Text>
+                      <Text style={styles.col4}>{safe(period?.intake)}</Text>
+                    </View>
+                  );
+                })}
+              </>
+            )}
             <Text style={{ paddingTop: 5 }}>
               instructions: {safe(item?.instructions)}
             </Text>

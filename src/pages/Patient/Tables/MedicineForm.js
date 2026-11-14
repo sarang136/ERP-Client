@@ -30,7 +30,13 @@ import {
   normalizeMedicineFrequency,
   PRESET_MEDICINE_FREQUENCIES,
 } from "../../../helpers/prescriptionFrequency";
-import { getMedicineEndDate, getDaysBetween, drugIdentity } from "../../../helpers/currentMedicines";
+import {
+  getMedicineEndDate,
+  getDaysBetween,
+  drugIdentity,
+  getScheduleList,
+  validateSchedulesSequential,
+} from "../../../helpers/currentMedicines";
 import { toast } from "react-toastify";
 import { isPilotCenterRow } from "../../../helpers/pilotCenter";
 import PrescriptionPharmacyStock from "./PrescriptionPharmacyStock";
@@ -209,6 +215,152 @@ const Medicine = ({
     setMedicines(drugsTable);
   };
 
+  // Multiple dosage periods for one medicine (e.g. 500mg day 1-5, then 250mg
+  // day 6-10). A medicine only ever carries `schedules` once it has 2+
+  // periods — collapsing back to 1 period deletes the key again, so a
+  // medicine with a single period always saves in the original flat shape.
+  const addSchedulePeriod = (idx) => {
+    const drugsTable = [...medicines];
+    const med = { ...drugsTable[idx] };
+    const existingPeriods = getScheduleList(med);
+    const last = existingPeriods[existingPeriods.length - 1];
+    const prevEnd = last?.endDate ? new Date(last.endDate) : new Date();
+    const start = new Date(prevEnd);
+    start.setDate(start.getDate() + 1);
+    const newPeriod = {
+      startDate: start,
+      duration: "30",
+      unit: "Day (s)",
+      dosageAndFrequency: {
+        morning: "",
+        evening: "",
+        night: "",
+        unit: last?.dosageAndFrequency?.unit || "",
+      },
+      frequency: 1,
+      frequencyType: "interval",
+      intake: last?.intake || "After food",
+      instructions: last?.instructions || "",
+    };
+    newPeriod.endDate = getMedicineEndDate(start, newPeriod);
+
+    med.schedules = [...existingPeriods, newPeriod];
+    drugsTable[idx] = med;
+    medicinesRef.current = drugsTable;
+    setMedicines(drugsTable);
+  };
+
+  const removeSchedulePeriod = (idx, pIdx) => {
+    const drugsTable = [...medicines];
+    const med = { ...drugsTable[idx] };
+    const periods = [...(med.schedules || [])];
+    periods.splice(pIdx, 1);
+
+    if (periods.length <= 1) {
+      // Back down to a single period: drop `schedules` entirely and restore
+      // the original flat fields so this medicine saves in the old shape.
+      const remaining = periods[0] || getScheduleList(med)[0];
+      delete med.schedules;
+      med.startDate = remaining.startDate;
+      med.endDate = remaining.endDate;
+      med.duration = remaining.duration;
+      med.unit = remaining.unit;
+      med.dosageAndFrequency = remaining.dosageAndFrequency;
+      med.frequency = remaining.frequency;
+      med.frequencyType = remaining.frequencyType;
+      med.monthlyDate = remaining.monthlyDate;
+      med.intake = remaining.intake;
+      med.instructions = remaining.instructions;
+    } else {
+      med.schedules = periods;
+    }
+
+    drugsTable[idx] = med;
+    medicinesRef.current = drugsTable;
+    setMedicines(drugsTable);
+  };
+
+  const handlePeriodChange = (idx, pIdx, prop, value) => {
+    const drugsTable = [...medicinesRef.current];
+    const med = { ...drugsTable[idx] };
+    const periods = [...(med.schedules || [])];
+    let period = { ...periods[pIdx] };
+
+    if (prop === "morning" || prop === "evening" || prop === "night" || prop === "doseUnit") {
+      period.dosageAndFrequency = {
+        ...period.dosageAndFrequency,
+        [prop === "doseUnit" ? "unit" : prop]: value,
+      };
+    } else if (prop === "frequency") {
+      period.frequencyPreset = "custom";
+      period.frequencyType = "interval";
+      period.frequency = value;
+    } else if (prop === "monthlyDate") {
+      period.monthlyDate = value;
+    } else if (prop === "frequencyPreset") {
+      period.frequencyPreset = value;
+      if (value === "monthly") {
+        period.frequencyType = "monthly";
+        if (!period.monthlyDate) period.monthlyDate = 1;
+      } else if (value === "custom") {
+        period.frequencyType = "interval";
+        const currentFrequency = normalizeMedicineFrequency(period.frequency);
+        period.frequency = PRESET_MEDICINE_FREQUENCIES.some(
+          ({ value: v }) => v === currentFrequency,
+        )
+          ? ""
+          : currentFrequency;
+      } else {
+        period.frequencyType = "interval";
+        period.frequency = normalizeMedicineFrequency(value);
+      }
+    } else {
+      period[prop] = value;
+    }
+
+    if (prop === "duration" || prop === "unit") {
+      period.endDate = getMedicineEndDate(period.startDate, period);
+    }
+
+    periods[pIdx] = period;
+    med.schedules = periods;
+    drugsTable[idx] = med;
+    medicinesRef.current = drugsTable;
+    setMedicines(drugsTable);
+  };
+
+  const handlePeriodStartDateChange = (idx, pIdx, date) => {
+    const drugsTable = [...medicinesRef.current];
+    const med = { ...drugsTable[idx] };
+    const periods = [...(med.schedules || [])];
+    const period = { ...periods[pIdx], startDate: date };
+    if (period.endDate) {
+      period.duration = String(getDaysBetween(date, period.endDate));
+      period.unit = "Day (s)";
+    } else {
+      period.endDate = getMedicineEndDate(date, period);
+    }
+    periods[pIdx] = period;
+    med.schedules = periods;
+    drugsTable[idx] = med;
+    medicinesRef.current = drugsTable;
+    setMedicines(drugsTable);
+  };
+
+  const handlePeriodEndDateChange = (idx, pIdx, date) => {
+    const drugsTable = [...medicinesRef.current];
+    const med = { ...drugsTable[idx] };
+    const periods = [...(med.schedules || [])];
+    const period = { ...periods[pIdx], endDate: date };
+    period.duration = String(getDaysBetween(period.startDate, date));
+    period.unit = "Day (s)";
+    periods[pIdx] = period;
+    med.schedules = periods;
+    drugsTable[idx] = med;
+    medicinesRef.current = drugsTable;
+    setMedicines(drugsTable);
+  };
+
   const removeDrug = (idx) => {
     const list = [...medicines];
     list.splice(idx, 1);
@@ -306,7 +458,9 @@ const Medicine = ({
               items={medicines.map((_, idx) => idx)}
               strategy={verticalListSortingStrategy}
             >
-              {(medicines || []).map((medicine, idx) => (
+              {(medicines || []).map((medicine, idx) => {
+                const periods = medicine.schedules?.length ? medicine.schedules : null;
+                return (
                 <div
                   key={idx}
                   className="pb-2 mb-2"
@@ -482,10 +636,11 @@ const Medicine = ({
                     </div>
                   </Col> */}
                   <Col xs={3}>
+                    {!periods ? (
                     <div className="d-flex align-items-center">
 
                       <div className="d-flex flex-column align-items-center">
-                        <div className="fw-bold mb-1">Mor</div>
+                        <div className="fw-bold mb-1" style={{ textTransform: "uppercase" }}>Mor</div>
                         <Input
                           type="number"
                           min="0"
@@ -502,7 +657,7 @@ const Medicine = ({
                       <span className="mx-2">-</span>
 
                       <div className="d-flex flex-column align-items-center">
-                        <div className="fw-bold mb-1">Aft</div>
+                        <div className="fw-bold mb-1" style={{ textTransform: "uppercase" }}>Aft</div>
                         <Input
                           type="number"
                           min="0"
@@ -519,7 +674,7 @@ const Medicine = ({
                       <span className="mx-2">-</span>
 
                       <div className="d-flex flex-column align-items-center">
-                        <div className="fw-bold mb-1">Eve</div>
+                        <div className="fw-bold mb-1" style={{ textTransform: "uppercase" }}>Eve</div>
                         <Input
                           type="number"
                           min="0"
@@ -534,7 +689,7 @@ const Medicine = ({
                       </div>
 
                       <div className="d-flex flex-column align-items-center ms-2">
-                        <div className="fw-bold mb-1" style={{ fontSize: "11px" }}>Unit</div>
+                        <div className="fw-bold mb-1" style={{ fontSize: "11px", textTransform: "uppercase" }}>Unit</div>
                         <Input
                           type="text"
                           bsSize="sm"
@@ -552,6 +707,11 @@ const Medicine = ({
                         />
                       </div>
                     </div>
+                    ) : (
+                      <div className="text-muted fst-italic" style={{ fontSize: "12px" }}>
+                        {periods.length} dosage periods — see below
+                      </div>
+                    )}
                   </Col>
                   <Col xs={2} className="ps-3">
                     <div>
@@ -581,6 +741,8 @@ const Medicine = ({
                     </div>
                   </Col>
                   <Col xs={2} className="">
+                    {!periods ? (
+                    <>
                     <div className="d-flex flex-nowrap">
                       <div className="position-relative">
                         <Input
@@ -642,8 +804,25 @@ const Medicine = ({
                         />
                       </div>
                     )}
+                    </>
+                    ) : (
+                      <span className="badge bg-info-subtle text-info">
+                        {periods.length} periods
+                      </span>
+                    )}
+                    {showDates && !periods && !medicine.locked && (
+                      <button
+                        type="button"
+                        className="btn btn-link btn-sm p-0 d-flex align-items-center gap-1 mt-2"
+                        onClick={() => addSchedulePeriod(idx)}
+                      >
+                        <i className="ri-add-circle-line"></i>
+                        Add dosage period
+                      </button>
+                    )}
                   </Col>
                   <Col xs={2} className="">
+                    {!periods ? (
                     <div>
                       <Input
                         name="frequencyPreset"
@@ -714,6 +893,11 @@ const Medicine = ({
                         {getMedicineFrequencyLabel(medicine)}
                       </div>
                     </div>
+                    ) : (
+                      <div className="text-muted fst-italic" style={{ fontSize: "12px" }}>
+                        Varies by period
+                      </div>
+                    )}
                   </Col>
                   <Col xs={1}>
                     {medicine.locked ? (
@@ -732,11 +916,293 @@ const Medicine = ({
                     ) : (
                       <i
                         onClick={() => removeDrug(idx)}
-                        className="btn text-black btn-sm btn-outline-danger ri-delete-bin-6-line"
+                        className="btn btn-sm btn-outline-danger ri-delete-bin-6-line"
                       ></i>
                     )}
                   </Col>
                 </SortableMedicine>
+                {periods && (
+                  <Row className="mt-1">
+                    <Col xs={12}>
+                      <div
+                        className="p-2 rounded"
+                        style={{ background: "#f4f7fc", border: "1px solid #dde3ee" }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <span
+                            className="fw-semibold text-primary text-uppercase"
+                            style={{ fontSize: "10px", letterSpacing: "0.4px" }}
+                          >
+                            Dosage periods
+                          </span>
+                          {!medicine.locked && (
+                            <button
+                              type="button"
+                              className="btn btn-link btn-sm p-0 d-flex align-items-center gap-1"
+                              style={{ fontSize: "12px" }}
+                              onClick={() => addSchedulePeriod(idx)}
+                            >
+                              <i className="ri-add-line"></i>
+                              Add period
+                            </button>
+                          )}
+                        </div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "26px 240px 220px 150px 140px 90px 28px",
+                            columnGap: "10px",
+                            fontSize: "9px",
+                            letterSpacing: "0.3px",
+                            color: "#8a93a6",
+                            textTransform: "uppercase",
+                            paddingBottom: "2px",
+                          }}
+                        >
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                          <span>Duration</span>
+                          <span>Frequency</span>
+                          <span></span>
+                          <span></span>
+                        </div>
+
+                        {periods.map((period, pIdx) => {
+                          const freqPreset =
+                            period.frequencyPreset ?? getMedicineFrequencyPreset(period);
+                          return (
+                          <div
+                            key={pIdx}
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "26px 240px 220px 150px 140px 90px 28px",
+                              columnGap: "10px",
+                              alignItems: "end",
+                              paddingTop: "6px",
+                              paddingBottom: "6px",
+                              borderTop: pIdx > 0 ? "1px dashed #dde3ee" : "none",
+                            }}
+                          >
+                            <span
+                              className="badge bg-info-subtle text-info"
+                              style={{ fontSize: "10px" }}
+                            >
+                              P{pIdx + 1}
+                            </span>
+
+                            <div className="d-flex align-items-end gap-1">
+                              <div className="d-flex flex-column">
+                                <span style={{ fontSize: "8px", color: "#8a93a6", textTransform: "uppercase" }}>
+                                  From
+                                </span>
+                                <Flatpicker
+                                  value={period.startDate || ""}
+                                  onChange={([date]) =>
+                                    handlePeriodStartDateChange(idx, pIdx, date)
+                                  }
+                                  options={{ dateFormat: "d M, Y" }}
+                                  className="form-control form-control-sm"
+                                  style={{ width: "112px" }}
+                                  disabled={medicine.locked}
+                                />
+                              </div>
+                              <span className="text-muted mb-1">&rarr;</span>
+                              <div className="d-flex flex-column">
+                                <span style={{ fontSize: "8px", color: "#8a93a6", textTransform: "uppercase" }}>
+                                  To
+                                </span>
+                                <Flatpicker
+                                  value={period.endDate || ""}
+                                  onChange={([date]) =>
+                                    handlePeriodEndDateChange(idx, pIdx, date)
+                                  }
+                                  options={{ dateFormat: "d M, Y" }}
+                                  className="form-control form-control-sm"
+                                  style={{ width: "112px" }}
+                                  disabled={medicine.locked}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="d-flex align-items-end gap-1">
+                              <div className="d-flex flex-column">
+                                <span style={{ fontSize: "8px", color: "#8a93a6", textTransform: "uppercase" }}>
+                                  Mor
+                                </span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  bsSize="sm"
+                                  style={{ width: "42px" }}
+                                  value={period.dosageAndFrequency?.morning || ""}
+                                  onChange={(e) =>
+                                    handlePeriodChange(idx, pIdx, "morning", e.target.value)
+                                  }
+                                  disabled={medicine.locked}
+                                />
+                              </div>
+                              <span className="text-muted mb-1">-</span>
+                              <div className="d-flex flex-column">
+                                <span style={{ fontSize: "8px", color: "#8a93a6", textTransform: "uppercase" }}>
+                                  Aft
+                                </span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  bsSize="sm"
+                                  style={{ width: "42px" }}
+                                  value={period.dosageAndFrequency?.evening || ""}
+                                  onChange={(e) =>
+                                    handlePeriodChange(idx, pIdx, "evening", e.target.value)
+                                  }
+                                  disabled={medicine.locked}
+                                />
+                              </div>
+                              <span className="text-muted mb-1">-</span>
+                              <div className="d-flex flex-column">
+                                <span style={{ fontSize: "8px", color: "#8a93a6", textTransform: "uppercase" }}>
+                                  Eve
+                                </span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  bsSize="sm"
+                                  style={{ width: "42px" }}
+                                  value={period.dosageAndFrequency?.night || ""}
+                                  onChange={(e) =>
+                                    handlePeriodChange(idx, pIdx, "night", e.target.value)
+                                  }
+                                  disabled={medicine.locked}
+                                />
+                              </div>
+                              <div className="d-flex flex-column">
+                                <span style={{ fontSize: "8px", color: "#8a93a6", textTransform: "uppercase" }}>
+                                  Unit
+                                </span>
+                                <Input
+                                  type="text"
+                                  bsSize="sm"
+                                  style={{ width: "46px" }}
+                                  value={period.dosageAndFrequency?.unit || ""}
+                                  placeholder="ml, drop"
+                                  onChange={(e) =>
+                                    handlePeriodChange(idx, pIdx, "doseUnit", e.target.value)
+                                  }
+                                  disabled={medicine.locked}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="d-flex align-items-center gap-1">
+                              <Input
+                                type="number"
+                                bsSize="sm"
+                                title="Duration"
+                                style={{ width: "48px" }}
+                                value={period.duration || ""}
+                                onChange={(e) =>
+                                  handlePeriodChange(idx, pIdx, "duration", e.target.value)
+                                }
+                                disabled={medicine.locked}
+                              />
+                              <Input
+                                type="select"
+                                bsSize="sm"
+                                style={{ width: "92px" }}
+                                value={period.unit || "Day (s)"}
+                                onChange={(e) =>
+                                  handlePeriodChange(idx, pIdx, "unit", e.target.value)
+                                }
+                                disabled={medicine.locked}
+                              >
+                                <option>Day (s)</option>
+                                <option>Month (s)</option>
+                                <option>Year (s)</option>
+                              </Input>
+                            </div>
+
+                            <Input
+                              type="select"
+                              bsSize="sm"
+                              title={getMedicineFrequencyLabel(period)}
+                              value={freqPreset}
+                              onChange={(e) =>
+                                handlePeriodChange(idx, pIdx, "frequencyPreset", e.target.value)
+                              }
+                              disabled={medicine.locked}
+                            >
+                              <option value="1">Daily</option>
+                              <option value="2">Alternate days</option>
+                              <option value="7">Every 7 days</option>
+                              <option value="15">Every 15 days</option>
+                              <option value="28">Every 28 days</option>
+                              <option value="30">Every 30 days</option>
+                              <option value="monthly">Specific date/month</option>
+                              <option value="custom">Custom days</option>
+                            </Input>
+
+                            {freqPreset === "monthly" ? (
+                              <Input
+                                type="number"
+                                min="1"
+                                max="31"
+                                placeholder="Day (1-31)"
+                                bsSize="sm"
+                                value={period.monthlyDate ?? ""}
+                                onChange={(e) =>
+                                  handlePeriodChange(idx, pIdx, "monthlyDate", e.target.value)
+                                }
+                                disabled={medicine.locked}
+                              />
+                            ) : freqPreset === "custom" ? (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                placeholder="Days"
+                                bsSize="sm"
+                                value={period.frequency ?? ""}
+                                onChange={(e) =>
+                                  handlePeriodChange(idx, pIdx, "frequency", e.target.value)
+                                }
+                                disabled={medicine.locked}
+                              />
+                            ) : (
+                              <span></span>
+                            )}
+
+                            {!medicine.locked && (
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger py-0 px-1"
+                                onClick={() => removeSchedulePeriod(idx, pIdx)}
+                                title="Remove this period"
+                              >
+                                <i className="ri-delete-bin-6-line"></i>
+                              </button>
+                            )}
+                          </div>
+                          );
+                        })}
+
+                        {validateSchedulesSequential(periods) && (
+                          <div
+                            className="alert alert-danger py-1 px-2 mt-1 mb-0 d-flex align-items-center gap-1"
+                            style={{ fontSize: "12px" }}
+                          >
+                            <i className="ri-error-warning-line"></i>
+                            {validateSchedulesSequential(periods)}
+                          </div>
+                        )}
+                      </div>
+                    </Col>
+                  </Row>
+                )}
                 {isPilotCenter && !medicine.locked && (
                   <Row className="mt-1">
                     <Col xs={12}>
@@ -750,7 +1216,8 @@ const Medicine = ({
                   </Row>
                 )}
                 </div>
-              ))}
+                );
+              })}
             </SortableContext>
           </DndContext>
         </Row>

@@ -179,7 +179,9 @@ const PrescriptionTable = ({ medicines }) => {
           {/* <Text style={styles.col2}>Qty</Text> */}
         </View>
         <View style={{ ...styles.tableBody }}>
-          {(medicines || []).map((item, idx) => (
+          {(medicines || []).map((item, idx) => {
+            const periods = item?.schedules?.length > 1 ? item.schedules : [item];
+            return (
             <View
               key={item._id}
               style={{
@@ -188,28 +190,41 @@ const PrescriptionTable = ({ medicines }) => {
                 paddingBottom: 5,
               }}
             >
-              <View style={styles.row}>
+              {periods.map((period, pIdx) => (
+              <View
+                style={{
+                  ...styles.row,
+                  borderTop: pIdx > 0 ? "1px dashed #999" : "none",
+                  paddingTop: pIdx > 0 ? 2 : 0,
+                  marginTop: pIdx > 0 ? 2 : 0,
+                }}
+                key={pIdx}
+              >
                 <Text style={{ ...styles.col1, ...styles.fontBold }}>
-                  {idx + 1}
+                  {pIdx === 0 ? idx + 1 : ""}
                 </Text>
                 <Text style={{ ...styles.col5, ...styles.fontBold }}>
-                  <Text style={{ textTransform: "uppercase" }}>
-                    {item.medicine.type ? `${item.medicine.type} ` : ""}
-                  </Text>{" "}
-                  {item.medicine?.name} {item.medicine.strength || ""}{" "}
+                  {pIdx === 0 && (
+                    <>
+                      <Text style={{ textTransform: "uppercase" }}>
+                        {item.medicine.type ? `${item.medicine.type} ` : ""}
+                      </Text>{" "}
+                      {item.medicine?.name} {item.medicine.strength || ""}{" "}
+                    </>
+                  )}
                   {/* <Text style={{ textTransform: "uppercase" }}>
                     {item.medicine.unit || ""}
                   </Text> */}
                 </Text>
                 <View style={{ ...styles.col3, flexDirection: "row" }}>
                   <View style={{ flex: 1, alignItems: "center" }}>
-                    <Text>{formatDosage(item.dosageAndFrequency?.morning, item.dosageAndFrequency?.unit) || "-"}</Text>
+                    <Text>{formatDosage(period.dosageAndFrequency?.morning, period.dosageAndFrequency?.unit) || "-"}</Text>
                   </View>
                   <View style={{ flex: 1, alignItems: "center" }}>
-                    <Text>{formatDosage(item.dosageAndFrequency?.evening, item.dosageAndFrequency?.unit) || "-"}</Text>
+                    <Text>{formatDosage(period.dosageAndFrequency?.evening, period.dosageAndFrequency?.unit) || "-"}</Text>
                   </View>
                   <View style={{ flex: 1, alignItems: "center" }}>
-                    <Text>{formatDosage(item.dosageAndFrequency?.night, item.dosageAndFrequency?.unit) || "-"}</Text>
+                    <Text>{formatDosage(period.dosageAndFrequency?.night, period.dosageAndFrequency?.unit) || "-"}</Text>
                   </View>
                 </View>
 
@@ -220,7 +235,7 @@ const PrescriptionTable = ({ medicines }) => {
                       // ...styles.fontSizeMd,
                     }}
                   >
-                    {item.intake}{" - "}{getMedicineFrequencyLabel(item)}{" - "}{item.duration} {item.unit}
+                    {period.intake}{" - "}{getMedicineFrequencyLabel(period)}{" - "}{period.duration} {period.unit}
                   </Text>
                 </View>
 
@@ -228,6 +243,7 @@ const PrescriptionTable = ({ medicines }) => {
                   {item.intake}
                 </Text> */}
               </View>
+              ))}
               {/* <View
                 style={{
                   ...styles.row,
@@ -275,7 +291,8 @@ const PrescriptionTable = ({ medicines }) => {
                 <Text>{item.intake || "Intake"}</Text>
               </View> */}
             </View>
-          ))}
+            );
+          })}
         </View>
       </View>
     </React.Fragment>

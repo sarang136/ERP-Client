@@ -72,11 +72,26 @@ const MedicineApprovalRow = ({
                             style={canToggle ? { cursor: "pointer" } : undefined}
                             onClick={onRowToggle}
                         >
-                            {med.dosageAndFrequency?.morning || 0}-
-                            {med.dosageAndFrequency?.evening || 0}-
-                            {med.dosageAndFrequency?.night || 0} · {med.duration} {med.unit}
+                            {med.schedules?.length > 1 ? (
+                                med.schedules.map((period, pIdx) => (
+                                    <div key={pIdx} className="d-flex">
+                                        <span style={{ width: "72px", flexShrink: 0, whiteSpace: "nowrap" }}>
+                                            {period.dosageAndFrequency?.morning || 0}-
+                                            {period.dosageAndFrequency?.evening || 0}-
+                                            {period.dosageAndFrequency?.night || 0}
+                                        </span>
+                                        <span style={{ whiteSpace: "nowrap" }}>· {period.duration} {period.unit}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <>
+                                    {med.dosageAndFrequency?.morning || 0}-
+                                    {med.dosageAndFrequency?.evening || 0}-
+                                    {med.dosageAndFrequency?.night || 0} · {med.duration} {med.unit}
+                                </>
+                            )}
                             {!readOnly &&
-                                ` · Total qty (by duration): ${med.totalQuantity}${
+                                ` · Total qty${med.schedules?.length > 1 ? " (all periods)" : " (by duration)"}: ${med.totalQuantity}${
                                     med.partiallyGiven ? ` (Remaining: ${med.remainingQuantity})` : ""
                                 }`}
                         </div>
