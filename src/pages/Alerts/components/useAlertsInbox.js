@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import { startOfDay, endOfDay } from "date-fns";
 import {
   getAllSopAlerts,
   markSopAlertRead,
@@ -9,28 +8,24 @@ import {
   addAlertNote,
 } from "../../../helpers/backend_helper";
 import { dateLabel } from "./alertUtils";
+import { DEFAULT_RESOLVED_STATE } from "./alertConstants";
 
 const SERVER_DEBOUNCE_MS = 350;
 const DEFAULT_PAGE_SIZE = 50;
 
-const todayDefaults = () => {
-  const now = new Date();
-  return {
-    dateFrom: startOfDay(now).toISOString(),
-    dateTo: endOfDay(now).toISOString(),
-  };
-};
-
+// The page opens on every unresolved alert: no date range, Resolution =
+// Unresolved. Picking a date range or another Resolution narrows from there.
 const initialFilters = () => ({
   patients: [],         // array of { value, label } from AsyncSelect
   rules: [],            // array of { value, label } from AsyncSelect
   categories: [],       // array of SOP category values (empty = all)
   centers: [],          // array of center _ids (empty = all accessible)
   roles: [],            // array of User.role values the alert was routed to (empty = all)
-  ...todayDefaults(),
+  dateFrom: null,       // ISO start of the picked range; null = all dates
+  dateTo: null,         // ISO end of the picked range; null = all dates
   readState: "all",     // all | unread | read
   phase: "all",         // all | IMMEDIATE | DELAYED
-  resolvedState: "all", // all | resolved | unresolved
+  resolvedState: DEFAULT_RESOLVED_STATE, // all | resolved | unresolved
   resolvedBy: "all",    // all | staff | system — who closed it; all by default
   // all | SOP_RULE | BASELINE_INVESTIGATION. What produced the alert. Needed
   // because a baseline-package alert has no `rule`, so it can never be reached
@@ -104,7 +99,7 @@ export const useAlertsInbox = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  // Unified server-side filter state. Defaults: today's date range, no
+  // Unified server-side filter state. Defaults: unresolved only, any date, no
   // patient/rule restriction, all severities/phases/read-states.
   const [serverFilters, setServerFilters] = useState(initialFilters);
 
@@ -148,9 +143,8 @@ export const useAlertsInbox = () => {
     setServerFilters((p) => ({ ...p, [key]: value }));
   }, []);
 
-  // "Clear all" returns to the same defaults the page boots with — today's
-  // window stays on so the user is never staring at "0 alerts ever" by
-  // accident; if they want all-time they can manually clear the date range.
+  // "Clear all" returns to the same defaults the page boots with: every
+  // unresolved alert, any date.
   const clearServerFilters = useCallback(() => {
     setServerFilters(initialFilters());
   }, []);

@@ -7,7 +7,11 @@ import { Button, ButtonGroup, Row, Col } from "reactstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { usePermissions } from "../../../Components/Hooks/useRoles";
 import { fetchAllCenters } from "../../../store/features/center/centerSlice";
-import { SEVERITIES, SEVERITY_COLOR } from "./alertConstants";
+import {
+  DEFAULT_RESOLVED_STATE,
+  SEVERITIES,
+  SEVERITY_COLOR,
+} from "./alertConstants";
 import { endOfDay, startOfDay } from "date-fns";
 import {
   getSearchPatients,
@@ -134,7 +138,7 @@ const AlertsFilters = ({
     !!serverFilters.dateTo ||
     serverFilters.readState !== "all" ||
     serverFilters.phase !== "all" ||
-    serverFilters.resolvedState !== "all" ||
+    serverFilters.resolvedState !== DEFAULT_RESOLVED_STATE ||
     (serverFilters.resolvedBy || "all") !== "all" ||
     serverFilters.source !== "all" ||
     serverFilters.severity?.length > 0;
@@ -184,6 +188,12 @@ const AlertsFilters = ({
     if (!dateFrom || !dateTo) return;
     onServerFilterChange("dateFrom", startOfDay(dateFrom).toISOString());
     onServerFilterChange("dateTo", endOfDay(dateTo).toISOString());
+  };
+
+  // Back to all dates (the default).
+  const clearDates = () => {
+    onServerFilterChange("dateFrom", null);
+    onServerFilterChange("dateTo", null);
   };
 
   const flatpickrValue = serverFilters.dateFrom
@@ -255,11 +265,25 @@ const AlertsFilters = ({
           />
         </Col>
         <Col md={3}>
-          <small className="text-muted d-block mb-1">Date range</small>
+          <small className="text-muted d-flex align-items-center mb-1">
+            Date range
+            {serverFilters.dateFrom && (
+              <Button
+                color="link"
+                size="sm"
+                className="p-0 ms-auto"
+                style={{ fontSize: "inherit" }}
+                onClick={clearDates}
+              >
+                <i className="bx bx-x me-1" />
+                All dates
+              </Button>
+            )}
+          </small>
           <Flatpickr
             key={serverFilters.dateFrom + "-" + serverFilters.dateTo}
             className="form-control form-control-sm"
-            placeholder="Pick a date range..."
+            placeholder="All dates"
             options={{ mode: "range", dateFormat: "Y-m-d" }}
             value={flatpickrValue}
             onChange={handleDateChange}

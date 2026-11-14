@@ -29,3 +29,27 @@ export const ALERT_SOURCE_META = {
     icon: "bx bx-test-tube",
   },
 };
+
+// The Resolution filter the page opens on (and "Clear all filters" returns to):
+// the inbox is a to-do list, so it starts with what still needs resolving.
+export const DEFAULT_RESOLVED_STATE = "unresolved";
+
+// One table column per job role: the people in that role who see the alert
+// (worked out by the server — services/sop/alertRecipients.js). Keys are
+// User.role values; Center Manager is the MANAGER role.
+export const RECIPIENT_ROLES = [
+  { key: "DOCTOR", label: "Doctor" },
+  { key: "PSYCHOLOGIST", label: "Psychologist" },
+  { key: "MSW", label: "MSW" },
+  { key: "RMO", label: "RMO" },
+  { key: "NURSE", label: "Nurse" },
+  { key: "MANAGER", label: "Center Manager" },
+];
+
+// Shown under a name that is there for a reason other than the alert being
+// routed to their whole role.
+export const RECIPIENT_VIA_NOTE = {
+  PATIENT_DOCTOR: "Patient's doctor",
+  PATIENT_PSYCHOLOGIST: "Patient's psychologist",
+  PICKED: "Picked by name",
+};
