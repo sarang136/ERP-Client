@@ -464,11 +464,53 @@ const Prescription = ({
         ),
     }),
     onSubmit: async (values) => {
+      const hasAnyDose = (dosageAndFrequency) =>
+        ["morning", "evening", "night"].some((slot) => {
+          const val = dosageAndFrequency?.[slot];
+          return val !== undefined && val !== null && val !== "" && Number(val) !== 0;
+        });
+
       for (const med of medicines) {
+        if (med.locked) continue;
+
         if (med.schedules?.length > 1) {
+          const missingDateIdx = med.schedules.findIndex(
+            (period) => !period.startDate || !period.endDate,
+          );
+          if (missingDateIdx !== -1) {
+            toast.error(
+              `Enter both From and To date for period ${missingDateIdx + 1} (${med.medicine?.name || "a medicine"})`,
+            );
+            return;
+          }
+
           const error = validateSchedulesSequential(med.schedules);
           if (error) {
             toast.error(`${error} (${med.medicine?.name || "a medicine"})`);
+            return;
+          }
+
+          const emptyPeriodIdx = med.schedules.findIndex(
+            (period) => !hasAnyDose(period.dosageAndFrequency),
+          );
+          if (emptyPeriodIdx !== -1) {
+            toast.error(
+              `Enter at least one of Morning/Afternoon/Evening dose for period ${emptyPeriodIdx + 1} (${med.medicine?.name || "a medicine"})`,
+            );
+            return;
+          }
+        } else {
+          if (!med.startDate || !med.endDate) {
+            toast.error(
+              `Enter both From and To date (${med.medicine?.name || "a medicine"})`,
+            );
+            return;
+          }
+
+          if (!hasAnyDose(med.dosageAndFrequency)) {
+            toast.error(
+              `Enter at least one of Morning/Afternoon/Evening dose (${med.medicine?.name || "a medicine"})`,
+            );
             return;
           }
         }

@@ -191,6 +191,7 @@ const PrescriptionTable = ({ medicines }) => {
               }}
             >
               {periods.map((period, pIdx) => (
+              <React.Fragment key={pIdx}>
               <View
                 style={{
                   ...styles.row,
@@ -198,7 +199,6 @@ const PrescriptionTable = ({ medicines }) => {
                   paddingTop: pIdx > 0 ? 2 : 0,
                   marginTop: pIdx > 0 ? 2 : 0,
                 }}
-                key={pIdx}
               >
                 <Text style={{ ...styles.col1, ...styles.fontBold }}>
                   {pIdx === 0 ? idx + 1 : ""}
@@ -243,6 +243,13 @@ const PrescriptionTable = ({ medicines }) => {
                   {item.intake}
                 </Text> */}
               </View>
+              {item.schedules?.length > 1 && period.instructions && (
+                <View style={{ ...styles.row, marginLeft: 10 }}>
+                  <Text style={{ ...styles.fontItalic, fontSize: "9px" }}>Instruction: </Text>
+                  <Text style={{ fontSize: "9px" }}>{period.instructions}</Text>
+                </View>
+              )}
+              </React.Fragment>
               ))}
               {/* <View
                 style={{
@@ -266,7 +273,7 @@ const PrescriptionTable = ({ medicines }) => {
                   {item.intake || ""} {item.unit || ""}
                 </Text>
               </View> */}
-              {item.instructions && (
+              {!(item.schedules?.length > 1) && item.instructions && (
                 <View
                   style={{
                     ...styles.row,

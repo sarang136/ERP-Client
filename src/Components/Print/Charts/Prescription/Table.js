@@ -100,31 +100,39 @@ const PrescriptionTable = ({ medicines }) => {
                 {multiplePeriods.map((period, pIdx) => {
                   const periodFreq = period?.dosageAndFrequency || {};
                   return (
-                    <View
-                      key={pIdx}
-                      style={{
-                        ...styles.row,
-                        borderTop: pIdx > 0 ? "1px dashed #999" : "none",
-                        paddingTop: pIdx > 0 ? 2 : 0,
-                        marginTop: pIdx > 0 ? 2 : 0,
-                      }}
-                    >
-                      <Text style={styles.col5}></Text>
-                      <Text style={styles.col4}>
-                        {safe(formatDosage(periodFreq?.morning, periodFreq?.unit))}-{safe(formatDosage(periodFreq?.evening, periodFreq?.unit))}-{safe(formatDosage(periodFreq?.night, periodFreq?.unit))}
-                      </Text>
-                      <Text style={styles.col4}>
-                        {safe(period?.duration)} {safe(period?.unit)}
-                      </Text>
-                      <Text style={styles.col4}>{safe(period?.intake)}</Text>
-                    </View>
+                    <React.Fragment key={pIdx}>
+                      <View
+                        style={{
+                          ...styles.row,
+                          borderTop: pIdx > 0 ? "1px dashed #999" : "none",
+                          paddingTop: pIdx > 0 ? 2 : 0,
+                          marginTop: pIdx > 0 ? 2 : 0,
+                        }}
+                      >
+                        <Text style={styles.col5}></Text>
+                        <Text style={styles.col4}>
+                          {safe(formatDosage(periodFreq?.morning, periodFreq?.unit))}-{safe(formatDosage(periodFreq?.evening, periodFreq?.unit))}-{safe(formatDosage(periodFreq?.night, periodFreq?.unit))}
+                        </Text>
+                        <Text style={styles.col4}>
+                          {safe(period?.duration)} {safe(period?.unit)}
+                        </Text>
+                        <Text style={styles.col4}>{safe(period?.intake)}</Text>
+                      </View>
+                      {period?.instructions && (
+                        <Text style={{ fontSize: "8px", color: "#555", paddingLeft: "6px" }}>
+                          instructions: {safe(period.instructions)}
+                        </Text>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </>
             )}
-            <Text style={{ paddingTop: 5 }}>
-              instructions: {safe(item?.instructions)}
-            </Text>
+            {!multiplePeriods && (
+              <Text style={{ paddingTop: 5 }}>
+                instructions: {safe(item?.instructions)}
+              </Text>
+            )}
           </View>
         );
         })}

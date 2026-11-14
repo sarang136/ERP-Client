@@ -341,12 +341,35 @@ const MedicineChart = ({
       : []),
     {
       name: "Intake",
-      cell: (row) => (
-        <div style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
-          {row?.instructions ? `${row?.instructions}, ` : ""}
-          {row?.intake || ""}
-        </div>
-      ),
+      cell: (row) => {
+        const periods = row.schedules?.length ? row.schedules : null;
+        if (!periods) {
+          return (
+            <div style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+              {row?.instructions ? `${row?.instructions}, ` : ""}
+              {row?.intake || ""}
+            </div>
+          );
+        }
+        return (
+          <div style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+            {periods.map((p, i) => (
+              <div
+                key={i}
+                style={{
+                  fontSize: "12px",
+                  lineHeight: "20px",
+                  padding: "1px 0",
+                  borderTop: i > 0 ? "1px dashed #dde3ee" : "none",
+                }}
+              >
+                {p.instructions ? `${p.instructions}, ` : ""}
+                {p.intake || ""}
+              </div>
+            ))}
+          </div>
+        );
+      },
       wrap: true,
       // selector: (row, idx) =>
       //   row?.instructions ? `${row?.instructions}, ` : "" + row?.intake || "",

@@ -43,6 +43,13 @@ import PrescriptionPharmacyStock from "./PrescriptionPharmacyStock";
 import { getAvailableMedicineIds } from "../../../helpers/backend_helper";
 
 
+const toDateOnly = (date) => {
+  if (!date) return undefined;
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+};
+
 const SortableMedicine = ({ index, locked, children }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: index, disabled: locked });
@@ -715,29 +722,37 @@ const Medicine = ({
                   </Col>
                   <Col xs={2} className="ps-3">
                     <div>
-                      <Input
-                        // id={idx}
-                        name="intake"
-                        className="bg-white"
-                        bsSize={"sm"}
-                        id={idx}
-                        type="select"
-                        onChange={handleChange}
-                        value={medicine.intake}
-                      >
-                        <option value={"Before food"}>Before food</option>
-                        <option value={"After food"}>After food</option>
-                      </Input>
-                      <Input
-                        name="instructions"
-                        bsSize={"sm"}
-                        id={idx}
-                        className="mt-2 bg-white"
-                        type="text"
-                        onChange={handleChange}
-                        value={medicine.instructions}
-                        placeholder="instruction"
-                      />
+                      {!periods ? (
+                        <Input
+                          // id={idx}
+                          name="intake"
+                          className="bg-white"
+                          bsSize={"sm"}
+                          id={idx}
+                          type="select"
+                          onChange={handleChange}
+                          value={medicine.intake}
+                        >
+                          <option value={"Before food"}>Before food</option>
+                          <option value={"After food"}>After food</option>
+                        </Input>
+                      ) : (
+                        <div className="text-muted fst-italic" style={{ fontSize: "12px" }}>
+                          Set per period below
+                        </div>
+                      )}
+                      {!periods && (
+                        <Input
+                          name="instructions"
+                          bsSize={"sm"}
+                          id={idx}
+                          className="mt-2 bg-white"
+                          type="text"
+                          onChange={handleChange}
+                          value={medicine.instructions}
+                          placeholder="instruction"
+                        />
+                      )}
                     </div>
                   </Col>
                   <Col xs={2} className="">
@@ -798,7 +813,10 @@ const Medicine = ({
                         <Flatpicker
                           value={medicine.endDate || ""}
                           onChange={([date]) => handleEndDateChange(idx, date)}
-                          options={{ dateFormat: "d M, Y" }}
+                          options={{
+                            dateFormat: "d M, Y",
+                            minDate: toDateOnly(medicine.startDate),
+                          }}
                           className="form-control form-control-sm bg-white"
                           placeholder="To"
                         />
@@ -926,7 +944,12 @@ const Medicine = ({
                     <Col xs={12}>
                       <div
                         className="p-2 rounded"
-                        style={{ background: "#f4f7fc", border: "1px solid #dde3ee" }}
+                        style={{
+                          background: "#f4f7fc",
+                          border: "1px solid #dde3ee",
+                          width: "fit-content",
+                          minWidth: "100%",
+                        }}
                       >
                         <div className="d-flex align-items-center justify-content-between mb-1">
                           <span
@@ -951,8 +974,8 @@ const Medicine = ({
                         <div
                           style={{
                             display: "grid",
-                            gridTemplateColumns: "26px 240px 220px 150px 140px 90px 28px",
-                            columnGap: "10px",
+                            gridTemplateColumns: "26px 240px 220px 150px 150px 140px auto 28px",
+                            columnGap: "6px",
                             fontSize: "9px",
                             letterSpacing: "0.3px",
                             color: "#8a93a6",
@@ -963,6 +986,7 @@ const Medicine = ({
                           <span></span>
                           <span></span>
                           <span></span>
+                          <span>Intake</span>
                           <span>Duration</span>
                           <span>Frequency</span>
                           <span></span>
@@ -977,8 +1001,8 @@ const Medicine = ({
                             key={pIdx}
                             style={{
                               display: "grid",
-                              gridTemplateColumns: "26px 240px 220px 150px 140px 90px 28px",
-                              columnGap: "10px",
+                              gridTemplateColumns: "26px 240px 220px 150px 150px 140px auto 28px",
+                              columnGap: "6px",
                               alignItems: "end",
                               paddingTop: "6px",
                               paddingBottom: "6px",
@@ -1018,7 +1042,10 @@ const Medicine = ({
                                   onChange={([date]) =>
                                     handlePeriodEndDateChange(idx, pIdx, date)
                                   }
-                                  options={{ dateFormat: "d M, Y" }}
+                                  options={{
+                                    dateFormat: "d M, Y",
+                                    minDate: toDateOnly(period.startDate),
+                                  }}
                                   className="form-control form-control-sm"
                                   style={{ width: "112px" }}
                                   disabled={medicine.locked}
@@ -1098,6 +1125,32 @@ const Medicine = ({
                               </div>
                             </div>
 
+                            <div>
+                              <Input
+                                type="select"
+                                bsSize="sm"
+                                value={period.intake || "After food"}
+                                onChange={(e) =>
+                                  handlePeriodChange(idx, pIdx, "intake", e.target.value)
+                                }
+                                disabled={medicine.locked}
+                              >
+                                <option value="Before food">Before food</option>
+                                <option value="After food">After food</option>
+                              </Input>
+                              <Input
+                                type="text"
+                                bsSize="sm"
+                                className="mt-1"
+                                placeholder="instruction"
+                                value={period.instructions || ""}
+                                onChange={(e) =>
+                                  handlePeriodChange(idx, pIdx, "instructions", e.target.value)
+                                }
+                                disabled={medicine.locked}
+                              />
+                            </div>
+
                             <div className="d-flex align-items-center gap-1">
                               <Input
                                 type="number"
@@ -1153,6 +1206,7 @@ const Medicine = ({
                                 max="31"
                                 placeholder="Day (1-31)"
                                 bsSize="sm"
+                                style={{ width: "90px" }}
                                 value={period.monthlyDate ?? ""}
                                 onChange={(e) =>
                                   handlePeriodChange(idx, pIdx, "monthlyDate", e.target.value)
@@ -1166,6 +1220,7 @@ const Medicine = ({
                                 step="0.1"
                                 placeholder="Days"
                                 bsSize="sm"
+                                style={{ width: "70px" }}
                                 value={period.frequency ?? ""}
                                 onChange={(e) =>
                                   handlePeriodChange(idx, pIdx, "frequency", e.target.value)
