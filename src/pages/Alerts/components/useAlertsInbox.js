@@ -15,7 +15,9 @@ const DEFAULT_PAGE_SIZE = 50;
 
 // The page opens on every unresolved alert: no date range, Resolution =
 // Unresolved. Picking a date range or another Resolution narrows from there.
-const initialFilters = () => ({
+// `overrides` lets a caller start from different filters (a dashboard's
+// "this patient's alerts" link, see pages/Alerts/index.js).
+const initialFilters = (overrides = {}) => ({
   patients: [],         // array of { value, label } from AsyncSelect
   rules: [],            // array of { value, label } from AsyncSelect
   categories: [],       // array of SOP category values (empty = all)
@@ -101,8 +103,12 @@ export const useAlertsInbox = (initialOverrides) => {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   // Unified server-side filter state. Defaults: unresolved only, any date, no
-  // patient/rule restriction, all severities/phases/read-states.
-  const [serverFilters, setServerFilters] = useState(initialFilters);
+  // patient/rule restriction, all severities/phases/read-states — unless the
+  // caller (e.g. a dashboard's "jump to this patient's alerts" link) seeds
+  // different starting filters via initialOverrides.
+  const [serverFilters, setServerFilters] = useState(() =>
+    initialFilters(initialOverrides),
+  );
 
   // Debounced copy — only THIS triggers refetch.
   const [debouncedFilters, setDebouncedFilters] = useState(serverFilters);
