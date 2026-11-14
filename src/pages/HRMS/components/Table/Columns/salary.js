@@ -427,13 +427,6 @@ export const salaryColumns = ({ searchText, copyId, onCopy, onOpen, onApprove, o
         style: employeeDeductionStyle,
     },
     {
-        name: <div>Bonus Adjustment</div>,
-        selector: row => formatCurrency(row?.earned?.bonusAdjustmentTotal || 0),
-        wrap: true,
-        center: true,
-        style: employeeDeductionStyle,
-    },
-    {
         name: <div>Deductions</div>,
         selector: row => formatCurrency(row?.earned?.deductions),
         wrap: true,
