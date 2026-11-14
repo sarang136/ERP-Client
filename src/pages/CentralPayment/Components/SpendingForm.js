@@ -118,8 +118,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         else if (!IFSC_REGEX_MODAL.test(fields.ifsc.trim())) errs.ifsc = "Enter a valid IFSC, e.g. SBIN0001234";
         if (!fields.accountHolderName.trim()) errs.accountHolderName = "Account Holder Name is required";
         if (!fields.accountNo.trim()) errs.accountNo = "Account No. is required";
-        if (!fields.pan.trim()) errs.pan = "PAN Card No. is required";
-        else if (!PAN_REGEX_MODAL.test(fields.pan.trim())) errs.pan = "Enter a valid PAN, e.g. ABCDE1234F";
+        if (fields.pan.trim() && !PAN_REGEX_MODAL.test(fields.pan.trim())) errs.pan = "Enter a valid PAN, e.g. ABCDE1234F";
         return errs;
     };
 
@@ -2093,7 +2092,7 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
                         )}
                     </FormGroup>
                     <FormGroup>
-                        <Label className="fw-medium">PAN Card No. <span className="text-danger">*</span></Label>
+                        <Label className="fw-medium">PAN Card No. <span className="text-muted fs-12">(optional)</span></Label>
                         <Input
                             value={vendorModalFields.pan}
                             onChange={(e) => handleVendorModalChange("pan", e.target.value.toUpperCase().replace(/\s/g, ""))}
