@@ -59,6 +59,24 @@ describe("Alerts inbox defaults", () => {
     expect(params).toEqual({ page: 1, pageSize: 50, resolvedState: "unresolved" });
   });
 
+  test("a caller can start from other filters (dashboard's patient link)", () => {
+    const patient = { value: "p1", label: "Ravi" };
+    const { result } = renderHook(() => useAlertsInbox({ patients: [patient] }));
+
+    expect(result.current.serverFilters).toMatchObject({
+      patients: [patient],
+      resolvedState: "unresolved",
+      dateFrom: null,
+      dateTo: null,
+    });
+    expect(api.getAllSopAlerts.mock.calls[0][0]).toEqual({
+      page: 1,
+      pageSize: 50,
+      patients: "p1",
+      resolvedState: "unresolved",
+    });
+  });
+
   test("Clear all filters returns to the same defaults", () => {
     const { result } = renderHook(() => useAlertsInbox());
     act(() => {
