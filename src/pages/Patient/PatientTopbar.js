@@ -44,7 +44,7 @@ import AddNoteModal from "../Nurse/Views/Components/AddNoteModal";
 import AssignNurseModal from "./Views/Components/AssignNurseModal";
 import {
   getCurrentAdmissionType,
-  admissionTypeLabel,
+  admissionTypeSummaryLabel,
   getAdmissionTypeDetailParts,
 } from "../../utils/admissionType";
 // import { getAdditionalDetails } from "../../helpers/backend_helper";
@@ -140,10 +140,8 @@ const PatientTopbar = ({
     ? "Geriatric"
     : currentAdmissionType
     ? [
-        admissionTypeLabel(
-          "admissionType",
-          currentAdmissionType.data?.admissionType,
-        ),
+        // No "Independent Admission": that one reads "Minor (below 18)" alone.
+        admissionTypeSummaryLabel(currentAdmissionType.data),
         ...getAdmissionTypeDetailParts(currentAdmissionType.data),
       ]
         .filter(Boolean)

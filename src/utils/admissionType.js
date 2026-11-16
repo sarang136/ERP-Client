@@ -1,5 +1,6 @@
 import {
   ADMISSION_TYPE,
+  INDEPENDENT_ADMISSION,
   admissionTypeFields,
 } from "../Components/constants/patient";
 
@@ -126,3 +127,26 @@ export const getAdmissionTypeDetailParts = (data) =>
         ? `${field.label}: ${label}`
         : label;
     });
+
+/**
+ * The admission type's name as the patient header and the ADMISSION TYPE card
+ * show it. "Independent Admission" is left out (owner decision, 2026-11-16): an
+ * independent admission reads by its adult/minor answer alone, "Minor (below
+ * 18)". Supportive and Emergency keep their name, because their details ("Upto
+ * 30 days", "Risk to self") mean nothing without it. An older independent
+ * record with no adult/minor answer still shows the name, so the line is never
+ * empty.
+ *
+ * Only these two summaries use it; the chart, the chart form, the clear-type
+ * modal and the prints still show the full name.
+ */
+export const admissionTypeSummaryLabel = (data) => {
+  if (!data?.admissionType) return "";
+  if (
+    data.admissionType === INDEPENDENT_ADMISSION &&
+    getAdmissionTypeDetailParts(data).length > 0
+  ) {
+    return "";
+  }
+  return admissionTypeLabel("admissionType", data.admissionType);
+};
