@@ -139,7 +139,6 @@ const SpendingForm = ({ centerAccess, centers, paymentData, onUpdate }) => {
         try {
             const res = await createCentralPaymentVendorRequest({
                 vendorCategory: "central_payment",
-                center: form.values.center || undefined,
                 tradeName: vendorModalFields.tradeName.trim(),
                 pan: vendorModalFields.pan.trim().toUpperCase(),
                 bankDetails: {

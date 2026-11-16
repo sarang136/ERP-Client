@@ -61,6 +61,8 @@ const VendorList = ({ onAdd, onEdit }) => {
   const canCreate = hasPermission("MASTERDATA", "VENDOR", "WRITE");
   const canEdit = hasPermission("MASTERDATA", "VENDOR", "WRITE");
   const canChangeStatus = hasPermission("MASTERDATA", "VENDOR", "WRITE");
+  // Deleting a vendor needs the Delete level, not just Write
+  const canDelete = hasPermission("MASTERDATA", "VENDOR", "DELETE");
   // Approving is its own permission (Vendor Approval), so the person who makes a vendor need not be
   // the one who approves it. Submitting for approval stays with Vendor WRITE.
   const canApprove = hasPermission("MASTERDATA", "VENDOR_APPROVAL", "WRITE");
@@ -152,7 +154,7 @@ const VendorList = ({ onAdd, onEdit }) => {
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !canDelete) return;
     setDeleting(true);
     try {
       await deleteVendor(deleteTarget._id);
@@ -314,7 +316,7 @@ const VendorList = ({ onAdd, onEdit }) => {
               <i className="bx bx-edit-alt"></i>
             </button>
           )}
-          {canChangeStatus && (
+          {canDelete && (
             <button
               type="button"
               className="vendor-icon-btn is-danger"
