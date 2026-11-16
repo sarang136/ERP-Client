@@ -715,7 +715,7 @@ const Medicine = ({
                       </div>
                     </div>
                     ) : (
-                      <div className="text-muted fst-italic" style={{ fontSize: "12px" }}>
+                      <div className="text-muted fst-italic text-center" style={{ fontSize: "12px" }}>
                         {periods.length} dosage periods — see below
                       </div>
                     )}
@@ -737,7 +737,7 @@ const Medicine = ({
                           <option value={"After food"}>After food</option>
                         </Input>
                       ) : (
-                        <div className="text-muted fst-italic" style={{ fontSize: "12px" }}>
+                        <div className="text-muted fst-italic text-center" style={{ fontSize: "12px" }}>
                           Set per period below
                         </div>
                       )}
@@ -824,9 +824,11 @@ const Medicine = ({
                     )}
                     </>
                     ) : (
-                      <span className="badge bg-info-subtle text-info">
-                        {periods.length} periods
-                      </span>
+                      <div className="text-center">
+                        <span className="badge bg-info-subtle text-info">
+                          {periods.length} periods
+                        </span>
+                      </div>
                     )}
                     {showDates && !periods && !medicine.locked && (
                       <button
@@ -912,7 +914,7 @@ const Medicine = ({
                       </div>
                     </div>
                     ) : (
-                      <div className="text-muted fst-italic" style={{ fontSize: "12px" }}>
+                      <div className="text-muted fst-italic text-center" style={{ fontSize: "12px" }}>
                         Varies by period
                       </div>
                     )}

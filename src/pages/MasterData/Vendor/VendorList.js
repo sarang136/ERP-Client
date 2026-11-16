@@ -15,40 +15,39 @@ import { usePermissions } from "../../../Components/Hooks/useRoles.js";
 import "./vendor.scss";
 
 const tableCustomStyles = {
+  table: { style: { backgroundColor: "transparent" } },
   headRow: {
     style: {
-      backgroundColor: "#f8fafc",
-      borderBottom: "1px solid #e2e8f0",
-      minHeight: "46px",
+      backgroundColor: "#ffffff",
+      borderBottom: "1px solid #eceff3",
+      minHeight: "44px",
     },
   },
   headCells: {
     style: {
-      fontSize: "11.5px",
-      fontWeight: 700,
-      textTransform: "uppercase",
-      letterSpacing: "0.05em",
-      color: "#64748b",
+      fontSize: "12.5px",
+      fontWeight: 600,
+      color: "#6b7280",
       whiteSpace: "nowrap",
     },
   },
   rows: {
     style: {
-      minHeight: "60px",
-      fontSize: "13.5px",
-      "&:not(:last-of-type)": { borderBottomColor: "#edeff3" },
+      minHeight: "66px",
+      fontSize: "14px",
+      "&:not(:last-of-type)": { borderBottomColor: "#f1f3f6" },
     },
     highlightOnHoverStyle: {
-      backgroundColor: "#f8fafc",
-      borderBottomColor: "#edeff3",
+      backgroundColor: "#fafbfc",
+      borderBottomColor: "#f1f3f6",
       outline: "none",
     },
   },
   pagination: {
     style: {
-      borderTop: "1px solid #e2e8f0",
+      borderTop: "1px solid #eceff3",
       fontSize: "13px",
-      color: "#64748b",
+      color: "#6b7280",
       flexWrap: "wrap",
     },
   },
@@ -62,6 +61,11 @@ const VendorList = ({ onAdd, onEdit }) => {
   const canCreate = hasPermission("MASTERDATA", "VENDOR", "WRITE");
   const canEdit = hasPermission("MASTERDATA", "VENDOR", "WRITE");
   const canChangeStatus = hasPermission("MASTERDATA", "VENDOR", "WRITE");
+  // Deleting a vendor needs the Delete level, not just Write
+  const canDelete = hasPermission("MASTERDATA", "VENDOR", "DELETE");
+  // Approving is its own permission (Vendor Approval), so the person who makes a vendor need not be
+  // the one who approves it. Submitting for approval stays with Vendor WRITE.
+  const canApprove = hasPermission("MASTERDATA", "VENDOR_APPROVAL", "WRITE");
 
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -123,6 +127,7 @@ const VendorList = ({ onAdd, onEdit }) => {
 
   // Draft/Incomplete/Rejected → Submit, Pending → Approve (aur activate bhi)
   const handleQuickAction = async (row) => {
+    if (row.approvalStatus === "pending" ? !canApprove : !canChangeStatus) return;
     try {
       if (
         row.approvalStatus === "incomplete" ||
@@ -149,7 +154,7 @@ const VendorList = ({ onAdd, onEdit }) => {
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !canDelete) return;
     setDeleting(true);
     try {
       await deleteVendor(deleteTarget._id);
@@ -177,119 +182,99 @@ const VendorList = ({ onAdd, onEdit }) => {
 
   const getStatusPill = (row) => {
     if (row.approvalStatus === "approved") {
-      return <span className="vendor-status-pill status-active">Active</span>;
+      return <span className="vendor-status-text is-active">Active</span>;
     }
     if (row.approvalStatus === "pending") {
-      return (
-        <span className="vendor-status-pill status-inactive">Pending</span>
-      );
+      return <span className="vendor-status-text is-pending">Pending</span>;
     }
-    return <span className="vendor-status-pill status-draft">Draft</span>;
+    return <span className="vendor-status-text is-draft">Draft</span>;
   };
 
   // Page pe koi Draft/Pending vendor hai tabhi Submit/Approve button aayega
-  const hasQuickAction =
-    canChangeStatus && vendors.some((v) => v.approvalStatus !== "approved");
+  const hasQuickAction = vendors.some((v) =>
+    v.approvalStatus === "pending"
+      ? canApprove
+      : v.approvalStatus !== "approved" && canChangeStatus,
+  );
   const actionsWidth = hasQuickAction ? "230px" : "150px";
 
   const columns = [
     {
-      name: "Vendor Code",
-      selector: (row) => row.vendorCode,
-      sortable: true,
-      minWidth: "130px",
-      maxWidth: "150px",
-      hide: 600,
-      cell: (row) => (
-        <span className="vendor-cell-code">{row.vendorCode || "—"}</span>
-      ),
-    },
-    {
-      name: "Legal Name",
-      selector: (row) => row.legalName,
+      name: "Vendor",
+      selector: (row) => row.legalName || row.tradeName,
       sortable: true,
       grow: 2,
-      minWidth: "200px",
+      minWidth: "230px",
       cell: (row) => (
-        <span
-          className="vendor-cell-name"
-          title={row.legalName || row.tradeName || ""}
-        >
-          {row.legalName || row.tradeName || "—"}
-        </span>
+        <div className="vendor-stack-cell">
+          <span
+            className="vendor-cell-name"
+            title={row.legalName || row.tradeName || ""}
+          >
+            {row.legalName || row.tradeName || "—"}
+          </span>
+          <span className="vendor-cell-code vendor-stack-sub">
+            {row.vendorCode || "—"}
+          </span>
+        </div>
       ),
     },
     {
-      name: "Vendor Type",
-      selector: (row) => row.vendorType,
+      name: "Type",
+      selector: (row) => row.vendorCategory,
       sortable: true,
-      minWidth: "130px",
-      hide: 1150,
+      width: "170px",
       cell: (row) =>
         row.vendorCategory === "central_payment" ? (
-          <span className="vendor-category-badge is-central">
-            <i className="bx bx-wallet"></i> Central Payment
-          </span>
+          <span className="vendor-cell-text">Central Payment</span>
         ) : (
-          <div>
-            <span className="vendor-category-badge is-po">
-             PO Required
-            </span>
+          <div className="vendor-stack-cell">
+            <span className="vendor-cell-text">PO Required</span>
             {row.vendorType && (
-              <div className="vendor-cell-muted small text-capitalize mt-1">
+              <span className="vendor-cell-muted vendor-stack-sub text-capitalize">
                 {row.vendorType.replace(/_/g, " ")}
-              </div>
+              </span>
             )}
           </div>
+        ),
+    },
+    {
+      name: "Raised By",
+      minWidth: "200px",
+      hide: 1200,
+      cell: (row) =>
+        row.requestedBy || row.postedFrom === "CENTRAL_PAYMENT" ? (
+          <div className="vendor-stack-cell">
+            <span className="vendor-cell-text vendor-ellipsis" title={row.requestedBy?.name || ""}>
+              {row.requestedBy?.name || "Unknown user"}
+            </span>
+            <span className="vendor-cell-muted vendor-stack-sub vendor-ellipsis" title={row.requestedFromCenter?.title || ""}>
+              {row.requestedFromCenter?.title || "Center not recorded"}
+            </span>
+          </div>
+        ) : (
+          <span className="vendor-cell-muted">—</span>
         ),
     },
     {
       name: "PAN",
       selector: (row) => row.pan,
       sortable: true,
-      minWidth: "130px",
-      hide: 1366,
+      width: "140px",
+      hide: 1100,
       cell: (row) => <span className="vendor-cell-code">{row.pan || "—"}</span>,
     },
     {
       name: "GSTIN",
-      minWidth: "170px",
-      hide: 1500,
+      width: "180px",
+      hide: 1450,
       cell: (row) => (
         <span className="vendor-cell-code">{primaryGstin(row) || "—"}</span>
       ),
     },
     {
-      name: "Phone",
-      minWidth: "130px",
-      hide: 1600,
-      cell: (row) => (
-        <span className="vendor-cell-muted">
-          {row.primaryContact?.phone || "—"}
-        </span>
-      ),
-    },
-    {
-      name: "Added On",
-      selector: (row) => row.createdAt,
-      minWidth: "120px",
-      hide: 1800,
-      cell: (row) => (
-        <span className="vendor-cell-muted">
-          {row.createdAt
-            ? new Date(row.createdAt).toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })
-            : "—"}
-        </span>
-      ),
-    },
-    {
       name: "Status",
-      minWidth: "120px",
-      maxWidth: "140px",
+      width: "120px",
       cell: (row) => getStatusPill(row),
     },
     {
@@ -299,15 +284,17 @@ const VendorList = ({ onAdd, onEdit }) => {
       right: true,
       cell: (row) => (
         <div className="vendor-row-actions align-items-center">
-          {canChangeStatus && row.approvalStatus !== "approved" && (
-            <Button
-              size="sm"
-              color={row.approvalStatus === "pending" ? "success" : "primary"}
-              onClick={() => handleQuickAction(row)}
-            >
-              {row.approvalStatus === "pending" ? "Approve" : "Submit"}
-            </Button>
-          )}
+          {row.approvalStatus !== "approved" &&
+            (row.approvalStatus === "pending" ? canApprove : canChangeStatus) && (
+              <Button
+                size="sm"
+                outline
+                color={row.approvalStatus === "pending" ? "success" : "primary"}
+                onClick={() => handleQuickAction(row)}
+              >
+                {row.approvalStatus === "pending" ? "Approve" : "Submit"}
+              </Button>
+            )}
           <button
             type="button"
             className="vendor-icon-btn"
@@ -329,7 +316,7 @@ const VendorList = ({ onAdd, onEdit }) => {
               <i className="bx bx-edit-alt"></i>
             </button>
           )}
-          {canChangeStatus && (
+          {canDelete && (
             <button
               type="button"
               className="vendor-icon-btn is-danger"
@@ -558,7 +545,9 @@ const VendorList = ({ onAdd, onEdit }) => {
 
                     <div className="d-flex gap-2 flex-wrap justify-content-center mb-3">
                       <span className="vendor-overview-chip">
-                        {(overviewVendor.vendorType || "—").replace(/_/g, " ")}
+                        {overviewVendor.vendorCategory === "central_payment"
+                          ? "Central Payment"
+                          : (overviewVendor.vendorType || "—").replace(/_/g, " ")}
                       </span>
                       <span
                         className={`vendor-status-pill status-${overviewVendor.status}`}
@@ -577,16 +566,20 @@ const VendorList = ({ onAdd, onEdit }) => {
                       </div>
                     </div>
 
-                    <div className="vendor-overview-hero-row">
-                      <i className="bx bx-phone"></i>
-                      <span>{overviewVendor.primaryContact?.phone || "—"}</span>
-                    </div>
-                    <div className="vendor-overview-hero-row">
-                      <i className="bx bx-envelope"></i>
-                      <span className="text-truncate">
-                        {overviewVendor.primaryContact?.email || "—"}
-                      </span>
-                    </div>
+                    {overviewVendor.vendorCategory !== "central_payment" && (
+                      <>
+                        <div className="vendor-overview-hero-row">
+                          <i className="bx bx-phone"></i>
+                          <span>{overviewVendor.primaryContact?.phone || "—"}</span>
+                        </div>
+                        <div className="vendor-overview-hero-row">
+                          <i className="bx bx-envelope"></i>
+                          <span className="text-truncate">
+                            {overviewVendor.primaryContact?.email || "—"}
+                          </span>
+                        </div>
+                      </>
+                    )}
 
                     <div className="vendor-overview-hero-dates">
                       <div>
@@ -618,6 +611,116 @@ const VendorList = ({ onAdd, onEdit }) => {
                 </div>
 
                 {/* ---------- Right: sectioned cards ---------- */}
+                {overviewVendor.vendorCategory === "central_payment" ? (
+                  <div className="vendor-overview-cards">
+                    <div className="vendor-overview-card">
+                      <div className="vendor-overview-card-title">
+                        <i className="bx bx-wallet"></i> Central Payment Vendor
+                      </div>
+                      <div className="vendor-overview-card-grid">
+                        <div>
+                          <div className="vendor-overview-label">Vendor Name</div>
+                          <div className="vendor-overview-value">
+                            {overviewVendor.tradeName || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="vendor-overview-label">Bank IFSC Code</div>
+                          <div className="vendor-overview-value">
+                            {overviewVendor.bankDetails?.ifsc || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="vendor-overview-label">Account Holder Name</div>
+                          <div className="vendor-overview-value">
+                            {overviewVendor.bankDetails?.accountHolderName || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="vendor-overview-label">Account No.</div>
+                          <div className="d-flex align-items-center gap-2">
+                            <span className="vendor-overview-hero-value">
+                              {overviewVendor.bankDetails?.accountNo
+                                ? showAccountNo
+                                  ? overviewVendor.bankDetails.accountNo
+                                  : `••••${overviewVendor.bankDetails.accountNo.slice(-4)}`
+                                : "—"}
+                            </span>
+                            {overviewVendor.bankDetails?.accountNo && (
+                              <button
+                                type="button"
+                                className="vendor-overview-show-btn"
+                                onClick={() => setShowAccountNo((v) => !v)}
+                              >
+                                {showAccountNo ? "Hide" : "Show"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="vendor-overview-label">PAN Card No.</div>
+                          <div className="vendor-overview-value">
+                            {overviewVendor.pan || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="vendor-overview-label">PAN Card Upload</div>
+                          {(() => {
+                            const panDoc = overviewVendor.documents?.find((d) => d.docType === "pan_card");
+                            return panDoc ? (
+                              <a
+                                href={panDoc.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="vendor-overview-doc-link"
+                              >
+                                <i className="bx bx-show"></i> Preview
+                              </a>
+                            ) : (
+                              <span className="vendor-overview-doc-empty">Not uploaded</span>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="vendor-overview-card">
+                      <div className="vendor-overview-card-title">
+                        <i className="bx bx-user-voice"></i> Request
+                      </div>
+                      <div className="vendor-overview-card-grid">
+                        <div>
+                          <div className="vendor-overview-label">Raised By</div>
+                          <div className="vendor-overview-value">
+                            {overviewVendor.requestedBy?.name || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="vendor-overview-label">Center</div>
+                          <div className="vendor-overview-value">
+                            {overviewVendor.requestedFromCenter?.title || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="vendor-overview-label">Raised On</div>
+                          <div className="vendor-overview-value">
+                            {overviewVendor.createdAt
+                              ? new Date(overviewVendor.createdAt).toLocaleDateString()
+                              : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="vendor-overview-label">Raised From</div>
+                          <div className="vendor-overview-value">
+                            {overviewVendor.postedFrom === "CENTRAL_PAYMENT"
+                              ? "Central Payment"
+                              : "Vendor Management"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                 <div className="vendor-overview-cards">
                   <div className="vendor-overview-card">
                     <div className="vendor-overview-card-title">
@@ -956,6 +1059,7 @@ const VendorList = ({ onAdd, onEdit }) => {
                     </div>
                   </div>
                 </div>
+                )}
               </div>
             </div>
           )}
