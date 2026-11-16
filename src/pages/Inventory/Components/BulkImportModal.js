@@ -49,9 +49,13 @@ const headerToDbMap = {
   "Purchase Unit": "purchaseUnit",
   Strength: "Strength",
   Unit: "unitType",
+  Stock: "stock",
   "Stock  (Ex. Per Tablet, Per Ampoule)": "stock",
+  MRP: "mrp",
   "MRP (Ex. Per Strip, Per Box)": "mrp",
+  "Purchase Price": "purchasePrice",
   "Purchase Price  (Ex. Per Strip, Per Box)": "purchasePrice",
+  "Sales Price": "SalesPrice",
   "Sales Price  (Ex. Per Strip, Per Box)": "SalesPrice",
   "Expiry Date": "Expiry",
   Batch: "Batch",
@@ -1057,19 +1061,23 @@ const BulkImportModal = ({ isOpen, user, toggle, onImport }) => {
               <table className="table table-bordered table-sm">
                 <thead className="table-light">
                   <tr>
-                    {Object.keys(headerToDbMap).map((header) => (
-                      <th key={header}>
-                        {header}
-                      </th>
-                    ))}
+                    {Object.keys(headerToDbMap)
+                      .filter((header) => header in (uploadedData[0] || {}))
+                      .map((header) => (
+                        <th key={header}>
+                          {header}
+                        </th>
+                      ))}
                   </tr>
                 </thead>
                 <tbody>
                   {uploadedData.slice(0, 10).map((row, idx) => (
                     <tr key={idx}>
-                      {Object.keys(headerToDbMap).map((header) => (
-                        <td key={header}>{row[header] ?? ""}</td>
-                      ))}
+                      {Object.keys(headerToDbMap)
+                        .filter((header) => header in (uploadedData[0] || {}))
+                        .map((header) => (
+                          <td key={header}>{row[header] ?? ""}</td>
+                        ))}
                     </tr>
                   ))}
                 </tbody>
