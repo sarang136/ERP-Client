@@ -1,0 +1,29 @@
+/*
+ * Pins the Resolution column (column id "resolution" in AlertsList.js) to the
+ * left edge while the alerts table scrolls sideways. react-data-table-component
+ * puts data-column-id on the header cell and every body cell; the wrapper that
+ * gets the className is the scrolling box, so `left: 0` is measured from it.
+ *
+ * Layering, bottom to top: ordinary cells → pinned body cells (1) → the header
+ * row (2, already sticky to the top via fixedHeader). The library gives the
+ * header row z-index 1, which would let pinned body cells scrolling up slide
+ * over the pinned header cell, so it is raised here.
+ */
+.sop-alerts-table .rdt_TableCol[data-column-id="resolution"],
+.sop-alerts-table .rdt_TableCell[data-column-id="resolution"] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  /* Edge line + soft shadow so the pinned column reads as above the rest. */
+  box-shadow: 1px 0 0 #e9ecef, 6px 0 6px -6px rgba(0, 0, 0, 0.25);
+}
+
+/* Take the row's own colour (white / striped / hover) so scrolled cells don't
+   show through. The header cell already has its own background. */
+.sop-alerts-table .rdt_TableCell[data-column-id="resolution"] {
+  background-color: inherit;
+}
+
+.sop-alerts-table .rdt_TableHead {
+  z-index: 2;
+}
