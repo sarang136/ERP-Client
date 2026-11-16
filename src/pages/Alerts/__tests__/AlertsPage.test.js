@@ -228,7 +228,7 @@ describe("Alerts table role columns", () => {
       routing: { notifyRoles: ["NURSE", "ADMIN"], notifyAdmissionDoctor: true },
       recipients: {
         DOCTOR: [{ _id: "u1", name: "Dr Dev", via: "PATIENT_DOCTOR" }],
-        PSYCHOLOGIST: [{ _id: "u5", name: "akshay", via: "PATIENT_PSYCHOLOGIST", suspended: true }],
+        PSYCHOLOGIST: [{ _id: "u5", name: "akshay", via: "PATIENT_PSYCHOLOGIST" }],
         MSW: [],
         RMO: [{ _id: "u2", name: "Ravi RMO", via: "PICKED" }],
         NURSE: [{ _id: "u3", name: "Asha", via: "ROLE" }, { _id: "u4", name: "Nina", via: "ROLE" }],
@@ -288,13 +288,14 @@ describe("Alerts table role columns", () => {
     expect(cellOf(0, "MANAGER")).toHaveTextContent("—");
   });
 
-  test("a suspended person is still listed, marked Suspended", () => {
+  test("no one is marked or greyed as suspended (the server leaves them out)", () => {
     renderList();
     const psych = cellOf(0, "PSYCHOLOGIST");
-    expect(within(psych).getByText("akshay")).toHaveClass("text-muted");
-    expect(within(psych).getByText("Patient's psychologist · Suspended")).toBeInTheDocument();
-    // People who can sign in carry no such mark.
-    expect(within(cellOf(0, "NURSE")).queryByText(/suspended/i)).not.toBeInTheDocument();
+    expect(within(psych).getByText("akshay")).not.toHaveClass("text-muted");
+    expect(within(psych).getByText("Patient's psychologist")).toBeInTheDocument();
+    for (const role of ["DOCTOR", "PSYCHOLOGIST", "MSW", "RMO", "NURSE", "MANAGER"]) {
+      expect(within(cellOf(0, role)).queryByText(/suspended/i)).not.toBeInTheDocument();
+    }
   });
 
   test("a row without recipients shows a dash in every role column", () => {
