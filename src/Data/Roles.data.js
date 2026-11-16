@@ -711,6 +711,7 @@ export const permissionList = [
     label: "Vendor Management",
     subModules: [
       { name: "VENDOR", label: "Vendor" },
+      { name: "VENDOR_APPROVAL", label: "Vendor Approval" },
       { name: "ITEM_MASTER", label: "Item Master" },
       { name: "ITEM_TYPE", label: "Item Types" },
       { name: "UOM", label: "Unit of Measurement" },
