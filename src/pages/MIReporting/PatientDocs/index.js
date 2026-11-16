@@ -21,6 +21,23 @@ const DOCS_TYPE_OPTIONS = [
     { value: "discharged", label: "Discharged" },
 ];
 
+const INCOMPLETE_SINCE_OPTIONS = [
+    { value: "ALL", label: "All (Incomplete Since)" },
+    { value: "GT7", label: "> 7 Days" },
+    { value: "GT15", label: "> 15 Days" },
+    { value: "GT30", label: "> 30 Days" },
+];
+
+const matchesIncompleteSince = (rawDays, bucket) => {
+    if (bucket === "ALL") return true;
+    const days = rawDays === "" || rawDays == null ? NaN : Number(rawDays);
+    if (!Number.isFinite(days)) return false;
+    if (bucket === "GT7") return days > 7;
+    if (bucket === "GT15") return days > 15;
+    if (bucket === "GT30") return days > 30;
+    return true;
+};
+
 const PatientDocs = () => {
     const dispatch = useDispatch();
     const patientDocs = useSelector((state) => state.MIReporting.patientDocs);
@@ -33,6 +50,7 @@ const PatientDocs = () => {
     const [selectedCenter, setSelectedCenter] = useState("ALL");
     const [selectedStatus, setSelectedStatus] = useState("ALL");
     const [selectedDocsType, setSelectedDocsType] = useState("admitted");
+    const [selectedIncompleteSince, setSelectedIncompleteSince] = useState("ALL");
     const [csvData, setCsvData] = useState([]);
     const [csvLoading, setCsvLoading] = useState(false);
     const csvRef = useRef();
@@ -51,10 +69,11 @@ const PatientDocs = () => {
         return data.filter((item) =>{
             if (selectedCenter !== "ALL" && item?.center_name !== selectedCenter) return false;
             if (selectedStatus !== "ALL" && item?.info_complete !== selectedStatus) return false;
+            if (!matchesIncompleteSince(item?.incomplete_since_days, selectedIncompleteSince)) return false;
               return true;
 });
-        
- },[data, selectedCenter, selectedStatus] );
+
+ },[data, selectedCenter, selectedStatus, selectedIncompleteSince] );
 
     
     const prepareCsvData = () => {
@@ -130,7 +149,8 @@ const PatientDocs = () => {
             "Doctor Name",
             "Psychologist Name",
             "Center Manager",
-            "Status"
+            "Status",
+            "Incomplete Since (Days)"
             ]
 
     const admittedLabelsMapping={
@@ -153,7 +173,8 @@ const PatientDocs = () => {
             "Doctor Name":"doctor_name",
             "Psychologist Name":"psychologist_name",
             "Center Manager":"cm",
-            "Status":"info_complete"
+            "Status":"info_complete",
+            "Incomplete Since (Days)":"incomplete_since_days"
 
     }
 
@@ -172,7 +193,7 @@ const PatientDocs = () => {
             "Psychologist Name",
             "Center Manager",
             "Status",
-            
+            "Incomplete Since (Days)"
             ]
 
     const dischargedLabelsMapping={
@@ -190,7 +211,8 @@ const PatientDocs = () => {
             "Doctor Name":"doctor_name",
             "Psychologist Name":"psychologist_name",
             "Center Manager":"cm",
-            "Status":"info_complete"
+            "Status":"info_complete",
+            "Incomplete Since (Days)":"incomplete_since_days"
 
     }
 
@@ -309,6 +331,14 @@ const PatientDocs = () => {
                             placeholder="Docs Type..."
                         />
                     </Col>
+                    <Col md={2}>
+                        <Select
+                            value={INCOMPLETE_SINCE_OPTIONS.find((o) => o.value === selectedIncompleteSince) || INCOMPLETE_SINCE_OPTIONS[0]}
+                            onChange={(opt) => setSelectedIncompleteSince(opt.value)}
+                            options={INCOMPLETE_SINCE_OPTIONS}
+                            placeholder="Incomplete Since..."
+                        />
+                    </Col>
                 </Row>
                 <Card>
                 <CardBody>
@@ -329,7 +359,7 @@ const PatientDocs = () => {
                             style={{
                                 borderCollapse: "separate",
                                 borderSpacing: 0,
-                                fontSize: "0.78rem",
+                                fontSize: "0.68rem",
                                 tableLayout: "fixed",
                             }}
                         >
