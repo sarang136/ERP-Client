@@ -47,7 +47,8 @@ import { useRecordingSession } from "./useRecordingSession";
 
 const RECORDING = "RECORDING";
 // Center-based configuration for the Recording tab: Can be ["All"], ["None"], or specific center IDs/names
-const centersAllowed = ["6519aafd522bd79e93d5ba5c", "Hyderabad"];
+const centersAllowed = ["All"];
+// "6519aafd522bd79e93d5ba5c", "Hyderabad"
 // Navi
 // Hyderabad
 
@@ -348,19 +349,22 @@ const DetailAdmission = ({
           typeof rest.addictionFields === "string"
             ? JSON.parse(rest.addictionFields)
             : rest.addictionFields || {};
-        if (af?.patternOfUse?.primarySubstanceOfConcern) inferredType = "addiction";
+        if (af?.patternOfUse?.primarySubstanceOfConcern)
+          inferredType = "addiction";
       } else if (lower === "psychiatric") {
         const pf =
           typeof rest.psychiatricFields === "string"
             ? JSON.parse(rest.psychiatricFields)
             : rest.psychiatricFields || {};
-        if (pf?.historyOfPresentIllness?.modeOfOnset) inferredType = "psychiatric";
+        if (pf?.historyOfPresentIllness?.modeOfOnset)
+          inferredType = "psychiatric";
       } else if (lower === "geriatric") {
         const gf =
           typeof rest.geriatricFields === "string"
             ? JSON.parse(rest.geriatricFields)
             : rest.geriatricFields || {};
-        if (gf?.historyOfPresentIllness?.modeOfOnset) inferredType = "geriatric";
+        if (gf?.historyOfPresentIllness?.modeOfOnset)
+          inferredType = "geriatric";
       }
     } catch {
       // ignore
@@ -980,7 +984,9 @@ const DetailAdmission = ({
         return;
       }
       if (values.patientType?.toLowerCase() === "geriatric") {
-        const { isValid: checklistValid } = validateElderlyChecklist(values.elderlyChecklistFields);
+        const { isValid: checklistValid } = validateElderlyChecklist(
+          values.elderlyChecklistFields,
+        );
         if (!checklistValid) {
           setElderlyChecklistSubmitAttempted(true);
           setFormStep(ELDERLY_CHECKLIST);
@@ -1014,11 +1020,30 @@ const DetailAdmission = ({
           "judgment",
         ];
         const mseEnumValidators = {
-          quality: new Set(["dysphoric", "anxious", "irritable", "perplexed", "elevated", "euphoric", "elated", "exalted", "ecstatic", "euthymic"]),
+          quality: new Set([
+            "dysphoric",
+            "anxious",
+            "irritable",
+            "perplexed",
+            "elevated",
+            "euphoric",
+            "elated",
+            "exalted",
+            "ecstatic",
+            "euthymic",
+          ]),
           reactivity: new Set(["present", "absent"]),
           mobility: new Set(["intact", "constricted", "fixed", "labile"]),
           delusions: new Set(["none", "present"]),
-          formOfThought: new Set(["normal", "loosening_of_associations", "flight_of_ideas", "thought_blocking", "perseveration", "circumstantial", "tangential"]),
+          formOfThought: new Set([
+            "normal",
+            "loosening_of_associations",
+            "flight_of_ideas",
+            "thought_blocking",
+            "perseveration",
+            "circumstantial",
+            "tangential",
+          ]),
           perception: new Set(["normal", "hallucination", "illusion"]),
         };
         const mseMissing = mseFields.some((f) => {
@@ -1104,7 +1129,9 @@ const DetailAdmission = ({
       );
 
       if (!isEdit && isDoctor && isAiRecord && !values.isValidated) {
-        toast.error("Doctors must validate AI-generated records upon creation.");
+        toast.error(
+          "Doctors must validate AI-generated records upon creation.",
+        );
         return;
       }
 
@@ -1731,7 +1758,8 @@ const DetailAdmission = ({
 
   const isGeriatricChecklistValid = useMemo(() => {
     if (!isGeriatric) return true;
-    return validateElderlyChecklist(validation.values.elderlyChecklistFields).isValid;
+    return validateElderlyChecklist(validation.values.elderlyChecklistFields)
+      .isValid;
   }, [isGeriatric, validation.values.elderlyChecklistFields]);
 
   useEffect(() => {
@@ -1838,7 +1866,11 @@ const DetailAdmission = ({
                 outline={formStep !== ELDERLY_CHECKLIST}
                 onClick={() => setFormStep(ELDERLY_CHECKLIST)}
                 disabled={isGenerating}
-                style={!isGeriatricChecklistValid ? { borderColor: "#dc3545" } : undefined}
+                style={
+                  !isGeriatricChecklistValid
+                    ? { borderColor: "#dc3545" }
+                    : undefined
+                }
               >
                 Elderly Functional and Daily Living Checklist
                 {!isGeriatricChecklistValid && (
