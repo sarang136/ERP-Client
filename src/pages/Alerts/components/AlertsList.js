@@ -37,9 +37,8 @@ const RC = { "data-tag": "allowRowEvents" };
 const RESOLUTION_COLUMN_ID = "resolution";
 
 // The names in one role column (Doctor, Nurse, …): who in that role the alert
-// reaches. Long lists scroll inside the cell, like the notes. A suspended user
-// is still listed (muted, marked "Suspended"): they can't sign in until
-// reactivated, then they see it.
+// reaches. Long lists scroll inside the cell, like the notes. Suspended and
+// deleted users are left out by the server (owner decision, 2026-11-16).
 const RecipientNames = ({ list }) => {
   if (!list?.length) {
     return (
@@ -51,18 +50,13 @@ const RecipientNames = ({ list }) => {
   return (
     <div {...RC} className="py-1" style={{ maxHeight: 110, overflowY: "auto", width: "100%" }}>
       {list.map((r) => {
-        const notes = [RECIPIENT_VIA_NOTE[r.via], r.suspended && "Suspended"].filter(Boolean);
+        const note = RECIPIENT_VIA_NOTE[r.via];
         return (
-          <div
-            {...RC}
-            key={r._id}
-            className={r.suspended ? "text-muted" : undefined}
-            style={{ fontSize: "0.75rem", lineHeight: 1.35, marginBottom: 2 }}
-          >
+          <div {...RC} key={r._id} style={{ fontSize: "0.75rem", lineHeight: 1.35, marginBottom: 2 }}>
             {r.name}
-            {notes.length > 0 && (
+            {note && (
               <small {...RC} className="d-block text-muted" style={{ fontSize: "0.65rem" }}>
-                {notes.join(" · ")}
+                {note}
               </small>
             )}
           </div>
