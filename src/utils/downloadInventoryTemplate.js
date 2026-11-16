@@ -11,10 +11,10 @@ export const downloadInventoryTemplate = async (type = "TEMPLATE", medicines = [
             "Medicine Name",
             "Strength",
             "Unit",
-            "Stock",
-            "MRP",
-            "Purchase Price",
-            "Sales Price",
+            "Stock  (Ex. Per Tablet, Per Ampoule)",
+            "MRP (Ex. Per Strip, Per Box)",
+            "Purchase Price  (Ex. Per Strip, Per Box)",
+            "Sales Price  (Ex. Per Strip, Per Box)",
             "Expiry Date",
             "Batch",
             "Company",
@@ -35,8 +35,8 @@ export const downloadInventoryTemplate = async (type = "TEMPLATE", medicines = [
             fgColor: { argb: "FF007ACC" },
         };
 
-        sheet.columns.forEach((col) => {
-            col.width = Math.max(...headers.map((h) => h.length), 15);
+        sheet.columns.forEach((col, idx) => {
+            col.width = Math.max(headers[idx].length + 2, 15);
         });
 
         const expiryDateColIndex = headers.indexOf("Expiry Date") + 1;
