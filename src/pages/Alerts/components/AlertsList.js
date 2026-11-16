@@ -5,6 +5,8 @@ import {
   SEVERITY_HEX,
   PHASE_META,
   ALERT_SOURCE_META,
+  RECIPIENT_ROLES,
+  RECIPIENT_VIA_NOTE,
 } from "./alertConstants";
 import {
   timeAgo,
@@ -18,6 +20,7 @@ import {
 import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { setTotalAmount, viewPatient } from "../../../store/actions";
+import "./AlertsList.css";
 
 // Tabular alerts view. One row per SOPAlert. Click a row → opens the
 // offcanvas (pre-existing behaviour). Pagination is server-driven via the
@@ -29,6 +32,52 @@ import { setTotalAmount, viewPatient } from "../../../store/actions";
 // user might click on (badges, inner divs, <small>, icons) must carry the
 // attribute, or clicks on the visible text are silently dropped.
 const RC = { "data-tag": "allowRowEvents" };
+
+// Matches the selectors in AlertsList.css.
+const RESOLUTION_COLUMN_ID = "resolution";
+
+// The names in one role column (Doctor, Nurse, …): who in that role the alert
+// reaches. Long lists scroll inside the cell, like the notes. A suspended user
+// is still listed (muted, marked "Suspended"): they can't sign in until
+// reactivated, then they see it.
+const RecipientNames = ({ list }) => {
+  if (!list?.length) {
+    return (
+      <small {...RC} className="text-muted">
+        —
+      </small>
+    );
+  }
+  return (
+    <div {...RC} className="py-1" style={{ maxHeight: 110, overflowY: "auto", width: "100%" }}>
+      {list.map((r) => {
+        const notes = [RECIPIENT_VIA_NOTE[r.via], r.suspended && "Suspended"].filter(Boolean);
+        return (
+          <div
+            {...RC}
+            key={r._id}
+            className={r.suspended ? "text-muted" : undefined}
+            style={{ fontSize: "0.75rem", lineHeight: 1.35, marginBottom: 2 }}
+          >
+            {r.name}
+            {notes.length > 0 && (
+              <small {...RC} className="d-block text-muted" style={{ fontSize: "0.65rem" }}>
+                {notes.join(" · ")}
+              </small>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const recipientColumns = RECIPIENT_ROLES.map(({ key, label }) => ({
+  id: `recipients-${key}`,
+  name: label,
+  width: "160px",
+  cell: (row) => <RecipientNames list={row.recipients?.[key]} />,
+}));
 
 const AlertsList = ({
   alerts,
@@ -45,8 +94,59 @@ const AlertsList = ({
 }) => {
   const dispatch = useDispatch();
 
-
   const columns = [
+    // Resolution comes first and stays pinned to the left while the table
+    // scrolls sideways (AlertsList.css, keyed on this id).
+    {
+      id: RESOLUTION_COLUMN_ID,
+      name: "Resolution",
+      width: "180px",
+      ignoreRowClick: true,
+      cell: (row) =>
+        row.resolution?.resolved ? (
+          <div className="py-1" style={{ whiteSpace: "normal", minWidth: 0 }}>
+            <Badge
+              color="success"
+              pill
+              className="d-inline-flex align-items-center mb-1"
+            >
+              <i className="bx bx-check-circle me-1" />
+              Resolved
+            </Badge>
+            {row.resolution?.resolvedByName && (
+              <div style={{ fontSize: "0.72rem", color: "#6c757d", lineHeight: 1.3 }}>
+                <i className="bx bx-user me-1" />
+                {row.resolution.resolvedByName}
+              </div>
+            )}
+            {row.resolution?.resolvedAt && (
+              <div style={{ fontSize: "0.72rem", color: "#6c757d" }}>
+                {new Date(row.resolution.resolvedAt).toLocaleDateString("en-PK", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            )}
+          </div>
+        ) : canResolve ? (
+          <Button
+            size="sm"
+            color="success"
+            outline
+            onClick={(e) => {
+              e.stopPropagation();
+              onResolve(row);
+            }}
+          >
+            <i className="bx bx-check me-1" />
+            Resolve
+          </Button>
+        ) : (
+          <small className="text-muted">—</small>
+        ),
+    },
     {
       name: "",
       width: "6px",
@@ -280,6 +380,8 @@ const AlertsList = ({
         );
       },
     },
+    // Doctor, Psychologist, MSW, RMO, Nurse, Center Manager.
+    ...recipientColumns,
     {
       name: "Message",
       grow: 2,
@@ -421,59 +523,11 @@ const AlertsList = ({
         );
       },
     },
-    {
-      name: "Action",
-      width: "180px",
-      ignoreRowClick: true,
-      cell: (row) =>
-        row.resolution?.resolved ? (
-          <div className="py-1" style={{ whiteSpace: "normal", minWidth: 0 }}>
-            <Badge
-              color="success"
-              pill
-              className="d-inline-flex align-items-center mb-1"
-            >
-              <i className="bx bx-check-circle me-1" />
-              Resolved
-            </Badge>
-            {row.resolution?.resolvedByName && (
-              <div style={{ fontSize: "0.72rem", color: "#6c757d", lineHeight: 1.3 }}>
-                <i className="bx bx-user me-1" />
-                {row.resolution.resolvedByName}
-              </div>
-            )}
-            {row.resolution?.resolvedAt && (
-              <div style={{ fontSize: "0.72rem", color: "#6c757d" }}>
-                {new Date(row.resolution.resolvedAt).toLocaleDateString("en-PK", {
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
-            )}
-          </div>
-        ) : canResolve ? (
-          <Button
-            size="sm"
-            color="success"
-            outline
-            onClick={(e) => {
-              e.stopPropagation();
-              onResolve(row);
-            }}
-          >
-            <i className="bx bx-check me-1" />
-            Resolve
-          </Button>
-        ) : (
-          <small className="text-muted">—</small>
-        ),
-    },
   ];
 
   return (
     <DataTable
+      className="sop-alerts-table"
       columns={columns}
       data={alerts || []}
       pagination

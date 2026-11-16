@@ -114,8 +114,8 @@ const CurrentMedicinesTable = ({ medicines, baseDate }) => {
         </View>
         <View style={{ ...styles.tableBody }}>
           {(medicines || []).map((item, idx) => {
-            const { from, to } = getDateRange(item);
             const prescriber = getPrescriberName(item);
+            const periods = item?.schedules?.length > 1 ? item.schedules : [item];
             return (
               <View
                 key={item._id || idx}
@@ -125,46 +125,76 @@ const CurrentMedicinesTable = ({ medicines, baseDate }) => {
                   paddingBottom: 5,
                 }}
               >
-                <View style={styles.row}>
-                  <Text style={{ ...styles.col1, ...styles.fontBold }}>
-                    {idx + 1}
-                  </Text>
-                  <Text style={{ ...styles.col5, ...styles.fontBold }}>
-                    <Text style={{ textTransform: "uppercase" }}>
-                      {item.medicine?.type ? `${item.medicine.type} ` : ""}
-                    </Text>{" "}
-                    {item.medicine?.name} {item.medicine?.strength || ""}
-                  </Text>
-                  <View style={{ ...styles.col3, flexDirection: "row" }}>
-                    <View style={{ flex: 1, alignItems: "center" }}>
-                      <Text>
-                        {formatDosage(item.dosageAndFrequency?.morning, item.dosageAndFrequency?.unit) || "-"}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, alignItems: "center" }}>
-                      <Text>
-                        {formatDosage(item.dosageAndFrequency?.evening, item.dosageAndFrequency?.unit) || "-"}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, alignItems: "center" }}>
-                      <Text>
-                        {formatDosage(item.dosageAndFrequency?.night, item.dosageAndFrequency?.unit) || "-"}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{ ...styles.col6, alignItems: "flex-end", marginRight: "10px" }}>
-                    <Text style={styles.fontMd}>
-                      {item.intake}{" - "}{getMedicineFrequencyLabel(item)}{" - "}{item.duration} {item.unit}
-                    </Text>
-                    <Text style={{ fontFamily: "Helvetica-Oblique", fontSize: "8px", marginTop: 2 }}>
-                      {from} - {to}
-                    </Text>
-                  </View>
-                  <Text style={{ ...styles.colPrescriber, textTransform: "capitalize" }}>
-                    {prescriber}
-                  </Text>
-                </View>
-                {item.instructions && (
+                {periods.map((period, pIdx) => {
+                  const { from, to } = getDateRange(period);
+                  return (
+                    <React.Fragment key={pIdx}>
+                      <View
+                        style={{
+                          ...styles.row,
+                          borderTop: pIdx > 0 ? "1px dashed #999" : "none",
+                          paddingTop: pIdx > 0 ? 2 : 0,
+                          marginTop: pIdx > 0 ? 2 : 0,
+                        }}
+                      >
+                        <Text style={{ ...styles.col1, ...styles.fontBold }}>
+                          {pIdx === 0 ? idx + 1 : ""}
+                        </Text>
+                        <Text style={{ ...styles.col5, ...styles.fontBold }}>
+                          {pIdx === 0 && (
+                            <>
+                              <Text style={{ textTransform: "uppercase" }}>
+                                {item.medicine?.type ? `${item.medicine.type} ` : ""}
+                              </Text>{" "}
+                              {item.medicine?.name} {item.medicine?.strength || ""}
+                            </>
+                          )}
+                        </Text>
+                        <View style={{ ...styles.col3, flexDirection: "row" }}>
+                          <View style={{ flex: 1, alignItems: "center" }}>
+                            <Text>
+                              {formatDosage(period.dosageAndFrequency?.morning, period.dosageAndFrequency?.unit) || "-"}
+                            </Text>
+                          </View>
+                          <View style={{ flex: 1, alignItems: "center" }}>
+                            <Text>
+                              {formatDosage(period.dosageAndFrequency?.evening, period.dosageAndFrequency?.unit) || "-"}
+                            </Text>
+                          </View>
+                          <View style={{ flex: 1, alignItems: "center" }}>
+                            <Text>
+                              {formatDosage(period.dosageAndFrequency?.night, period.dosageAndFrequency?.unit) || "-"}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={{ ...styles.col6, alignItems: "flex-end", marginRight: "10px" }}>
+                          <Text style={styles.fontMd}>
+                            {period.intake}{" - "}{getMedicineFrequencyLabel(period)}{" - "}{period.duration} {period.unit}
+                          </Text>
+                          <Text style={{ fontFamily: "Helvetica-Oblique", fontSize: "8px", marginTop: 2 }}>
+                            {from} - {to}
+                          </Text>
+                        </View>
+                        <Text style={{ ...styles.colPrescriber, textTransform: "capitalize" }}>
+                          {pIdx === 0 ? prescriber : ""}
+                        </Text>
+                      </View>
+                      {item.schedules?.length > 1 && period.instructions && (
+                        <View
+                          style={{
+                            ...styles.row,
+                            ...styles.paddingTop5,
+                            ...styles.mrgnLeft10,
+                          }}
+                        >
+                          <Text style={styles.fontItalic}>Instruction: </Text>
+                          <Text>{period.instructions}</Text>
+                        </View>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+                {!(item.schedules?.length > 1) && item.instructions && (
                   <View
                     style={{
                       ...styles.row,
