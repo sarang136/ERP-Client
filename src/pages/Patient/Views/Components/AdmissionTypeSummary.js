@@ -2,7 +2,7 @@ import React from "react";
 import { connect } from "react-redux";
 import {
   getCurrentAdmissionType,
-  admissionTypeLabel,
+  admissionTypeSummaryLabel,
   getAdmissionTypeDetailParts,
 } from "../../../../utils/admissionType";
 import { SummaryCard } from "./SpecialRequirementsSummary";
@@ -24,9 +24,8 @@ const AdmissionTypeSummary = ({ addmission, isAdmit }) => {
 
   const current = getCurrentAdmissionType(addmission);
   const data = current?.data;
-  const typeLabel = data
-    ? admissionTypeLabel("admissionType", data.admissionType)
-    : "";
+  // Empty for an independent admission: it reads "Minor (below 18)" alone.
+  const typeLabel = admissionTypeSummaryLabel(data);
   const detail = data ? getAdmissionTypeDetailParts(data) : [];
 
   // The admission card's Patient Type (patientAdmissionType) — flagged here
@@ -34,7 +33,7 @@ const AdmissionTypeSummary = ({ addmission, isAdmit }) => {
   const isGeriatric = addmission.patientAdmissionType === "geriatric";
 
   // Nothing to show: no admission type recorded and not geriatric.
-  if (!typeLabel && !isGeriatric) return null;
+  if (!data && !isGeriatric) return null;
 
   // Geriatric is shown IN PLACE of the admission type, by decision — the same
   // as the patient header's "Admission Type: Geriatric".
@@ -49,8 +48,13 @@ const AdmissionTypeSummary = ({ addmission, isAdmit }) => {
   return (
     <SummaryCard title="ADMISSION TYPE" compact>
       {typeLabel && <div style={{ fontSize: "0.7rem" }}>{typeLabel}</div>}
+      {/* The details are the grey second line under a type name, or the main
+          line when there is no name (independent: "Minor (below 18)"). */}
       {detail.length > 0 && (
-        <div className="text-muted" style={{ fontSize: "0.7rem" }}>
+        <div
+          className={typeLabel ? "text-muted" : undefined}
+          style={{ fontSize: "0.7rem" }}
+        >
           {detail.join(" · ")}
         </div>
       )}
