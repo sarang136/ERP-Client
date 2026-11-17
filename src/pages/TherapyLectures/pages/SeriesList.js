@@ -149,7 +149,7 @@ const SeriesList = () => {
         <div>
           <h4 className="mb-0">Therapy Lectures</h4>
           <small className="text-muted">
-            45-Day De-addiction Lecture Programme · a series runs 45 days from the day it starts · one series per half-month
+            6-Week De-addiction Lecture Programme · a series runs 42 days from the day it starts · one series per half-month
             (started 1st–15th or 16th onwards)
           </small>
         </div>

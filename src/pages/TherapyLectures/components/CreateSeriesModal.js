@@ -29,7 +29,7 @@ export const suggestedStart = ({ month, half } = {}, today = todayKey()) => {
   return today >= fromKey && today <= toKey ? today : fromKey;
 };
 
-// New series: centre, start date (any day), hosts. It runs 45 days from that
+// New series: centre, start date (any day), hosts. It runs 42 days from that
 // date. Started on the 1st–15th it is its month's 1st half, on the 16th or
 // later the 2nd half; a centre has one series per half. Anyone with the page
 // can create one.

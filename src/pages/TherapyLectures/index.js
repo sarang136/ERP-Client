@@ -6,9 +6,9 @@ import SeriesDetail from "./pages/SeriesDetail";
 import { usePermissions } from "../../Components/Hooks/useRoles";
 import { LecturePermissions, PERMISSION_MODULE } from "./permissions";
 
-// Therapy Lectures: 45-day lecture series per centre — each starts on any day and
+// Therapy Lectures: 42-day (6-week) lecture series per centre — each starts on any day and
 // counts as its month's 1st half (started 1st–15th) or 2nd half (16th onwards),
-// one per half — with their hosts, patients, daily activity, attendance and
+// one per half — with their hosts, patients, daily session, attendance and
 // photo evidence. A patient's own record is also on the patient page's
 // Therapy Lectures tab (pages/Patient/Views/TherapyLectures.js).
 //

@@ -19,6 +19,7 @@ import { useLecturePermissions } from "../permissions";
 import {
   LEAVE_TEXT,
   activityText,
+  activityWeekText,
   errorMessage,
   formatDate,
   formatDay,
@@ -114,7 +115,8 @@ const SeriesDetail = () => {
   const canRemove = isHost && canDelete; // delete the series, remove patients
   const status = seriesStatus(series);
   const canEditSessions = !series.locked || isAdmin;
-  const totalDays = programme?.seriesDays || 45;
+  const totalDays = series.days || programme?.seriesDays || 42; // 45 for series created before 2026-11-17
+  // Day N suggests session N; a 45-day series' last 3 days have none.
   const plannedActivity = (day) => programme?.activities?.find((a) => a.day === day) || null;
   // Back to the month list: this month while the series runs, else the month it started.
   const backTo = `/therapy-lectures?month=${series.day ? today.slice(0, 7) : series.startKey.slice(0, 7)}&centre=${series.centerId || series.center?._id}`;
@@ -165,7 +167,7 @@ const SeriesDetail = () => {
               <h4 className="mb-1">
                 {series.label} <Badge color={status.color} className="fs-12 align-middle">{status.text}</Badge>
               </h4>
-              <div className="text-muted small">{programme?.name || "45-Day De-addiction Lecture Programme"}</div>
+              <div className="text-muted small">{programme?.name || "6-Week De-addiction Lecture Programme"}</div>
             </div>
             <div className="text-md-end">
               <div className="small text-muted">Hosts</div>
@@ -238,7 +240,7 @@ const SeriesDetail = () => {
                 <tr>
                   <th style={{ width: 70 }}>Day</th>
                   <th>Date</th>
-                  <th>Activity</th>
+                  <th>Session</th>
                   <th>Hosts</th>
                   <th className="text-center">Attendance</th>
                   <th className="text-center">Photos</th>
@@ -259,11 +261,11 @@ const SeriesDetail = () => {
                         {s.done ? (
                           <>
                             <div className="fw-medium">{activityText(s.activity)}</div>
-                            <small className="text-muted">{s.activity?.week} · {s.activity?.weekTheme}</small>
+                            <small className="text-muted">{activityWeekText(s.activity)}</small>
                           </>
                         ) : (
-                          <span className="text-muted small" title="Planned: activity for this day">
-                            {plannedActivity(s.seriesDay)?.topic || "—"}
+                          <span className="text-muted small" title="Planned session for this day">
+                            {activityText(plannedActivity(s.seriesDay)) || "—"}
                           </span>
                         )}
                       </td>
@@ -405,7 +407,7 @@ const SeriesDetail = () => {
         canEdit={canWrite && Boolean(session?.canRun) && canEditSessions && !session?.isFuture}
         canDeletePhotos={canDelete}
         viewOnly={!canWrite}
-        suggestedActivity={session ? Math.min(Math.max(session.seriesDay, 1), totalDays) : 1}
+        suggestedActivity={plannedActivity(session?.seriesDay)?.day || null}
         onSessionChange={replaceSession}
       />
       <HostsModal

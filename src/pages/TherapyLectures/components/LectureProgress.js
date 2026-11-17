@@ -39,7 +39,7 @@ const halfShort = (halfLabel) => (halfLabel ? halfLabel.replace(/^(first|second)
 
 /**
  * A patient's lecture record: the series they're in now, their attendance, every
- * series they've been in, and the 45 activities with their attendance at each.
+ * series they've been in, and the programme's 42 sessions with their attendance at each.
  * Shown in the series page's Progress window and on the patient page's tab.
  * `linkSeries` turns series names into links to the series page. The
  * activities list starts collapsed; the series data shows first.
@@ -57,7 +57,7 @@ const LectureProgress = ({ data, linkSeries = false }) => {
             {current ? (
               <>
                 {linkSeries && current._id ? <Link to={`/therapy-lectures/${current._id}`}>{current.label}</Link> : current.label}
-                {current.day ? <span className="text-muted fw-normal"> · Day {current.day} of {SERIES_DAYS}</span> : null}
+                {current.day ? <span className="text-muted fw-normal"> · Day {current.day} of {current.days || SERIES_DAYS}</span> : null}
                 {!current.day && current.startKey ? (
                   <span className="text-muted fw-normal"> · starts {formatDate(current.startKey)}</span>
                 ) : null}
@@ -69,11 +69,11 @@ const LectureProgress = ({ data, linkSeries = false }) => {
           {current?.halfLabel && <div className="small text-muted">{halfShort(current.halfLabel)}</div>}
         </div>
         <div>
-          <div className="small text-muted">Activities attended</div>
+          <div className="small text-muted">Sessions attended</div>
           <div className="fw-semibold">{data.attendedActivities} of {data.activities.length}</div>
         </div>
         <div>
-          <div className="small text-muted">Sessions</div>
+          <div className="small text-muted">Attendance</div>
           <div className="fw-semibold">
             <span className="text-success">{data.presentCount} present</span> · <span className="text-danger">{data.absentCount} absent</span>
           </div>
@@ -133,14 +133,14 @@ const LectureProgress = ({ data, linkSeries = false }) => {
         onClick={() => setShowActivities((v) => !v)}
       >
         <i className={`bx ${showActivities ? "bx-chevron-down" : "bx-chevron-right"} me-1`} />
-        Activities · {data.attendedActivities} of {data.activities.length} attended
+        Programme sessions · {data.attendedActivities} of {data.activities.length} attended
       </Button>
       {showActivities && (
         <Table size="sm" className="align-middle mb-0" data-testid="lecture-activities">
           <thead className="table-light">
             <tr>
               <th style={{ width: 60 }}>No.</th>
-              <th>Activity</th>
+              <th>Session</th>
               <th>Attendance</th>
             </tr>
           </thead>
@@ -152,12 +152,21 @@ const LectureProgress = ({ data, linkSeries = false }) => {
                 <React.Fragment key={a.day}>
                   {header && (
                     <tr className="table-light">
-                      <td colSpan={3} className="small fw-semibold text-muted">{a.week} · {a.weekTheme}</td>
+                      <td colSpan={3} className="small fw-semibold text-muted">{a.weekTheme ? `${a.week} · ${a.weekTheme}` : a.week}</td>
                     </tr>
                   )}
                   <tr>
                     <td>{a.day}</td>
-                    <td>{a.topic}</td>
+                    <td>
+                      {a.title ? (
+                        <>
+                          <div>{a.title} · {a.topic}</div>
+                          <small className="text-muted">{a.weekday}</small>
+                        </>
+                      ) : (
+                        a.topic
+                      )}
+                    </td>
                     <td>
                       {a.records.length === 0 ? (
                         <span className="text-muted small">—</span>
