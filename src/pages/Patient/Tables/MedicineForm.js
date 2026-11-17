@@ -479,7 +479,7 @@ const Medicine = ({
                   <Col xs={2} className="">
                     {medicine.medicine.isNew ? (
                       <div className="font-semi-bold text-uppercase">
-                        <div className="d-flex align-items-center mb-1">
+                        <div className="d-flex align-items-center flex-wrap row-gap-1">
                           <span className="me-2">
                             <Select
                               inputId={`medicine-type-${idx}`}
@@ -527,14 +527,12 @@ const Medicine = ({
                               }}
                             />
                           </span>
-                          <span style={{ wordBreak: "break-word" }}>{medicine.medicine?.name}</span>
-                        </div>
-                        <div className="d-flex align-items-center">
+                          <span className="me-2" style={{ wordBreak: "break-word" }}>{medicine.medicine?.name}</span>
                           <div className="form-group me-2">
                             <input
                               list="unit-options"
                               className="form-control form-control-sm"
-                              style={{ width: "90px" }}
+                              style={{ width: "90px", height: "31px" }}
                               id={idx}
                               onChange={(e) => {
                                 handleMedicineSub("unit", idx, e.target.value);
@@ -562,7 +560,7 @@ const Medicine = ({
                           <Input
                             bsSize="xs"
                             id={idx}
-                            style={{ width: "60px" }}
+                            style={{ width: "60px", height: "31px" }}
                             onChange={(e) =>
                               handleMedicineSub("strength", idx, e.target.value)
                             }
@@ -570,7 +568,8 @@ const Medicine = ({
                             required
                             value={medicine.medicine?.strength}
                             type="text"
-                            className="form-control p-0 ps-1"
+                            placeholder="Strength"
+                            className="form-control ps-1"
                           />
                         </div>
                       </div>
@@ -613,7 +612,7 @@ const Medicine = ({
                   </Col> */}
                   <Col xs={3}>
                     {!periods ? (
-                    <div className="d-flex align-items-center">
+                    <div className="d-flex align-items-center flex-wrap flex-sm-nowrap row-gap-1">
 
                       <div className="d-flex flex-column align-items-center">
                         <div className="fw-bold mb-1" style={{ textTransform: "uppercase" }}>Mor</div>
@@ -649,38 +648,40 @@ const Medicine = ({
 
                       <span className="mx-2">-</span>
 
-                      <div className="d-flex flex-column align-items-center">
-                        <div className="fw-bold mb-1" style={{ textTransform: "uppercase" }}>Eve</div>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          bsSize="sm"
-                          id={idx}
-                          name="night"
-                          onChange={handleChange}
-                          value={medicine.dosageAndFrequency.night}
-                          style={{ width: "55px" }}
-                        />
-                      </div>
+                      <div className="d-flex flex-column flex-lg-row">
+                        <div className="d-flex flex-column align-items-center">
+                          <div className="fw-bold mb-1" style={{ textTransform: "uppercase" }}>Eve</div>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            bsSize="sm"
+                            id={idx}
+                            name="night"
+                            onChange={handleChange}
+                            value={medicine.dosageAndFrequency.night}
+                            style={{ width: "55px" }}
+                          />
+                        </div>
 
-                      <div className="d-flex flex-column align-items-center ms-2">
-                        <div className="fw-bold mb-1" style={{ fontSize: "11px", textTransform: "uppercase" }}>Unit</div>
-                        <Input
-                          type="text"
-                          bsSize="sm"
-                          onChange={(e) => {
-                             const drugsTable = [...medicines];
-                             drugsTable[idx].dosageAndFrequency = {
-                               ...drugsTable[idx].dosageAndFrequency,
-                               unit: e.target.value
-                             };
-                             setMedicines(drugsTable);
-                          }}
-                          value={medicine.dosageAndFrequency.unit || ""}
-                          placeholder="ml, drop"
-                          style={{ width: "65px", fontSize: "12px" }}
-                        />
+                        <div className="d-flex flex-column align-items-center mt-1 mt-lg-0 ms-lg-2">
+                          <div className="fw-bold mb-1" style={{ fontSize: "11px", textTransform: "uppercase" }}>Unit</div>
+                          <Input
+                            type="text"
+                            bsSize="sm"
+                            onChange={(e) => {
+                               const drugsTable = [...medicines];
+                               drugsTable[idx].dosageAndFrequency = {
+                                 ...drugsTable[idx].dosageAndFrequency,
+                                 unit: e.target.value
+                               };
+                               setMedicines(drugsTable);
+                            }}
+                            value={medicine.dosageAndFrequency.unit || ""}
+                            placeholder="ml, drop"
+                            style={{ width: "55px", fontSize: "12px" }}
+                          />
+                        </div>
                       </div>
                     </div>
                     ) : (
