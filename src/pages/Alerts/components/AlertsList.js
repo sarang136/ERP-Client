@@ -36,9 +36,10 @@ const RC = { "data-tag": "allowRowEvents" };
 // Matches the selectors in AlertsList.css.
 const RESOLUTION_COLUMN_ID = "resolution";
 
-// The names in one role column (Doctor, Nurse, …): who in that role the alert
-// reaches. Long lists scroll inside the cell, like the notes. Suspended and
-// deleted users are left out by the server (owner decision, 2026-11-16).
+// The names in one role column: the patient's assigned Doctor / Psychologist /
+// MSW / RMO / Nurse, or the managers the alert reaches. Long lists scroll inside
+// the cell, like the notes. Suspended and deleted users are left out by the
+// server (owner decision, 2026-11-16).
 const RecipientNames = ({ list }) => {
   if (!list?.length) {
     return (
