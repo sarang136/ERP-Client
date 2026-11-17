@@ -1,9 +1,11 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { Col, Input, Row } from "reactstrap";
+import Select from "react-select";
 import {
-  medicineTypes,
+  medicineTypes2,
   medicineUnits,
+  normalizeLabel,
 } from "../../../Components/constants/medicine";
 import { connect } from "react-redux";
 import {
@@ -475,78 +477,64 @@ const Medicine = ({
                 >
                 <SortableMedicine index={idx} locked={medicine.locked}>
                   <Col xs={2} className="">
-                    <span className="font-semi-bold text-uppercase d-flex">
-                      <span
-                        className={`me-2 ${medicine.medicine.isNew
-                          ? "w-50"
-                          : ""
-                          }`}
-                      >
-                        {medicine.medicine.isNew ? (
-                          <div class="form-group">
-                            <input
-                              list="type-options"
-                              className="form-control form-control-sm"
-                              id={idx}
-                              onChange={(e) =>
-                                handleMedicineSub("type", idx, e.target.value)
-                              }
-                              required
+                    {medicine.medicine.isNew ? (
+                      <div className="font-semi-bold text-uppercase">
+                        <div className="d-flex align-items-center mb-1">
+                          <span className="me-2">
+                            <Select
+                              inputId={`medicine-type-${idx}`}
                               name="type"
-                              value={medicine.medicine?.type}
-                              placeholder="Type or select an option"
+                              placeholder="Type"
+                              options={(medicineTypes2 || []).map((item) => ({
+                                value: item,
+                                label: normalizeLabel(item),
+                              }))}
+                              value={
+                                medicine.medicine?.type
+                                  ? {
+                                      value: medicine.medicine.type,
+                                      label: normalizeLabel(medicine.medicine.type),
+                                    }
+                                  : null
+                              }
+                              onChange={(selected) =>
+                                handleMedicineSub("type", idx, selected ? selected.value : "")
+                              }
+                              classNamePrefix="react-select"
+                              menuPortalTarget={document.body}
+                              styles={{
+                                container: (base) => ({ ...base, width: "90px" }),
+                                control: (base) => ({
+                                  ...base,
+                                  minHeight: "28px",
+                                  fontSize: "12px",
+                                }),
+                                valueContainer: (base) => ({
+                                  ...base,
+                                  padding: "0 4px",
+                                }),
+                                indicatorsContainer: (base) => ({
+                                  ...base,
+                                  height: "28px",
+                                }),
+                                option: (base) => ({
+                                  ...base,
+                                  padding: "4px 8px",
+                                  fontSize: "12px",
+                                }),
+                                menu: (base) => ({ ...base, minWidth: "100px" }),
+                                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                              }}
                             />
-                            <datalist id="type-options">
-                              {(medicineTypes || []).map((item, idx) => (
-                                <option
-                                  key={idx + item}
-                                  value={item}
-                                  className="text-cap"
-                                ></option>
-                              ))}
-                            </datalist>
-                          </div>
-                        ) : (
-                          // <Input
-                          //   bsSize="xs"
-                          //   id={idx}
-                          //   onChange={(e) =>
-                          //     handleMedicineSub("type", idx, e.target.value)
-                          //   }
-                          //   name="type"
-                          //   required
-                          //   value={medicine.medicine.type}
-                          //   type="select"
-                          //   className="form-control p-0 ps-1 w-5"
-                          // >
-                          //   <option value="" selected disabled hidden>
-                          //     Choose Type
-                          //   </option>
-                          //   {(medicineTypes || []).map((item, idx) => (
-                          //     <option
-                          //       key={idx + item}
-                          //       value={item}
-                          //       className="text-cap"
-                          //     >
-                          //       {item}
-                          //     </option>
-                          //   ))}
-                          // </Input>
-                          medicine.medicine.type
-                        )}
-                      </span>
-                      {medicine.medicine?.name}
-                      <span
-                        className={`ms-2 ${medicine.medicine.isNew
-                          ? "w-50"
-                          : ""
-                          }`}
-                      >
-                        {medicine.medicine.isNew ? (
-                          <div class="form-group">
+                          </span>
+                          <span style={{ wordBreak: "break-word" }}>{medicine.medicine?.name}</span>
+                        </div>
+                        <div className="d-flex align-items-center">
+                          <div className="form-group me-2">
                             <input
                               list="unit-options"
                               className="form-control form-control-sm"
+                              style={{ width: "90px" }}
                               id={idx}
                               onChange={(e) => {
                                 handleMedicineSub("unit", idx, e.target.value);
@@ -559,7 +547,7 @@ const Medicine = ({
                               required
                               name="unit"
                               value={medicine.medicine?.unit || ""}
-                              placeholder="Type or select an option"
+                              placeholder="Unit"
                             />
                             <datalist id="unit-options">
                               {(medicineUnits || []).map((item, idx) => (
@@ -571,33 +559,10 @@ const Medicine = ({
                               ))}
                             </datalist>
                           </div>
-                        ) : (
-                          // <Input
-                          //   bsSize="xs"
-                          //   id={idx}
-                          //   onChange={(e) =>
-                          //     handleMedicineSub("unit", idx, e.target.value)
-                          //   }
-                          //   name="unit"
-                          //   value={medicine.medicine?.unit}
-                          //   type="select"
-                          //   required
-                          //   className="form-control p-0 ps-1"
-                          // >
-                          //   <option value="" selected disabled hidden>
-                          //     Choose Unit
-                          //   </option>
-                          //   {(medicineUnits || []).map((item, idx) => (
-                          //     <option key={idx + item}>{item}</option>
-                          //   ))}
-                          // </Input>
-                          null
-                        )}{" "}
-                        {/* medicine.medicine?.strength &&  */}
-                        {medicine.medicine.isNew ? (
                           <Input
                             bsSize="xs"
                             id={idx}
+                            style={{ width: "60px" }}
                             onChange={(e) =>
                               handleMedicineSub("strength", idx, e.target.value)
                             }
@@ -607,11 +572,15 @@ const Medicine = ({
                             type="text"
                             className="form-control p-0 ps-1"
                           />
-                        ) : (
-                          medicine.medicine.strength
-                        )}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="font-semi-bold text-uppercase d-flex">
+                        <span className="me-2">{medicine.medicine.type}</span>
+                        {medicine.medicine?.name}
+                        <span className="ms-2">{medicine.medicine.strength}</span>
                       </span>
-                    </span>
+                    )}
                   </Col>
                   {/* <Col xs={3} className="">
 
