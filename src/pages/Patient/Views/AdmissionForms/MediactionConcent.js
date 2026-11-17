@@ -63,14 +63,14 @@ const MediactionConcent = ({ register, patient }) => {
         patient?.guardianName || "";
       document.querySelector('[name="medicationConsent_relation"]').value =
         patient?.guardianRelation || "";
-      document.querySelector('[name="medicationConsent_patientName"]').value =
-        patient?.name || "";
       document.querySelector('[name="medicationConsent_patientFull"]').value =
         patient?.name || "";
       document.querySelector('[name="medicationConsent_patientName2"]').value =
         patient?.name || "";
       document.querySelector('[name="medicationConsent_relation2"]').value =
         patient?.guardianRelation || "";
+      document.querySelector('[name="medicationConsent_nokName"]').value =
+        patient?.guardianName || "";
     }
 
     // auto-fill today’s date
@@ -118,6 +118,7 @@ const MediactionConcent = ({ register, patient }) => {
         <input
           type="date"
           defaultValue={new Date().toISOString().split("T")[0]}
+          readOnly
           {...register("page4_date", {
             setValueAs: (val) => {
               if (!val) return "";
@@ -145,13 +146,18 @@ const MediactionConcent = ({ register, patient }) => {
           <li style={li}>CLOZAPINE,</li>
           <li style={li}>BENZODIAZEPINES,</li>
           <li style={li}>MOOD STABILIZERS,</li>
-          <li style={li}>DRUGS,</li>
+        </ul>
+        <ul style={listColumn}>
+          <li style={li}>ANTICHOLINERGIC MEDICATION,</li>
+          <li style={li}>MEDICATION FOR DEMENTIA,</li>
+          <li style={li}>ANALGESICS AND ANTIPYRETICS,</li>
+          <li style={li}>ANTIEPILEPTIC MEDICATION,</li>
         </ul>
         <ul style={listColumn}>
           <li style={li}>ANTI DEPRESSANTS,</li>
-          <li style={li}>EMERGENCY,</li>
-          <li style={li}>IV FLUID,</li>
-          <li style={li}>INJECTABLE,</li>
+          <li style={li}>EMERGENCY MEDICATIONS,</li>
+          <li style={li}>IV FLUIDS,</li>
+          <li style={li}>INJECTABLES IM/IV,</li>
           <li style={li}>ANTIBIOTICS</li>
         </ul>
       </div>
@@ -162,6 +168,7 @@ const MediactionConcent = ({ register, patient }) => {
         <input
           type="text"
           defaultValue={patient?.guardianName}
+          readOnly
           {...register("medicationConsent_name")}
           style={{
             fontWeight: "bold",
@@ -173,6 +180,7 @@ const MediactionConcent = ({ register, patient }) => {
         <input
           type="text"
           defaultValue={patient?.guardianRelation}
+          readOnly
           {...register("medicationConsent_relation")}
           style={{
             fontWeight: "bold",
@@ -180,21 +188,11 @@ const MediactionConcent = ({ register, patient }) => {
             ...inputLine,
           }}
         />
-        of
+        of Mr/Mrs/Miss/Smt
         <input
           type="text"
           defaultValue={patient?.name}
-          {...register("medicationConsent_patientName")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-          }}
-        />
-        Mr/Mrs/Miss/Smt
-        <input
-          type="text"
-          defaultValue={patient?.name}
+          readOnly
           {...register("medicationConsent_patientFull")}
           style={{
             fontWeight: "bold",
@@ -219,6 +217,7 @@ const MediactionConcent = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.name}
+            readOnly
             {...register("medicationConsent_patientName2")}
             style={{
               fontWeight: "bold",
@@ -232,6 +231,7 @@ const MediactionConcent = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.guardianRelation}
+            readOnly
             {...register("medicationConsent_relation2")}
             style={{
               fontWeight: "bold",
@@ -244,6 +244,8 @@ const MediactionConcent = ({ register, patient }) => {
           <span style={bold}>Name of NOK</span>:
           <input
             type="text"
+            defaultValue={patient?.guardianName}
+            readOnly
             {...register("medicationConsent_nokName")}
             style={inputLine}
           />

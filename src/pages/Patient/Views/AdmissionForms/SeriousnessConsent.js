@@ -1,7 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import PrintHeader from "./printheader";
 
 const SeriousnessConsent = ({ register, patient }) => {
+  const [seriousnessApplicability, setSeriousnessApplicability] = useState("applicable");
+
   const pageContainer = {
     margin: "0 auto",
     padding: "15mm",
@@ -52,6 +54,8 @@ const SeriousnessConsent = ({ register, patient }) => {
         patient?.name || "";
       document.querySelector('[name="consent_relation"]').value =
         patient?.guardianRelation || "";
+      document.querySelector('[name="consent_nokName"]').value =
+        patient?.guardianName || "";
     }
 
     // auto-fill date
@@ -98,6 +102,7 @@ const SeriousnessConsent = ({ register, patient }) => {
         <input
           type="date"
           defaultValue={new Date().toISOString().split("T")[0]}
+          readOnly
           {...register("page3_date", {
             setValueAs: (val) => {
               if (!val) return "";
@@ -118,57 +123,31 @@ const SeriousnessConsent = ({ register, patient }) => {
         Hospitalization in ICU
       </div>
 
-      {/* A) Seriousness */}
+      {/* A) Emergency Medication (old B) */}
       <div style={section}>
-        <span style={bold}>A) Seriousness</span> I,
-        <input
-          type="text"
-          defaultValue={patient?.guardianName}
-          {...register("seriousness_name")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-          }}
-        />
-        , aware of the Serious Condition of our patient, Mr/Mrs/Miss/Smt.
-        <input
-          type="text"
-          defaultValue={patient?.name}
-          {...register("seriousness_patientName")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-          }}
-        />
-        , who is critical & might deteriorate further leading to medical
-        complications including death.
-      </div>
-
-      {/* B) Emergency Medication */}
-      <div style={section}>
-        <span style={bold}>B) Emergency Medication</span> I do hereby willfully
-        give my full, complete, and irrevocable written consent to administer
-        any/all Emergency Oral/Injectable Medication (both intramuscular and/or
+        <span style={bold}>A) Emergency Medication</span> If my patient gets
+        serious due to any condition I do hereby willfully give my full,
+        complete, and irrevocable written consent to administer any/all
+        Emergency Oral/Injectable Medication (both intramuscular and/or
         intravenous) as required to be given to the patient by doctors, nursing,
         and care staffs of{" "}
         <span style={bold}>Jagruti Rehabilitation Centre Pvt. Ltd.</span> I
-        understand that emergency medicines are “NOT” optional and are necessary
+        understand that emergency medicines are "NOT" optional and are necessary
         for appropriate management in case of non-psychiatric emergency. I
         understand that all the medication whatsoever are useful but may have
         side effect/s. The same have been clearly explained to me.
       </div>
 
-      {/* C) Transfer to Other Hospital */}
+      {/* B) Transfer to Other Hospital (old C) */}
       <div style={section}>
-        <span style={bold}>C) Transfer to Other Hospital</span> I, do hereby
+        <span style={bold}>B) Transfer to Other Hospital</span> I, do hereby
         willfully give my full, complete and irrevocable written consent to{" "}
         <span style={bold}>Jagruti Rehab Centre Pvt. Ltd.</span> to act in
-        capacity of a legal guardian of Mr/Mrs/Smt/Miss
+        capacity of a legal NR of Mr/Mrs/Smt/Miss
         <input
           type="text"
           defaultValue={patient?.name}
+          readOnly
           {...register("transfer_patientName")}
           style={{
             fontWeight: "bold",
@@ -189,21 +168,21 @@ const SeriousnessConsent = ({ register, patient }) => {
         OR
       </div>
 
-      {/* D) In-house Treatment */}
+      {/* C) In-house Treatment (old D) */}
       <div style={section}>
-        <span style={bold}>D) In-house Treatment</span> I do not want to shift
-        my patient to higher centre, looking at the age & condition of the
+        <span style={bold}>C) In-house Treatment</span> I do not want to shift
+        my patient to higher centre, looking at the age &amp; condition of the
         patient. Also, we are satisfied with the facilities of{" "}
-        <span style={bold}>Jagruti Rehab Centre Pvt. Ltd.</span> & would like to
-        continue the management of the patient here only.
+        <span style={bold}>Jagruti Rehab Centre Pvt. Ltd.</span> &amp; would
+        like to continue the management of the patient here only.
       </div>
 
-      {/* E) Disclaimer */}
+      {/* D) Disclaimer (old E) */}
       <div style={section}>
-        <span style={bold}>E)</span> I will not hold{" "}
-        <span style={bold}>Jagruti Rehab Centre Pvt. Ltd.</span> & its staff
-        responsible for any untoward incidence including death & will bear the
-        expenses of this extraordinary situation.
+        <span style={bold}>D)</span> I will not hold{" "}
+        <span style={bold}>Jagruti Rehab Centre Pvt. Ltd.</span> &amp; its
+        staff responsible for any untoward incidence including death &amp; will
+        bear the expenses of this extraordinary situation.
       </div>
 
       <div
@@ -213,12 +192,86 @@ const SeriousnessConsent = ({ register, patient }) => {
       </div>
 
       <div style={section}>
-        Jagruti has given me clear understanding of my patient’s physical and
-        mental health. I understood the same and we give our full consent with
-        regards to his/her treatment. During the course of treatment if patient
-        get violent / aggressive / delirious / disoriented etc., then in that
-        case he/she may need to be restrained temporarily to prevent head injury
-        / fracture / suicidal attempt / injury to self or others.
+        <strong>Restraint Constraint</strong> Jagruti has given me clear
+        understanding of my patient's physical and mental health. I understood
+        the same and we give our full consent with regards to his/her treatment.
+        During the course of treatment if patient get violent / aggressive /
+        delirious / disoriented etc., then in that case he/she may need to be
+        restrained temporarily to prevent head injury / fracture / suicidal
+        attempt / injury to self or others.
+      </div>
+
+      {/* E) Seriousness — heading always first, radios always second */}
+      <div style={{ marginBottom: "5px" }}>
+        {/* Heading always visible on screen; data-pdf-hide added only when Not Applicable so captureSection strips it from PDF clone */}
+        <span
+          {...(seriousnessApplicability === "not_applicable" ? { "data-pdf-hide": "true" } : {})}
+          style={bold}
+        >
+          E) Seriousness
+        </span>
+        <div data-pdf-hide="true" style={{ margin: "5px 0" }}>
+          <label style={{ marginRight: "15px", cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="seriousness_applicability"
+              value="applicable"
+              checked={seriousnessApplicability === "applicable"}
+              onChange={() => setSeriousnessApplicability("applicable")}
+              style={{ marginRight: "4px" }}
+            />
+            Applicable
+          </label>
+          <label style={{ cursor: "pointer" }}>
+            <input
+              type="radio"
+              name="seriousness_applicability"
+              value="not_applicable"
+              checked={seriousnessApplicability === "not_applicable"}
+              onChange={() => setSeriousnessApplicability("not_applicable")}
+              style={{ marginRight: "4px" }}
+            />
+            Not Applicable
+          </label>
+        </div>
+      </div>
+
+      {/* Content: separate block rendered immediately after, shown only when Applicable */}
+      <div
+        style={{
+          display: seriousnessApplicability === "applicable" ? "block" : "none",
+        }}
+      >
+        <div style={section}>
+          <div style={{ marginTop: "5px" }}>
+            I,
+            <input
+              type="text"
+              defaultValue={patient?.guardianName}
+              readOnly
+              {...register("seriousness_name")}
+              style={{
+                fontWeight: "bold",
+                textTransform: "uppercase",
+                ...inputLine,
+              }}
+            />
+            , aware of the Serious Condition of our patient, Mr/Mrs/Miss/Smt.
+            <input
+              type="text"
+              defaultValue={patient?.name}
+              readOnly
+              {...register("seriousness_patientName")}
+              style={{
+                fontWeight: "bold",
+                textTransform: "uppercase",
+                ...inputLine,
+              }}
+            />
+            , who is critical &amp; might deteriorate further leading to medical
+            complications including death.
+          </div>
+        </div>
       </div>
 
       {/* Patient & NOK Info */}
@@ -228,6 +281,7 @@ const SeriousnessConsent = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.name}
+            readOnly
             {...register("consent_patientName")}
             style={{
               fontWeight: "bold",
@@ -241,6 +295,7 @@ const SeriousnessConsent = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.guardianRelation}
+            readOnly
             {...register("consent_relation")}
             style={{
               fontWeight: "bold",
@@ -253,6 +308,8 @@ const SeriousnessConsent = ({ register, patient }) => {
           Name of NOK:
           <input
             type="text"
+            defaultValue={patient?.guardianName}
+            readOnly
             {...register("consent_nokName")}
             style={inputLine}
           />

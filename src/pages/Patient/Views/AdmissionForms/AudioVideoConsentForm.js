@@ -84,6 +84,7 @@ const AudioVideoConsentForm = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.guardianName}
+            readOnly
             style={{
               fontWeight: "bold",
               textTransform: "uppercase",
@@ -100,6 +101,7 @@ const AudioVideoConsentForm = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.name}
+            readOnly
             style={{
               fontWeight: "bold",
               textTransform: "uppercase",
@@ -144,6 +146,7 @@ const AudioVideoConsentForm = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.name}
+            readOnly
             style={{
               fontWeight: "bold",
               textTransform: "uppercase",
@@ -158,6 +161,7 @@ const AudioVideoConsentForm = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.guardianRelation}
+            readOnly
             style={{
               fontWeight: "bold",
               textTransform: "uppercase",
@@ -172,6 +176,7 @@ const AudioVideoConsentForm = ({ register, patient }) => {
           <input
             type="text"
             defaultValue={patient?.guardianName}
+            readOnly
             style={{
               fontWeight: "bold",
               textTransform: "uppercase",
@@ -181,13 +186,21 @@ const AudioVideoConsentForm = ({ register, patient }) => {
           />
         </p>
 
-        <p>Signature of NOK : ______________________________</p>
+        <p>
+          Signature of NOK :
+          <input
+            type="text"
+            style={inputInline}
+            {...register("nokSignature")}
+          />
+        </p>
 
         <p>
           Date :
           <input
             type="text"
             defaultValue={new Date().toLocaleDateString("en-GB")}
+            readOnly
             style={inputInline}
             {...register("consentDate")}
           />

@@ -49,10 +49,21 @@ const ConsentFormModal = ({
               (p) => Number(p?.price) > 0
             )
           )
-          .map((proc) => ({
-            label: proc.name.replace(/\b\w/g, (l) => l.toUpperCase()),
-            value: proc.name,
-          }));
+          .map((proc) => {
+            const prices = proc?.center?.[0]?.prices || [];
+            const monthly = prices.find(
+              (p) => p.unit === "month" || p.unit === "monthly" || p.unit === "per month"
+            )?.price ?? "";
+            const daily = prices.find(
+              (p) => p.unit === "days" || p.unit === "daily" || p.unit === "per day"
+            )?.price ?? "";
+            return {
+              label: proc.name.replace(/\b\w/g, (l) => l.toUpperCase()),
+              value: proc.name,
+              monthlyPrice: monthly,
+              dailyPrice: daily,
+            };
+          });
         if (!cancelled) setRoomTypeOptions(options);
       } catch (err) {
         if (!cancelled) setRoomTypeOptions([]);
@@ -205,6 +216,8 @@ const ConsentFormModal = ({
                 setDetails((prev) => ({
                   ...prev,
                   roomtype: opt ? opt.value : "",
+                  toPay: opt ? String(opt.monthlyPrice ?? "") : "",
+                  semiprivate: opt ? String(opt.dailyPrice ?? "") : "",
                 }))
               }
               options={roomTypeOptions}
