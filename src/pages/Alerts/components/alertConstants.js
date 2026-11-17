@@ -36,8 +36,9 @@ export const DEFAULT_RESOLVED_STATE = "unresolved";
 
 // One table column per job role (worked out by the server —
 // services/sop/alertRecipients.js): Doctor … Nurse show the person assigned to
-// the patient's admission in that role, when the rule sends the alert to it;
-// Center Manager shows the managers the alert reaches. Keys are User.role
+// the patient's admission in that role, whether or not the rule sends the alert
+// to it (owner decision, 2026-11-17); Center Manager shows the managers the
+// alert reaches. Keys are User.role
 // values; Center Manager is the MANAGER role.
 export const RECIPIENT_ROLES = [
   { key: "DOCTOR", label: "Doctor" },
