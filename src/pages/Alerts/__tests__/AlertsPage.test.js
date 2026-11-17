@@ -1,7 +1,8 @@
 // Alerts page (/alert): opens on every unresolved alert with no date range,
 // the date range can be cleared back to "All dates", the Resolution column
 // comes first (pinned by AlertsList.css), and the Doctor / Psychologist / MSW /
-// RMO / Nurse / Center Manager columns list who in each role sees the alert.
+// RMO / Nurse columns show the patient's assigned staff and Center Manager the
+// managers the alert reaches — in the table and in the detail offcanvas.
 //
 //   CI=true npx craco test --watchAll=false src/pages/Alerts/__tests__/AlertsPage.test.js
 
@@ -16,6 +17,7 @@ import { usePermissions } from "../../../Components/Hooks/useRoles";
 import { useAlertsInbox, buildServerParams } from "../components/useAlertsInbox";
 import AlertsFilters from "../components/AlertsFilters";
 import AlertsList from "../components/AlertsList";
+import AlertDetailOffcanvas from "../components/AlertDetailOffcanvas";
 
 jest.mock("../../../helpers/backend_helper", () => ({
   getAllSopAlerts: jest.fn(),
@@ -306,6 +308,54 @@ describe("Alerts table role columns", () => {
     renderList();
     for (const role of ["DOCTOR", "PSYCHOLOGIST", "MSW", "RMO", "NURSE", "MANAGER"]) {
       expect(cellOf(1, role)).toHaveTextContent("—");
+    }
+  });
+});
+
+describe("Alert detail offcanvas role-wise users", () => {
+  const ALERT = {
+    _id: "a1", severity: "HIGH", message: "Open one", createdAt: "2026-11-17T08:00:00.000Z",
+    patient: { _id: "p1", name: "Ravi" },
+    routing: { notifyRoles: ["NURSE", "MANAGER"], notifyAdmissionDoctor: true },
+    recipients: {
+      DOCTOR: [{ _id: "u1", name: "Dr Dev", via: "ASSIGNED" }],
+      PSYCHOLOGIST: [],
+      MSW: [],
+      RMO: [],
+      NURSE: [{ _id: "u4", name: "Nina", via: "ASSIGNED" }],
+      MANAGER: [{ _id: "u6", name: "Max", via: "PICKED" }, { _id: "u7", name: "Mira", via: "ROLE" }],
+    },
+  };
+
+  const renderDetail = (alert) =>
+    render(
+      <MemoryRouter>
+        <AlertDetailOffcanvas isOpen onClose={jest.fn()} alert={alert} />
+      </MemoryRouter>,
+    );
+
+  const row = (role) => screen.getByTestId(`role-users-${role}`);
+
+  test("lists the six roles with the same names as the table", () => {
+    renderDetail(ALERT);
+    expect(screen.getByText("Role-wise users")).toBeInTheDocument();
+    expect(within(row("DOCTOR")).getByText("Doctor")).toBeInTheDocument();
+    expect(within(row("DOCTOR")).getByText("Dr Dev")).toBeInTheDocument();
+    expect(within(row("DOCTOR")).queryByText(/picked|patient's/i)).not.toBeInTheDocument();
+    expect(within(row("NURSE")).getByText("Nina")).toBeInTheDocument();
+    for (const role of ["PSYCHOLOGIST", "MSW", "RMO"]) expect(row(role)).toHaveTextContent("—");
+
+    const manager = row("MANAGER");
+    expect(within(manager).getByText("Center Manager")).toBeInTheDocument();
+    expect(within(manager).getByText("Max")).toBeInTheDocument();
+    expect(within(manager).getAllByText("Picked by name")).toHaveLength(1);
+    expect(within(manager).getByText("Mira")).toBeInTheDocument();
+  });
+
+  test("an alert without recipients (pushed live) shows a dash for every role", () => {
+    renderDetail({ ...ALERT, recipients: undefined });
+    for (const role of ["DOCTOR", "PSYCHOLOGIST", "MSW", "RMO", "NURSE", "MANAGER"]) {
+      expect(row(role)).toHaveTextContent("—");
     }
   });
 });
