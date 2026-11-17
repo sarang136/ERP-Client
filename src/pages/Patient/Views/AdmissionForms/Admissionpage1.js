@@ -63,7 +63,7 @@ const Admissionpage1 = ({ register, admissions, patient, details, chartData }) =
 
   const [age, setAge] = useState("");
   const [icdOptions, setIcdOptions] = useState([]);
-  const [provisionalDxValue, setProvisionalDxValue] = useState(null);
+  const [provisionalDxValue, setProvisionalDxValue] = useState([]);
 
   const calculateAge = (dob) => {
     if (!dob) return "";
@@ -96,13 +96,15 @@ const Admissionpage1 = ({ register, admissions, patient, details, chartData }) =
       .catch(() => setIcdOptions([]));
   }, []);
 
-  // Pre-select the patient's provisional diagnosis from the latest Detail Admission chart
+  // Pre-select all provisional diagnoses from the latest Detail Admission chart
   useEffect(() => {
     if (!icdOptions.length) return;
-    const pd = chartData?.detailAdmission?.doctorSignature?.provisionaldiagnosis?.[0];
-    if (!pd) return;
-    const matched = icdOptions.find((opt) => opt.value === pd.code_id);
-    if (matched) setProvisionalDxValue(matched);
+    const pds = chartData?.detailAdmission?.doctorSignature?.provisionaldiagnosis;
+    if (!pds?.length) return;
+    const matched = pds
+      .map((pd) => icdOptions.find((opt) => opt.value === pd.code_id))
+      .filter(Boolean);
+    if (matched.length) setProvisionalDxValue(matched);
   }, [icdOptions, chartData]);
 
   return (
@@ -336,8 +338,9 @@ const Admissionpage1 = ({ register, admissions, patient, details, chartData }) =
           }}
         >
           <Select
+            isMulti
             value={provisionalDxValue}
-            onChange={(opt) => setProvisionalDxValue(opt)}
+            onChange={(opt) => setProvisionalDxValue(opt || [])}
             options={icdOptions}
             placeholder="Select Provisional Diagnosis"
             isClearable
@@ -345,7 +348,7 @@ const Admissionpage1 = ({ register, admissions, patient, details, chartData }) =
         </div>
         <input
           type="hidden"
-          value={provisionalDxValue?.label || ""}
+          value={provisionalDxValue.map((o) => o.label).join(", ")}
           {...register("Basic_Admission_Form_provisionalDiagnosis")}
         />
       </div>

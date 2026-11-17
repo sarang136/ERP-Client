@@ -192,9 +192,13 @@ const Admissionpage2 = ({ register, patient, details }) => {
           }}
         />{" "}
         and a non refundable admission fees of Rs. {admissionFee}/- at the time
-        of admission. Also, minimum 5 days of initial fees is compulsory. If
-        discharge is taken within 25 days of admission, then Daily Charges will
-        be applicable.
+        of admission. Also,{" "}
+        <span style={{ fontWeight: "bold" }}>
+          minimum 5 days of initial fees
+        </span>{" "}
+        is compulsory. If discharge is taken within 25 days of admission,{" "}
+        <span style={{ fontWeight: "bold" }}>then Daily Charges</span> will be
+        applicable.
       </div>
 
       <div style={consentPara}>
@@ -210,7 +214,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
         General Consultation If Any <br />
         D) General Medicines &nbsp; E) Family Member Counseling & Education{" "}
         <br />
-        F) Pathological Tests, X-Ray, Psychodiagnostic tests Etc. <br />
+        F) Pathological Tests, X-Ray, F2 Psychodiagnostic tests Etc. <br />
         G) All Personal Expenditure Such As Soaps, Toothbrush, Oil Or Any
         Personal Article Bought <br />
         H) Washing Of Clothes And Ironing, If Any <br />
