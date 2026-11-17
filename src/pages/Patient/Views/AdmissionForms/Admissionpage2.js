@@ -15,6 +15,16 @@ const Admissionpage2 = ({ register, patient, details }) => {
     ? 1200
     : 1000;
 
+  const loggedInUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("authUser"))?.data || {};
+    } catch {
+      return {};
+    }
+  })();
+  const loggedInUserName = loggedInUser.name || "";
+  const loggedInUserPhone = loggedInUser.phoneNumber || "";
+
   const pageContainer = {
     margin: "0 auto",
     padding: "15mm",
@@ -89,6 +99,9 @@ const Admissionpage2 = ({ register, patient, details }) => {
     document.querySelector('[name="Basic_Admission_Form_dateStaff"]').value =
       new Date().toISOString().split("T")[0] || "";
 
+    document.querySelector('[name="Basic_Admission_Form_staffName"]').value =
+      loggedInUserName;
+
     document.querySelector('[name="Basic_Admission_Form_dateRep"]').value =
       new Date().toISOString().split("T")[0] || "";
   }, [details, patient]);
@@ -133,6 +146,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
         <input
           type="text"
           defaultValue={details?.toPay}
+          readOnly
           {...register("Basic_Admission_Form_semiPrivate")}
           style={{
             fontWeight: "bold",
@@ -144,6 +158,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
         <input
           type="text"
           defaultValue={details?.semiprivate}
+          readOnly
           {...register("Basic_Admission_Form_private")}
           style={{
             fontWeight: "bold",
@@ -155,6 +170,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
         <input
           type="text"
           defaultValue={details?.roomtype}
+          readOnly
           {...register("Basic_Admission_Form_roomtype")}
           style={{
             fontWeight: "bold",
@@ -167,6 +183,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
         <input
           type="text"
           defaultValue={details?.advDeposit}
+          readOnly
           {...register("Basic_Admission_Form_advanceDeposit")}
           style={{
             fontWeight: "bold",
@@ -193,7 +210,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
         General Consultation If Any <br />
         D) General Medicines &nbsp; E) Family Member Counseling & Education{" "}
         <br />
-        F) Pathological Tests, X-Ray Etc. <br />
+        F) Pathological Tests, X-Ray, Psychodiagnostic tests Etc. <br />
         G) All Personal Expenditure Such As Soaps, Toothbrush, Oil Or Any
         Personal Article Bought <br />
         H) Washing Of Clothes And Ironing, If Any <br />
@@ -204,7 +221,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
 
       {[
         "If in case of any physical ailment, sickness, contagious disease or any other medical emergency, Jagruti Rehabilitation Centre holds all rights to conduct required tests ,transfer patient to any other Hospital, give him any immediate treatment including surgery in that case. Payment for all the medical Bills & hospital etc. shall be paid by me and Jagruti Rehabilitation Centre shall not be held Responsible for the same.",
-        "The monthly fees and other extra expenditure should be paid before 10 th of every English Calendar month. In case of delay in payment then Jagruti Rehabilitation Centre will discharge the patient & complete the discharge procedure & I will not blame Jagruti Rehabilitation Centre for the same.",
+        "The monthly fees and other extra expenditure should be paid 10 days before billing cycle. In case of delay in payment then Jagruti Rehabilitation Centre will discharge the patient & complete the discharge procedure & I will not blame Jagruti Rehabilitation Centre for the same.",
         "The fact that the Resident is temporally in the care of Jagruti Rehabilitation Centre, it offers no protection in law. Criminal acts including attempted or actual suicide while as a resident are subject to legal action & Jagruti Rehabilitation Centre accepts no responsibility in this connection.",
         "I do understand that wandering tendencies, absconding, suicidal tendencies, violent Behavior, Suspiciousness etc. are few of the symptoms of mental illness and I will not hold Jagruti Rehabilitation Centre responsible for the same.",
         "I understand that although the patient is under treatment in Jagruti Rehabilitation Centre, there could be some unfortunate incidents such as accidents of any kind, fracture due to fall, any accident while playing games & any type of illness & even to the extent of death can happen to the patient. In case of any such incidents I would not blame Jagruti Rehabilitation Centre for the same.",
@@ -221,20 +238,11 @@ const Admissionpage2 = ({ register, patient, details }) => {
       <div style={signatureRow}>
         <div style={signatureBox}>
           <div>
-            Any Comments:
-            <input
-              type="text"
-              {...register("Basic_Admission_Form_comments")}
-              style={{ border: "none", width: "100%", marginTop: "5px" }}
-            />
-          </div>
-        </div>
-        <div style={signatureBox}>
-          <div>
             Name of Patient / Representative:
             <input
               type="text"
               defaultValue={patient?.name}
+              readOnly
               {...register("Basic_Admission_Form_patientRep")}
               style={{
                 border: "none",
@@ -250,6 +258,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
             <input
               type="text"
               defaultValue={patient?.guardianRelation}
+              readOnly
               {...register("Basic_Admission_Form_relation")}
               style={{
                 border: "none",
@@ -265,6 +274,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
             <input
               type="date"
               defaultValue={new Date().toISOString().split("T")[0]}
+              readOnly
               {...register("Basic_Admission_Form_dateRep", {
                 setValueAs: (val) => {
                   if (!val) return "";
@@ -284,14 +294,28 @@ const Admissionpage2 = ({ register, patient, details }) => {
           Staff Name:
           <input
             type="text"
+            defaultValue={loggedInUserName}
+            readOnly
             {...register("Basic_Admission_Form_staffName")}
-            style={{ border: "none", width: "100%", marginTop: "5px" }}
+            style={{
+              border: "none",
+              width: "100%",
+              marginTop: "5px",
+              fontWeight: "bold",
+              textTransform: "uppercase",
+            }}
           />
+          {loggedInUserPhone && (
+            <div style={{ fontSize: "11px", marginTop: "2px" }}>
+              Contact: {loggedInUserPhone}
+            </div>
+          )}
           <div>
             Date:
             <input
               type="date"
               defaultValue={new Date().toISOString().split("T")[0]}
+              readOnly
               {...register("Basic_Admission_Form_dateStaff", {
                 setValueAs: (val) => {
                   if (!val) return "";
@@ -309,6 +333,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
           <input
             type="text"
             defaultValue={patient?.guardianName}
+            readOnly
             {...register("Basic_Admission_Form_witnessName")}
             style={{
               border: "none",
@@ -323,6 +348,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
             <input
               type="text"
               defaultValue={patient?.guardianRelation}
+              readOnly
               {...register("Basic_Admission_Form_relationWitness")}
               style={{
                 border: "none",
@@ -338,6 +364,7 @@ const Admissionpage2 = ({ register, patient, details }) => {
             <input
               type="date"
               defaultValue={new Date().toISOString().split("T")[0]}
+              readOnly
               {...register("Basic_Admission_Form_dateWitness", {
                 setValueAs: (val) => {
                   if (!val) return "";
