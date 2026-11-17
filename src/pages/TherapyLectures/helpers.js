@@ -15,8 +15,12 @@ export const shiftMonth = (month, n) => {
 export const monthLabel = (month) =>
   new Date(`${month}-01T00:00:00Z`).toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 
-/** A series runs 45 days from the day it starts (any day); day N suggests activity N. */
-export const SERIES_DAYS = 45;
+/**
+ * A series runs 42 days (6 weeks) from the day it starts (any day); day N
+ * suggests session N of the programme. Series created before 2026-11-17 run 45
+ * days: the server sends each series' own length as `days`.
+ */
+export const SERIES_DAYS = 42;
 /** Started on the 1st–15th it is its month's first half, on the 16th or later the second (one per half). */
 export const SECOND_HALF_FROM_DAY = 16;
 export const HALVES = [1, 2];
@@ -84,11 +88,11 @@ export const formatDate = (key) =>
 export const errorMessage = (err, fallback = "Something went wrong. Please try again") =>
   err?.message || err?.data?.message || fallback;
 
-/** Upcoming / Day N of 45 / Ended / Closed, with a badge colour. */
+/** Upcoming / Day N of 42 / Ended / Closed, with a badge colour. */
 export const seriesStatus = (s) => {
   if (s.locked) return { text: "Closed", color: "secondary" };
   if (s.ended) return { text: "Ended", color: "warning" };
-  if (s.started) return { text: s.day ? `Day ${s.day} of ${SERIES_DAYS}` : "Running", color: "success" };
+  if (s.started) return { text: s.day ? `Day ${s.day} of ${s.days || SERIES_DAYS}` : "Running", color: "success" };
   return { text: "Upcoming", color: "info" };
 };
 
@@ -104,7 +108,13 @@ export const LEAVE_TEXT = {
   COMPLETED: "Completed",
 };
 
-/** "Activity 11 · Cognitive Awareness I" */
-export const activityText = (a) => (a ? `Activity ${a.day} · ${a.topic}` : "");
+/**
+ * "MET/MI 2 · Motivational Enhancement I – …". A session saved against the
+ * earlier 45-activity list has no title: "Activity 11 · Cognitive Awareness I".
+ */
+export const activityText = (a) => (!a ? "" : a.title ? `${a.title} · ${a.topic}` : `Activity ${a.day} · ${a.topic}`);
+
+/** "Week 2 · Tuesday", or the old list's "Week 2 · Awareness, Triggers and Early Coping". */
+export const activityWeekText = (a) => (!a ? "" : [a.week, a.weekday || a.weekTheme].filter(Boolean).join(" · "));
 
 export const hostNames = (hosts) => (hosts || []).map((h) => h?.name).filter(Boolean).join(", ");
