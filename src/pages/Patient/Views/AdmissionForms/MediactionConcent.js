@@ -206,7 +206,7 @@ const MediactionConcent = ({ register, patient }) => {
 
       <div style={{ textAlign: "justify", marginBottom: "20px" }}>
         I have been explained about the risk and consequences occurring out of
-        consumption of Tab. / Cap. / Inj. & I hold no one responsible for the
+        consumption of Tab. / Cap. / Inj. & I hold no one responsible at Jagruti for the
         adverse consequences due to the use of abovementioned medication.
       </div>
 
