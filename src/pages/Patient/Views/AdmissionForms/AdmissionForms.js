@@ -235,9 +235,9 @@ const AddmissionForms = ({ patient, admissions: allAddmissions }) => {
           charts.payload?.filter((c) => c.detailAdmission) || [];
 
         if (detailAdmissionCharts.length > 0) {
-          // sort by createdAt or date to get the latest
+          // sort by updatedAt to get the most recently edited record
           const latest = detailAdmissionCharts.sort(
-            (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+            (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
           )[0];
           setChartData(latest);
         } else {
@@ -634,6 +634,8 @@ const AddmissionForms = ({ patient, admissions: allAddmissions }) => {
         formData.append("roomPriceDaily", details.semiprivate);
       if (details.advDeposit)
         formData.append("refundableDeposit", details.advDeposit);
+      if (data.Basic_Admission_Form_program)
+        formData.append("program", data.Basic_Admission_Form_program);
 
       await axios.patch(`/patient/consent-submit-file/${targetId}`, formData, {
         headers: {

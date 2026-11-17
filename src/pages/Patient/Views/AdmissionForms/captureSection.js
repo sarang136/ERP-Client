@@ -447,6 +447,10 @@ export const captureSection = async (
   // ── Clone the DOM node ─────────────────────────────────────────────────────
   const clone = el.cloneNode(true);
 
+  // Remove screen-only elements (interactive widgets, toggle controls) that
+  // must not appear in the PDF — marked with data-pdf-hide on the source element.
+  clone.querySelectorAll("[data-pdf-hide]").forEach((el) => el.remove());
+
   // Sync radio / checkbox checked state from the live DOM to the clone
   const origChecked = el.querySelectorAll(
     "input[type='radio'],input[type='checkbox']",
@@ -456,6 +460,14 @@ export const captureSection = async (
   );
   origChecked.forEach((orig, i) => {
     if (cloneChecked[i]) cloneChecked[i].checked = orig.checked;
+  });
+
+  // Sync native <select> values from live DOM to clone (cloneNode copies
+  // HTML attributes only; the runtime .value property must be re-applied).
+  const origSelects = el.querySelectorAll("select");
+  const cloneSelects = clone.querySelectorAll("select");
+  origSelects.forEach((orig, i) => {
+    if (cloneSelects[i]) cloneSelects[i].value = orig.value;
   });
 
   // Collapse radio groups → single bold uppercase span
