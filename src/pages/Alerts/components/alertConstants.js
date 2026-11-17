@@ -34,9 +34,11 @@ export const ALERT_SOURCE_META = {
 // the inbox is a to-do list, so it starts with what still needs resolving.
 export const DEFAULT_RESOLVED_STATE = "unresolved";
 
-// One table column per job role: the people in that role who see the alert
-// (worked out by the server — services/sop/alertRecipients.js). Keys are
-// User.role values; Center Manager is the MANAGER role.
+// One table column per job role (worked out by the server —
+// services/sop/alertRecipients.js): Doctor … Nurse show the person assigned to
+// the patient's admission in that role, when the rule sends the alert to it;
+// Center Manager shows the managers the alert reaches. Keys are User.role
+// values; Center Manager is the MANAGER role.
 export const RECIPIENT_ROLES = [
   { key: "DOCTOR", label: "Doctor" },
   { key: "PSYCHOLOGIST", label: "Psychologist" },
@@ -46,10 +48,10 @@ export const RECIPIENT_ROLES = [
   { key: "MANAGER", label: "Center Manager" },
 ];
 
-// Shown under a name that is there for a reason other than the alert being
-// routed to their whole role.
+// Shown under a name in Center Manager when the rule picked that manager by
+// name. Doctor, Psychologist, MSW, RMO and Nurse list only the patient's
+// assigned staff (via "ASSIGNED"), so they carry no note (owner decision,
+// 2026-11-17).
 export const RECIPIENT_VIA_NOTE = {
-  PATIENT_DOCTOR: "Patient's doctor",
-  PATIENT_PSYCHOLOGIST: "Patient's psychologist",
   PICKED: "Picked by name",
 };

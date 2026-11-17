@@ -151,11 +151,11 @@ describe("Alerts table", () => {
       _id: "a1", severity: "HIGH", message: "Open one", isRead: true, patient: { _id: "p1", name: "Ravi" },
       routing: { notifyRoles: ["NURSE", "ADMIN"], notifyAdmissionDoctor: true },
       recipients: {
-        DOCTOR: [{ _id: "u1", name: "Dr Dev", via: "PATIENT_DOCTOR" }],
+        DOCTOR: [{ _id: "u1", name: "Dr Dev", via: "ASSIGNED" }],
         PSYCHOLOGIST: [],
         MSW: [],
-        RMO: [{ _id: "u2", name: "Ravi RMO", via: "PICKED" }],
-        NURSE: [{ _id: "u3", name: "Asha", via: "ROLE" }, { _id: "u4", name: "Nina", via: "ROLE" }],
+        RMO: [],
+        NURSE: [{ _id: "u4", name: "Nina", via: "ASSIGNED" }],
         MANAGER: [],
       },
     },
@@ -225,14 +225,14 @@ describe("Alerts table role columns", () => {
   const ROWS = [
     {
       _id: "a1", severity: "HIGH", message: "Open one", isRead: true, patient: { _id: "p1", name: "Ravi" },
-      routing: { notifyRoles: ["NURSE", "ADMIN"], notifyAdmissionDoctor: true },
+      routing: { notifyRoles: ["NURSE", "MANAGER", "ADMIN"], notifyAdmissionDoctor: true, notifyAdmissionPsychologist: true },
       recipients: {
-        DOCTOR: [{ _id: "u1", name: "Dr Dev", via: "PATIENT_DOCTOR" }],
-        PSYCHOLOGIST: [{ _id: "u5", name: "akshay", via: "PATIENT_PSYCHOLOGIST" }],
+        DOCTOR: [{ _id: "u1", name: "Dr Dev", via: "ASSIGNED" }],
+        PSYCHOLOGIST: [{ _id: "u5", name: "akshay", via: "ASSIGNED" }],
         MSW: [],
-        RMO: [{ _id: "u2", name: "Ravi RMO", via: "PICKED" }],
-        NURSE: [{ _id: "u3", name: "Asha", via: "ROLE" }, { _id: "u4", name: "Nina", via: "ROLE" }],
-        MANAGER: [],
+        RMO: [],
+        NURSE: [{ _id: "u4", name: "Nina", via: "ASSIGNED" }],
+        MANAGER: [{ _id: "u6", name: "Max", via: "PICKED" }, { _id: "u7", name: "Mira", via: "ROLE" }],
       },
     },
     // A row from before the server sent recipients (or a live-pushed one).
@@ -275,24 +275,28 @@ describe("Alerts table role columns", () => {
     expect(heads[at + 7]).toBe("Message");
   });
 
-  test("each lists who in that role sees the alert, with the reason when it isn't the whole role", () => {
+  test("Doctor … Nurse show the assigned person with no note; empty is a dash", () => {
     renderList();
-    const nurse = cellOf(0, "NURSE");
-    expect(within(nurse).getByText("Asha")).toBeInTheDocument();
-    expect(within(nurse).getByText("Nina")).toBeInTheDocument();
-    expect(within(nurse).queryByText(/picked|patient's/i)).not.toBeInTheDocument();
+    for (const [role, name] of [["DOCTOR", "Dr Dev"], ["PSYCHOLOGIST", "akshay"], ["NURSE", "Nina"]]) {
+      const cell = cellOf(0, role);
+      expect(within(cell).getByText(name)).toBeInTheDocument();
+      expect(within(cell).queryByText(/picked|patient's|assigned/i)).not.toBeInTheDocument();
+    }
+    expect(cellOf(0, "MSW")).toHaveTextContent("—");
+    expect(cellOf(0, "RMO")).toHaveTextContent("—");
+  });
 
-    expect(within(cellOf(0, "DOCTOR")).getByText("Dr Dev")).toBeInTheDocument();
-    expect(within(cellOf(0, "DOCTOR")).getByText("Patient's doctor")).toBeInTheDocument();
-    expect(within(cellOf(0, "RMO")).getByText("Picked by name")).toBeInTheDocument();
-    expect(cellOf(0, "MANAGER")).toHaveTextContent("—");
+  test("Center Manager notes a manager picked by name, not one routed by role", () => {
+    renderList();
+    const manager = cellOf(0, "MANAGER");
+    expect(within(manager).getByText("Max")).toBeInTheDocument();
+    expect(within(manager).getAllByText("Picked by name")).toHaveLength(1);
+    expect(within(manager).getByText("Mira")).toBeInTheDocument();
   });
 
   test("no one is marked or greyed as suspended (the server leaves them out)", () => {
     renderList();
-    const psych = cellOf(0, "PSYCHOLOGIST");
-    expect(within(psych).getByText("akshay")).not.toHaveClass("text-muted");
-    expect(within(psych).getByText("Patient's psychologist")).toBeInTheDocument();
+    expect(within(cellOf(0, "PSYCHOLOGIST")).getByText("akshay")).not.toHaveClass("text-muted");
     for (const role of ["DOCTOR", "PSYCHOLOGIST", "MSW", "RMO", "NURSE", "MANAGER"]) {
       expect(within(cellOf(0, role)).queryByText(/suspended/i)).not.toBeInTheDocument();
     }
