@@ -2,7 +2,7 @@ import React from "react";
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader, Spinner } from "reactstrap";
 import LectureProgress, { usePatientLectureProgress } from "./LectureProgress";
 
-// A patient's attendance across the 45 activities, and the series they've been in.
+// A patient's attendance across the programme's 42 sessions, and the series they've been in.
 const ProgressModal = ({ isOpen, toggle, patient }) => {
   const { data, loading, error } = usePatientLectureProgress(patient?._id, isOpen);
 

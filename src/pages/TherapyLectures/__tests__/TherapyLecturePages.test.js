@@ -28,8 +28,9 @@ jest.mock("../../../Components/Hooks/useCenterOptions", () => ({
 }));
 
 const hosts = [{ _id: "h1", name: "asha" }];
-const seriesRow = { _id: "s1", center: { _id: "c1", title: "Pune" }, startKey: "2026-11-01", endKey: "2026-12-15", label: "1 Nov – 15 Dec 2026", hosts, patientCount: 7, sessionCount: 45, doneCount: 11, started: true, ended: false, locked: false, day: 12 };
-const octRow = { ...seriesRow, _id: "s0", startKey: "2026-10-16", endKey: "2026-11-29", label: "16 Oct – 29 Nov 2026", patientCount: 4, doneCount: 26, day: 27 };
+const seriesRow = { _id: "s1", center: { _id: "c1", title: "Pune" }, startKey: "2026-11-01", endKey: "2026-12-12", label: "1 Nov – 12 Dec 2026", hosts, patientCount: 7, sessionCount: 42, doneCount: 11, started: true, ended: false, locked: false, day: 12, days: 42 };
+// Created before the programme became 6 weeks: 45 days.
+const octRow = { ...seriesRow, _id: "s0", startKey: "2026-10-16", endKey: "2026-11-29", label: "16 Oct – 29 Nov 2026", patientCount: 4, sessionCount: 45, doneCount: 26, day: 27, days: 45 };
 
 // The user's role level on THERAPY_LECTURES for the test (null = not in the role).
 let roleLevel = "DELETE";
@@ -56,22 +57,22 @@ beforeEach(() => {
   api.getLectureHostOptions.mockResolvedValue({ data: [] });
   api.getLectureProgramme.mockResolvedValue({
     data: {
-      name: "45-Day De-addiction Lecture Programme",
-      days: 45,
-      seriesDays: 45,
+      name: "6-Week De-addiction Lecture Programme",
+      days: 42,
+      seriesDays: 42,
       maxPhotos: 10,
       editGraceDays: 2,
-      activities: [{ day: 12, week: "Week 2", weekTheme: "Awareness, Triggers and Early Coping", sessionNo: "4", topic: "Craving Management I" }],
+      activities: [{ day: 12, week: "Week 2", weekday: "Friday", title: "Relapse Prevention 2", topic: "Coping with High-Risk Situations" }],
     },
   });
   api.getLectureSeries.mockResolvedValue({
     data: {
-      series: { ...seriesRow, centerId: "c1", startKey: "2026-11-01", endKey: "2026-11-15", createdBy: { name: "asha" } },
+      series: { ...seriesRow, centerId: "c1", createdBy: { name: "asha" } },
       today: "2026-11-12",
       canManage: true,
       isAdmin: false,
       sessions: [
-        { _id: "x1", dateKey: "2026-11-11", seriesDay: 11, hosts: [], done: true, activityDay: 11, activity: { day: 11, week: "Week 2", weekTheme: "Awareness, Triggers and Early Coping", topic: "Cognitive Awareness I" }, attendance: [{ patient: "p1", status: "PRESENT" }], evidence: [{ _id: "e1", url: "u" }], presentCount: 1, absentCount: 0, canRun: true, isFuture: false },
+        { _id: "x1", dateKey: "2026-11-11", seriesDay: 11, hosts: [], done: true, activityDay: 11, activity: { day: 11, week: "Week 2", weekday: "Thursday", title: "Mindfulness 2", topic: "Noticing Triggers from the Inside" }, attendance: [{ patient: "p1", status: "PRESENT" }], evidence: [{ _id: "e1", url: "u" }], presentCount: 1, absentCount: 0, canRun: true, isFuture: false },
         { _id: "x2", dateKey: "2026-11-12", seriesDay: 12, hosts: [{ _id: "h2", name: "ravi" }], done: false, attendance: [], evidence: [], presentCount: 0, absentCount: 0, canRun: true, isFuture: false },
         { _id: "x3", dateKey: "2026-11-13", seriesDay: 13, hosts: [], done: false, attendance: [], evidence: [], presentCount: 0, absentCount: 0, canRun: true, isFuture: true },
       ],
@@ -87,10 +88,11 @@ test("month view: every series running in the month (one started in October), an
   renderAt("/therapy-lectures?month=2026-11&centre=c1");
   expect(await screen.findByText("7 patients")).toBeInTheDocument(); // loaded (the empty slots show first)
   const cards = screen.getAllByTestId("series-card");
-  expect(cards.map((c) => within(c).getByRole("heading", { level: 5 }).textContent)).toEqual(["16 Oct – 29 Nov 2026", "1 Nov – 15 Dec 2026"]);
+  expect(cards.map((c) => within(c).getByRole("heading", { level: 5 }).textContent)).toEqual(["16 Oct – 29 Nov 2026", "1 Nov – 12 Dec 2026"]);
   expect(cards.map((c) => within(c).getByTestId("series-half").textContent)).toEqual(["Oct · 2nd half", "Nov · 1st half"]);
-  expect(cards[1]).toHaveTextContent("Day 12 of 45");
-  expect(screen.getByText("11 / 45 sessions done")).toBeInTheDocument();
+  expect(cards[1]).toHaveTextContent("Day 12 of 42");
+  expect(cards[0]).toHaveTextContent("Day 27 of 45"); // a 45-day series from before
+  expect(screen.getByText("11 / 42 sessions done")).toBeInTheDocument();
   const empty = screen.getAllByTestId("empty-slot");
   expect(empty).toHaveLength(1); // November's 1st half is taken by the 1 Nov series
   expect(empty[0]).toHaveTextContent("Nov · 2nd half");
@@ -100,7 +102,7 @@ test("month view: every series running in the month (one started in October), an
 });
 
 test("month view: a series started on the 25th fills the 2nd-half slot", async () => {
-  const late = { ...seriesRow, _id: "s2", startKey: "2026-11-25", endKey: "2027-01-08", label: "25 Nov 2026 – 8 Jan 2027", started: false, day: null };
+  const late = { ...seriesRow, _id: "s2", startKey: "2026-11-25", endKey: "2027-01-05", label: "25 Nov 2026 – 5 Jan 2027", started: false, day: null };
   api.getLectureSeriesList.mockResolvedValue({ data: [late] });
   renderAt("/therapy-lectures?month=2026-11&centre=c1");
   const card = await screen.findByTestId("series-card");
@@ -111,11 +113,14 @@ test("month view: a series started on the 25th fills the 2nd-half slot", async (
   expect(empty[0]).toHaveTextContent("1–15 Nov");
 });
 
-test("series page: 45 days with activity, hosts and status; patients with attendance and actions", async () => {
+test("series page: days with the session held, hosts and status; patients with attendance and actions", async () => {
   renderAt("/therapy-lectures/s1");
-  expect(await screen.findByText("Activity 11 · Cognitive Awareness I")).toBeInTheDocument();
+  expect(await screen.findByText("Mindfulness 2 · Noticing Triggers from the Inside")).toBeInTheDocument();
+  expect(screen.getByText("Week 2 · Thursday")).toBeInTheDocument();
   expect(screen.getByText("Day 11")).toBeInTheDocument();
-  expect(screen.getByText("Craving Management I")).toBeInTheDocument(); // today's planned activity, not done yet
+  expect(screen.getByText("Relapse Prevention 2 · Coping with High-Risk Situations")).toBeInTheDocument(); // today's planned session, not done yet
+  expect(screen.getByText(/42-day series/)).toBeInTheDocument();
+  expect(screen.getByText("6-Week De-addiction Lecture Programme")).toBeInTheDocument();
   expect(screen.getByText("Today")).toBeInTheDocument();
   expect(screen.getByText("ravi")).toBeInTheDocument();
   expect(screen.getByText("Upcoming")).toBeInTheDocument();

@@ -7145,20 +7145,20 @@ export const removeLectureMember = (membershipId) =>
   axios.delete(`${TL}/members/${membershipId}`, { headers: tlHeaders });
 export const getLecturePatientProgress = (patientId) =>
   axios.get(`${TL}/patients/${patientId}/progress`, { headers: tlHeaders });
+// Who will host a day, set before it is held.
 export const updateLectureSessionHosts = (sessionId, hosts) =>
   axios.patch(`${TL}/sessions/${sessionId}/hosts`, { hosts }, { headers: tlHeaders });
-export const markLectureSessionDone = (sessionId, activityDay) =>
-  axios.post(`${TL}/sessions/${sessionId}/done`, { activityDay }, { headers: tlHeaders });
-export const undoLectureSessionDone = (sessionId) =>
-  axios.delete(`${TL}/sessions/${sessionId}/done`, { headers: tlHeaders });
-export const saveLectureAttendance = (sessionId, entries) =>
-  axios.put(`${TL}/sessions/${sessionId}/attendance`, { entries }, { headers: tlHeaders });
-export const uploadLectureEvidence = (sessionId, file) => {
+// The session form in one save: { activityDay, hosts[], attendance[{ patient, status }],
+// removePhotos[], updatedAt } and the new photo files.
+export const saveLectureSession = (sessionId, { activityDay, hosts, attendance, removePhotos, updatedAt, photos }) => {
   const form = new FormData();
-  form.append("file", file);
-  return axios.post(`${TL}/sessions/${sessionId}/evidence`, form, {
+  form.append("activityDay", String(activityDay));
+  form.append("hosts", JSON.stringify(hosts));
+  form.append("attendance", JSON.stringify(attendance));
+  form.append("removePhotos", JSON.stringify(removePhotos || []));
+  if (updatedAt) form.append("updatedAt", updatedAt);
+  for (const file of photos || []) form.append("photos", file);
+  return axios.put(`${TL}/sessions/${sessionId}`, form, {
     headers: { ...tlHeaders, "Content-Type": "multipart/form-data" },
   });
 };
-export const deleteLectureEvidence = (sessionId, evidenceId) =>
-  axios.delete(`${TL}/sessions/${sessionId}/evidence/${evidenceId}`, { headers: tlHeaders });
