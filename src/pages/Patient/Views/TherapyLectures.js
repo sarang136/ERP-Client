@@ -5,7 +5,7 @@ import { Spinner } from "reactstrap";
 import LectureProgress, { usePatientLectureProgress } from "../../TherapyLectures/components/LectureProgress";
 
 // Patient page → "Therapy Lectures" tab: the patient's lecture series (now and
-// before), their attendance in each, and the 45 activities with their
+// before), their attendance in each, and the programme's 42 sessions with their
 // attendance. Read-only; patients are added and moved on the Therapy Lectures
 // page. Shown to users with READ on the THERAPY_LECTURES role module (Views/index.js).
 const TherapyLectures = ({ patient }) => {
@@ -17,7 +17,7 @@ const TherapyLectures = ({ patient }) => {
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
           <h5 className="mb-0">Therapy Lectures</h5>
-          <small className="text-muted">45-Day De-addiction Lecture Programme</small>
+          <small className="text-muted">6-Week De-addiction Lecture Programme</small>
         </div>
         <Link to={`/therapy-lectures${centreId ? `?centre=${centreId}` : ""}`} className="small">
           Open Therapy Lectures <i className="bx bx-right-arrow-alt" />

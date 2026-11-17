@@ -48,17 +48,17 @@ jest.mock("../Components/CIWABQuestion", () => () => null);
 const PATIENT = { _id: "p1", name: "ravi", center: "c1" };
 const PROGRESS = {
   patient: { _id: "p1", name: "ravi", uid: "JRC7", isAdmit: true },
-  currentSeries: { _id: "s2", label: "25 Nov 2026 – 8 Jan 2027", halfLabel: "second half of November 2026", startKey: "2026-11-25", day: 6 },
+  currentSeries: { _id: "s2", label: "25 Nov 2026 – 5 Jan 2027", halfLabel: "second half of November 2026", startKey: "2026-11-25", day: 6, days: 42 },
   attendedActivities: 2,
   presentCount: 3,
   absentCount: 1,
   activities: [
-    { day: 1, week: "Week 1", weekTheme: "Orientation, Motivation and Stabilization", topic: "Orientation and Group Norms", records: [{ dateKey: "2026-11-25", status: "PRESENT", series: "25 Nov 2026 – 8 Jan 2027" }] },
-    { day: 2, week: "Week 1", weekTheme: "Orientation, Motivation and Stabilization", topic: "Psychoeducation I: Understanding Addiction", records: [] },
+    { day: 1, week: "Week 1", weekday: "Monday", title: "Psychoeducation 1", topic: "What Is Addiction?", records: [{ dateKey: "2026-11-25", status: "PRESENT", series: "25 Nov 2026 – 5 Jan 2027" }] },
+    { day: 2, week: "Week 1", weekday: "Tuesday", title: "MET/MI 1", topic: "Motivational Interviewing I – Exploring Ambivalence towards Change", records: [] },
   ],
   history: [
     { _id: "m1", seriesId: "s1", series: "3 Oct – 16 Nov 2026", halfLabel: "first half of October 2026", joinedKey: "2026-10-03", leftKey: "2026-10-20", leftReason: "MOVED", active: false, present: 1, absent: 1 },
-    { _id: "m2", seriesId: "s2", series: "25 Nov 2026 – 8 Jan 2027", halfLabel: "second half of November 2026", joinedKey: "2026-11-25", leftKey: null, leftReason: null, active: true, present: 2, absent: 0 },
+    { _id: "m2", seriesId: "s2", series: "25 Nov 2026 – 5 Jan 2027", halfLabel: "second half of November 2026", joinedKey: "2026-11-25", leftKey: null, leftReason: null, active: true, present: 2, absent: 0 },
   ],
 };
 
@@ -95,7 +95,7 @@ test("the tab shows for users with the THERAPY_LECTURES role, and opens the pati
   fireEvent.click(screen.getByRole("button", { name: "Therapy Lectures" }));
   expect(await screen.findByTestId("patient-therapy-lectures")).toBeInTheDocument();
   expect(api.getLecturePatientProgress).toHaveBeenCalledWith("p1");
-  expect(await screen.findByText("Day 6 of 45", { exact: false })).toBeInTheDocument();
+  expect(await screen.findByText("Day 6 of 42", { exact: false })).toBeInTheDocument();
 });
 
 test("no tab without the THERAPY_LECTURES role, even with the Therapy Lectures page", () => {
@@ -108,10 +108,10 @@ test("no tab without the THERAPY_LECTURES role, even with the Therapy Lectures p
 test("tab: series now and before, with half, status and attendance; links to the series", async () => {
   renderIn(<TherapyLectures />);
   const current = await screen.findByTestId("lecture-current");
-  expect(within(current).getByRole("link", { name: "25 Nov 2026 – 8 Jan 2027" })).toHaveAttribute("href", "/therapy-lectures/s2");
-  expect(current).toHaveTextContent("Day 6 of 45");
+  expect(within(current).getByRole("link", { name: "25 Nov 2026 – 5 Jan 2027" })).toHaveAttribute("href", "/therapy-lectures/s2");
+  expect(current).toHaveTextContent("Day 6 of 42");
   expect(screen.getAllByText("2nd half · November 2026")[0]).toBeInTheDocument();
-  expect(screen.getByText("2 of 2")).toBeInTheDocument(); // activities attended
+  expect(screen.getByText("2 of 2")).toBeInTheDocument(); // programme sessions attended
   const rows = screen.getAllByTestId("lecture-history-row");
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("3 Oct – 16 Nov 2026");
@@ -120,12 +120,13 @@ test("tab: series now and before, with half, status and attendance; links to the
   expect(rows[0]).toHaveTextContent("1 present · 1 absent");
   expect(rows[1]).toHaveTextContent("In it now");
 
-  // Activities stay folded until opened.
+  // The programme's sessions stay folded until opened.
   expect(screen.queryByTestId("lecture-activities")).not.toBeInTheDocument();
-  const toggle = screen.getByRole("button", { name: /Activities · 2 of 2 attended/ });
+  const toggle = screen.getByRole("button", { name: /Programme sessions · 2 of 2 attended/ });
   expect(toggle).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(toggle);
   expect(screen.getByTestId("lecture-activities")).toBeInTheDocument();
+  expect(screen.getByText("Psychoeducation 1 · What Is Addiction?")).toBeInTheDocument();
   expect(screen.getByText("Present · Wed 25 Nov")).toBeInTheDocument();
   fireEvent.click(toggle);
   expect(screen.queryByTestId("lecture-activities")).not.toBeInTheDocument();

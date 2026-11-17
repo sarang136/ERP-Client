@@ -42,7 +42,7 @@ test("suggested start: today when it falls in the chosen half, else that half's 
   expect(suggestedStart({}, "2026-11-13")).toBe("2026-11-13");
 });
 
-test("picking the 25th shows the 2nd half and the 45 days; the 3rd shows the 1st half", () => {
+test("picking the 25th shows the 2nd half and the 42 days; the 3rd shows the 1st half", () => {
   open({ center: "c1", month: NEXT, half: 2 });
   const input = screen.getByLabelText("Start date");
   expect(input).toHaveValue(`${NEXT}-16`);
@@ -50,7 +50,7 @@ test("picking the 25th shows the 2nd half and the 45 days; the 3rd shows the 1st
   fireEvent.change(input, { target: { value: `${NEXT}-25` } });
   const summary = screen.getByTestId("tl-start-summary");
   expect(summary).toHaveTextContent(`Counts as the ${halfLongText(NEXT, 2)}`);
-  expect(summary).toHaveTextContent(`Runs ${seriesLabel(`${NEXT}-25`)} · 45 days`);
+  expect(summary).toHaveTextContent(`Runs ${seriesLabel(`${NEXT}-25`)} · 42 days`);
 
   fireEvent.change(input, { target: { value: `${NEXT}-03` } });
   expect(screen.getByTestId("tl-start-summary")).toHaveTextContent(`Counts as the ${halfLongText(NEXT, 1)}`);
@@ -70,7 +70,7 @@ test("creates the series with the date picked", async () => {
   );
 });
 
-test("a date whose 45 days are over is refused", () => {
+test("a date whose 42 days are over is refused", () => {
   open({ center: "c1" });
   fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "2020-01-01" } });
   expect(screen.getByText("This series has already ended.")).toBeInTheDocument();
