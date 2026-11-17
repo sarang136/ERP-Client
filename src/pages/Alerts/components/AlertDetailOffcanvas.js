@@ -12,6 +12,8 @@ import {
   SEVERITY_HEX,
   PHASE_META,
   ALERT_SOURCE_META,
+  RECIPIENT_ROLES,
+  RECIPIENT_VIA_NOTE,
 } from "./alertConstants";
 import { Link } from "react-router-dom";
 import {
@@ -35,7 +37,50 @@ const sectionLabel = (icon, text) => (
   </small>
 );
 
-const AlertDetailOffcanvas = ({ isOpen, onClose, alert, canResolve, onResolve }) => {
+// The same names as the table's Doctor … Center Manager columns (the server's
+// `recipients`, services/sop/alertRecipients.js): the patient's assigned
+// Doctor / Psychologist / MSW / RMO / Nurse, and the managers the alert
+// reaches. An alert pushed live since the page loaded has no `recipients` yet
+// and shows dashes, as it does in the table.
+const RoleWiseUsers = ({ recipients }) => (
+  <div className="mb-3">
+    {sectionLabel("bx bx-group", "Role-wise users")}
+    <div className="border rounded">
+      {RECIPIENT_ROLES.map(({ key, label }, i) => {
+        const list = recipients?.[key] || [];
+        return (
+          <Row
+            key={key}
+            className={`g-0 px-3 py-2${i ? " border-top" : ""}`}
+            data-testid={`role-users-${key}`}
+          >
+            <Col xs={4} className="text-muted small">
+              {label}
+            </Col>
+            <Col xs={8} className="small">
+              {list.length ? (
+                list.map((r) => (
+                  <div key={r._id}>
+                    {r.name}
+                    {RECIPIENT_VIA_NOTE[r.via] && (
+                      <small className="d-block text-muted" style={{ fontSize: "0.7rem" }}>
+                        {RECIPIENT_VIA_NOTE[r.via]}
+                      </small>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <span className="text-muted">—</span>
+              )}
+            </Col>
+          </Row>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const AlertDetailOffcanvas =({ isOpen, onClose, alert, canResolve, onResolve }) => {
   const phase = alert
     ? PHASE_META[alert.phase] || PHASE_META.IMMEDIATE
     : PHASE_META.IMMEDIATE;
@@ -241,6 +286,8 @@ const AlertDetailOffcanvas = ({ isOpen, onClose, alert, canResolve, onResolve })
                   </div>
                 </div>
               )}
+
+              <RoleWiseUsers recipients={alert.recipients} />
             </div>
 
             {canResolve && onResolve && !alert.resolution?.resolved && (
