@@ -93,25 +93,26 @@ const ChartDate = ({
         : latest;
     }, null);
 
-  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-
-  const toISTDateString = (dateInput) => {
-    if (!dateInput) return null;
-    const date = new Date(dateInput);
-    if (isNaN(date.getTime())) return null;
-    const shifted = new Date(date.getTime() + IST_OFFSET_MS);
-    return shifted.toISOString().slice(0, 10);
-  };
-
   const fromDate = latestOutpass?.outpass?.fromDate;
   const toDate = latestOutpass?.outpass?.toDate;
 
-  const todayIST = toISTDateString(new Date());
-  const fromIST = toISTDateString(fromDate);
-  const toIST = toISTDateString(toDate);
+  // Comparisons are only meaningful to the minute (outpass times are
+  // entered as HH:mm), so drop seconds/ms to avoid false mismatches right
+  // at the boundary.
+  const toMinute = (d) => {
+    const nd = new Date(d);
+    if (isNaN(nd.getTime())) return null;
+    nd.setSeconds(0, 0);
+    return nd;
+  };
 
-  const isOnOutpass =
-    fromIST && toIST ? todayIST >= fromIST && todayIST <= toIST : false;
+  const from = fromDate ? toMinute(fromDate) : null;
+  const to = toDate ? toMinute(toDate) : null;
+  const now = toMinute(new Date());
+
+  // Compares the actual from/to instants, not just the calendar day, so the
+  // block only applies while the patient is actually out on the pass.
+  const isOnOutpass = from && to ? now >= from && now <= to : false;
 
   return (
     <React.Fragment>

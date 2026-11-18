@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
 });
 
 const formatDate = (value) =>
-  value ? moment(value).format("DD MMM, YYYY") : "";
+  value ? moment(value).format("DD MMM, YYYY hh:mm A") : "";
 
 const OutpassBody = ({ chart, doctor }) => {
   return (
