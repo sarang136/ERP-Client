@@ -331,11 +331,11 @@ const PatientTopbar = ({
                           <i className="ri-walk-line me-1"></i>
                           On Outpass:{" "}
                           {moment(patient.outpass.fromDate).format(
-                            "DD MMM, YYYY",
+                            "DD MMM, YYYY hh:mm A",
                           )}{" "}
                           -{" "}
                           {moment(patient.outpass.toDate).format(
-                            "DD MMM, YYYY",
+                            "DD MMM, YYYY hh:mm A",
                           )}
                         </span>
                       )}

@@ -206,8 +206,9 @@ const MediactionConcent = ({ register, patient }) => {
 
       <div style={{ textAlign: "justify", marginBottom: "20px" }}>
         I have been explained about the risk and consequences occurring out of
-        consumption of Tab. / Cap. / Inj. & I hold no one responsible at Jagruti for the
-        adverse consequences due to the use of abovementioned medication.
+        consumption of Tab. / Cap. / Inj. & I hold no one responsible at Jagruti
+        for the adverse consequences due to the use of abovementioned
+        medication.
       </div>
 
       {/* Signatures */}
@@ -247,7 +248,11 @@ const MediactionConcent = ({ register, patient }) => {
             defaultValue={patient?.guardianName}
             readOnly
             {...register("medicationConsent_nokName")}
-            style={inputLine}
+            style={{
+              fontWeight: "bold",
+              textTransform: "uppercase",
+              ...inputLine,
+            }}
           />
         </div>
         <div>

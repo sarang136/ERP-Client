@@ -20,11 +20,29 @@ import { addOutpass, createEditChart, updateOutpass } from "../../../store/actio
 import { toTimeZoneDateKey } from "../../../utils/date";
 import moment from "moment";
 
+const pad = (n) => String(n).padStart(2, "0");
+
 const formatDate = (value) => {
   if (!value) return "";
   const d = new Date(value);
   if (isNaN(d.getTime())) return "";
-  return d.toISOString().split("T")[0];
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const formatTime = (value) => {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "";
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const currentTime = () => formatTime(new Date());
+
+const combineDateTime = (date, time) => {
+  if (!date) return "";
+  const [y, mo, da] = date.split("-").map(Number);
+  const [h, mi] = (time || "00:00").split(":").map(Number);
+  return new Date(y, mo - 1, da, h || 0, mi || 0, 0, 0).toISOString();
 };
 
 const Outpass = ({
@@ -53,7 +71,9 @@ const Outpass = ({
       addmission: patient.addmission?._id,
       chart: OUTPASS,
       fromDate: editChart ? formatDate(editChart.fromDate) : "",
+      fromTime: editChart ? formatTime(editChart.fromDate) : currentTime(),
       toDate: editChart ? formatDate(editChart.toDate) : "",
+      toTime: editChart ? formatTime(editChart.toDate) : currentTime(),
       note: editChart ? editChart.note : "",
       type,
       date: chartDate,
@@ -76,26 +96,35 @@ const Outpass = ({
         .required("To date is required")
         .test(
           "to-not-before-from",
-          "To date can't be before from date",
+          "To date & time can't be before from date & time",
           function (value) {
-            const { fromDate } = this.parent;
+            const { fromDate, fromTime, toTime } = this.parent;
             if (!value || !fromDate) return true;
-            return value >= fromDate;
+            return (
+              combineDateTime(value, toTime) >=
+              combineDateTime(fromDate, fromTime)
+            );
           }
         ),
     }),
     onSubmit: (values) => {
       closeForm();
+      const { fromTime, toTime, ...rest } = values;
+      const payload = {
+        ...rest,
+        fromDate: combineDateTime(values.fromDate, fromTime),
+        toDate: combineDateTime(values.toDate, toTime),
+      };
       if (editChart) {
         dispatch(
           updateOutpass({
-            ...values,
+            ...payload,
             id: editChartData._id,
             chartId: editChart._id,
           })
         );
       } else {
-        dispatch(addOutpass(values));
+        dispatch(addOutpass(payload));
       }
     },
   });
@@ -131,18 +160,33 @@ const Outpass = ({
                   <div className="ribbon ribbon-primary w-75 ribbon-shape">
                     From Date
                   </div>
-                  <Input
-                    type="date"
-                    name="fromDate"
-                    min={admissionDateKey || undefined}
-                    onChange={validation.handleChange}
-                    onBlur={validation.handleBlur}
-                    value={validation.values.fromDate || ""}
-                    invalid={
-                      validation.touched.fromDate && !!validation.errors.fromDate
-                    }
-                    className="form-control presc-border pt-5 rounded"
-                  />
+                  <Row className="g-2 pt-5 px-2 pb-2 m-0">
+                    <Col xs={7} className="p-1">
+                      <Input
+                        type="date"
+                        name="fromDate"
+                        min={admissionDateKey || undefined}
+                        onChange={validation.handleChange}
+                        onBlur={validation.handleBlur}
+                        value={validation.values.fromDate || ""}
+                        invalid={
+                          validation.touched.fromDate &&
+                          !!validation.errors.fromDate
+                        }
+                        className="form-control presc-border rounded"
+                      />
+                    </Col>
+                    <Col xs={5} className="p-1">
+                      <Input
+                        type="time"
+                        name="fromTime"
+                        onChange={validation.handleChange}
+                        onBlur={validation.handleBlur}
+                        value={validation.values.fromTime || ""}
+                        className="form-control presc-border rounded"
+                      />
+                    </Col>
+                  </Row>
                   {(validation.touched.fromDate ||
                     validation.values.fromDate) &&
                     validation.errors.fromDate && (
@@ -159,22 +203,36 @@ const Outpass = ({
                   <div className="ribbon ribbon-primary w-75 ribbon-shape">
                     To Date
                   </div>
-                  <Input
-                    type="date"
-                    name="toDate"
-                    min={
-                      validation.values.fromDate ||
-                      admissionDateKey ||
-                      undefined
-                    }
-                    onChange={validation.handleChange}
-                    onBlur={validation.handleBlur}
-                    value={validation.values.toDate || ""}
-                    invalid={
-                      validation.touched.toDate && !!validation.errors.toDate
-                    }
-                    className="form-control presc-border pt-5 rounded"
-                  />
+                  <Row className="g-2 pt-5 px-2 pb-2 m-0">
+                    <Col xs={7} className="p-1">
+                      <Input
+                        type="date"
+                        name="toDate"
+                        min={
+                          validation.values.fromDate ||
+                          admissionDateKey ||
+                          undefined
+                        }
+                        onChange={validation.handleChange}
+                        onBlur={validation.handleBlur}
+                        value={validation.values.toDate || ""}
+                        invalid={
+                          validation.touched.toDate && !!validation.errors.toDate
+                        }
+                        className="form-control presc-border rounded"
+                      />
+                    </Col>
+                    <Col xs={5} className="p-1">
+                      <Input
+                        type="time"
+                        name="toTime"
+                        onChange={validation.handleChange}
+                        onBlur={validation.handleBlur}
+                        value={validation.values.toTime || ""}
+                        className="form-control presc-border rounded"
+                      />
+                    </Col>
+                  </Row>
                   {(validation.touched.toDate || validation.values.toDate) &&
                     validation.errors.toDate && (
                       <FormFeedback className="d-block">

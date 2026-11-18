@@ -4,7 +4,8 @@ import moment from "moment";
 import {capitalizeWords} from "../../../utils/toCapitalize";
 
 
-const formatDate = (value) => (value ? moment(value).format("DD MMM, YYYY") : "");
+const formatDate = (value) =>
+  value ? moment(value).format("DD MMM, YYYY hh:mm A") : "";
 
 const Outpass = ({ data }) => {
   return (
