@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useSelector } from "react-redux";
 import { Spinner } from "reactstrap";
 import Select from "react-select";
+import { getCenterHasStock } from "../../../helpers/backend_helper";
 
 const normalizeLabel = (val) =>
   val ? val.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : "";
@@ -246,6 +247,8 @@ const AddinventoryMedicine = ({
     return map;
   });
   const [centerStockTouched, setCenterStockTouched] = useState({});
+  const [centerStockError, setCenterStockError] = useState("");
+  const [checkingCenterStock, setCheckingCenterStock] = useState(false);
 
 
 
@@ -367,11 +370,12 @@ const AddinventoryMedicine = ({
 
   const allowedCenters = centerList || [];
 
-  const handleCenterChange = (selectedOptions) => {
-    const newSelectedIds = (selectedOptions || []).map((opt) => opt.value);
+  const handleCenterChange = async (selectedOptions) => {
+    const requestedIds = (selectedOptions || []).map((opt) => opt.value);
+    setCenterStockError("");
 
     // Find removed centers and delete their stocks & units
-    const removedIds = selectedCenters.filter((id) => !newSelectedIds.includes(id));
+    const removedIds = selectedCenters.filter((id) => !requestedIds.includes(id));
     if (removedIds.length > 0) {
       setCenterStocks((prev) => {
         const copy = { ...prev };
@@ -385,8 +389,37 @@ const AddinventoryMedicine = ({
       });
     }
 
+    let addedIds = requestedIds.filter((id) => !selectedCenters.includes(id));
+
+    let newSelectedIds = requestedIds;
+    if (addedIds.length > 0 && !isEditMode) {
+      setCheckingCenterStock(true);
+      try {
+        const noStockIds = [];
+        for (const id of addedIds) {
+          try {
+            const res = await getCenterHasStock(id);
+            if (!res?.hasStock) noStockIds.push(id);
+          } catch (err) {
+            noStockIds.push(id);
+          }
+        }
+        if (noStockIds.length > 0) {
+          const names = noStockIds
+            .map((id) => allowedCenters.find((c) => String(c._id) === id)?.title || id)
+            .join(", ");
+          setCenterStockError(
+            `${names} ${noStockIds.length > 1 ? "have" : "has"} no existing stock in inventory. Use bulk upload to add their first stock before adding medicine one at a time.`
+          );
+          newSelectedIds = requestedIds.filter((id) => !noStockIds.includes(id));
+          addedIds = addedIds.filter((id) => !noStockIds.includes(id));
+        }
+      } finally {
+        setCheckingCenterStock(false);
+      }
+    }
+
     // Find added centers and initialize them
-    const addedIds = newSelectedIds.filter((id) => !selectedCenters.includes(id));
     if (addedIds.length > 0) {
       setCenterStocks((prev) => {
         const copy = { ...prev };
@@ -540,8 +573,10 @@ const AddinventoryMedicine = ({
                 })}
                 onChange={handleCenterChange}
                 classNamePrefix="react-select"
-                isDisabled={uploading || !medicineSelected}
+                isDisabled={uploading || !medicineSelected || checkingCenterStock}
               />
+              {checkingCenterStock && <p className="fs-12 text-muted mt-1">Checking center stock...</p>}
+              {centerStockError && <p style={sharedStyles.errorText}>{centerStockError}</p>}
             </div>
 
             {/* Center wise stock */}

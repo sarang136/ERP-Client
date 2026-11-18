@@ -2699,6 +2699,12 @@ export const getPharmacyStockByIds = (ids, centerId) => {
   });
 };
 
+export const getCenterHasStock = (centerId) => {
+  return api.get(`${url.PHARMACY_CENTER_HAS_STOCK}/${centerId}`, {
+    headers: { "X-No-Cookie-Token": "true" },
+  });
+};
+
 export const getStockByMedicineIds = (medicineIds, centerId) => {
   return api.get(url.PHARMACY_STOCK_BY_MEDICINES, {
     params: { ids: medicineIds.join(","), centerId },

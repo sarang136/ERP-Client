@@ -535,6 +535,7 @@ export const PHARMACY_AVAILABLE_MEDICINES = "/pharmacy/available-medicines";
 export const PHARMACY_ALTERNATIVE_MEDICINES = "/pharmacy/alternative-medicines";
 export const PHARMACY_STOCK_BY_MEDICINES = "/pharmacy/stock-by-medicines";
 export const PHARMACY_BATCHES_BY_MEDICINES = "/pharmacy/batches-by-medicines";
+export const PHARMACY_CENTER_HAS_STOCK = "/pharmacy/center-has-stock";
 
 // PHARMACY REQUISITION - MEDICINE REQUISITION
 export const PHARMACY_MEDICINE_REQUISITION =
