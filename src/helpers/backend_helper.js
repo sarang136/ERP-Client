@@ -7168,3 +7168,10 @@ export const saveLectureSession = (sessionId, { activityDay, hosts, attendance, 
     headers: { ...tlHeaders, "Content-Type": "multipart/form-data" },
   });
 };
+export const deleteLectureEvidence = (sessionId, evidenceId) =>
+  axios.delete(`${TL}/sessions/${sessionId}/evidence/${evidenceId}`, { headers: tlHeaders });
+
+// The vendor's own account (ledger) under the vendor control account
+export const createVendorLedger = (id) =>
+  axios.post(`${url.VENDOR_BASE || "/master/vendor"}/${id}/ledger`, {}, { headers: noCookie });
+

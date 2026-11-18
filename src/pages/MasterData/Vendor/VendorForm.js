@@ -1497,7 +1497,7 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
                           Auto-create accounting ledger
                         </p>
                         <p className="vendor-option-sub">
-                          Creates a ledger account for this vendor
+                          A ledger account for this vendor is created under the vendor control account when the vendor is approved
                         </p>
                       </div>
                     </label>

@@ -7,6 +7,7 @@ import {
   updateVendorStatus,
   deleteVendor,
   updateVendorApprovalStatus,
+  createVendorLedger,
 } from "../../../helpers/backend_helper";
 import { useAuthError } from "../../../Components/Hooks/useAuthError";
 import { useDispatch } from "react-redux";
@@ -80,6 +81,7 @@ const VendorList = ({ onAdd, onEdit }) => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [overviewVendor, setOverviewVendor] = useState(null);
+  const [ledgerBusy, setLedgerBusy] = useState(false);
   const [showAccountNo, setShowAccountNo] = useState(false);
 
   // Typing rukne ke 400ms baad hi search hoga
@@ -136,9 +138,12 @@ const VendorList = ({ onAdd, onEdit }) => {
         await updateVendorApprovalStatus(row._id, "pending");
         toast.success("Vendor submitted for approval");
       } else if (row.approvalStatus === "pending") {
-        await updateVendorApprovalStatus(row._id, "approved");
+        const res = await updateVendorApprovalStatus(row._id, "approved");
         await updateVendorStatus(row._id, "active");
-        toast.success("Vendor approved and activated");
+        // The vendor's ledger is made at approval. If it could not be, the approval still stands.
+        const ledgerCode = /Ledger (\d+) created/.exec(res?.message || "")?.[1];
+        toast.success(ledgerCode ? `Vendor approved and activated. Ledger ${ledgerCode} created` : "Vendor approved and activated");
+        if (res?.ledgerWarning) toast.warn(res.ledgerWarning, { autoClose: 12000 });
       }
       dispatch(invalidateReferenceList("vendors"));
       setRefreshFlag((f) => f + 1);
@@ -150,6 +155,24 @@ const VendorList = ({ onAdd, onEdit }) => {
             "Couldn't update vendor",
         );
       }
+    }
+  };
+
+  // Gives an approved vendor its ledger now (never makes a second one)
+  const handleCreateLedger = async (vendor) => {
+    if (ledgerBusy) return;
+    setLedgerBusy(true);
+    try {
+      const res = await createVendorLedger(vendor._id);
+      toast.success(res?.message || "Ledger created");
+      setOverviewVendor((prev) => (prev && prev._id === vendor._id ? { ...prev, ledgerId: res?.data } : prev));
+      setRefreshFlag((f) => f + 1);
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error?.response?.data?.message || error?.message || "Couldn't create the ledger");
+      }
+    } finally {
+      setLedgerBusy(false);
     }
   };
 
@@ -562,6 +585,30 @@ const VendorList = ({ onAdd, onEdit }) => {
                         <div className="vendor-overview-hero-label">PAN</div>
                         <div className="vendor-overview-hero-value">
                           {overviewVendor.pan || "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="vendor-overview-hero-row">
+                      <i className="bx bx-book"></i>
+                      <div>
+                        <div className="vendor-overview-hero-label">Accounting ledger</div>
+                        <div className="vendor-overview-hero-value">
+                          {overviewVendor.ledgerId?.ledgerCode ? (
+                            `${overviewVendor.ledgerId.ledgerCode} · ${overviewVendor.ledgerId.name}`
+                          ) : overviewVendor.vendorCategory === "central_payment" ? (
+                            "Not needed (Central Payment vendor)"
+                          ) : overviewVendor.approvalStatus === "approved" ? (
+                            canChangeStatus ? (
+                              <Button size="sm" color="primary" outline disabled={ledgerBusy} onClick={() => handleCreateLedger(overviewVendor)}>
+                                {ledgerBusy ? "Creating..." : "Create ledger"}
+                              </Button>
+                            ) : (
+                              "Not created yet"
+                            )
+                          ) : (
+                            "Created when the vendor is approved"
+                          )}
                         </div>
                       </div>
                     </div>

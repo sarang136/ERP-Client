@@ -38,6 +38,8 @@ const LedgerList = ({ onAdd, onEdit }) => {
   const [typeFilter, setTypeFilter] = useState("");
   const [subTypeFilter, setSubTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [kindFilter, setKindFilter] = useState("");
+  const [vendorControls, setVendorControls] = useState(null); // null = still loading
   const [refreshFlag, setRefreshFlag] = useState(0);
   const [busyId, setBusyId] = useState("");
   const [viewing, setViewing] = useState(null);
@@ -57,6 +59,7 @@ const LedgerList = ({ onAdd, onEdit }) => {
       ...(typeFilter ? { ledgerTypeId: typeFilter } : {}),
       ...(subTypeFilter ? { ledgerSubTypeId: subTypeFilter } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
+      ...(kindFilter ? { kind: kindFilter } : {}),
     })
       .then((res) => {
         if (cancelled) return;
@@ -71,7 +74,14 @@ const LedgerList = ({ onAdd, onEdit }) => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, perPage, search, typeFilter, subTypeFilter, statusFilter, refreshFlag]);
+  }, [page, perPage, search, typeFilter, subTypeFilter, statusFilter, kindFilter, refreshFlag]);
+
+  // which group is the vendor control account right now (for the banner above the table)
+  useEffect(() => {
+    getLedgers({ kind: "vendor_control", status: "active", limit: 10 })
+      .then((res) => setVendorControls(res?.data || []))
+      .catch(() => setVendorControls(null));
+  }, [refreshFlag]);
 
   const openView = async (row) => {
     setViewing({ ...row, loading: true });
@@ -136,8 +146,12 @@ const LedgerList = ({ onAdd, onEdit }) => {
       cell: (row) => (
         <span className="uom-cell-muted">
           {row.postingType === "group" ? "Group" : "Posting"}
-          {row.isControlAccount ? " · Control" : ""}
           {row.isContraAccount ? " · Contra" : ""}
+          {row.isControlAccount && (
+            <span className="badge bg-info-subtle text-info ms-1" title="New ledgers of this kind are created under this group">
+              Control · {controlLabel(row.controlAccountType)}
+            </span>
+          )}
         </span>
       ),
     },
@@ -169,6 +183,18 @@ const LedgerList = ({ onAdd, onEdit }) => {
 
   const controlLabel = (v) => CONTROL_TYPES.find((c) => c.value === v)?.label || v;
 
+  const vendorBanner = (() => {
+    if (vendorControls === null) return null;
+    if (vendorControls.length === 1) {
+      const c = vendorControls[0];
+      return { color: "success", text: `Vendor ledgers are created under: ${c.ledgerCode} · ${c.name}. A new approved vendor gets its ledger here automatically.` };
+    }
+    if (vendorControls.length === 0) {
+      return { color: "warning", text: "No vendor control account is set. A new approved vendor will NOT get a ledger. Edit the group where vendor ledgers should sit (for example Sundry Creditors), switch on Control account and choose Vendors." };
+    }
+    return { color: "danger", text: `More than one active vendor control account (${vendorControls.map((c) => c.ledgerCode).join(", ")}). Keep only one active, or vendor ledgers cannot be created.` };
+  })();
+
   return (
     <div className="uom-page">
       <div className="uom-list-header">
@@ -177,6 +203,18 @@ const LedgerList = ({ onAdd, onEdit }) => {
           <p>Every account in the chart of accounts. A ledger is never deleted, it is made inactive</p>
         </div>
       </div>
+
+      {vendorBanner && (
+        <div className={`alert alert-${vendorBanner.color} py-2 d-flex align-items-center justify-content-between flex-wrap gap-2`}>
+          <span>
+            <i className="bx bx-info-circle me-1"></i>
+            {vendorBanner.text}
+          </span>
+          <Button size="sm" color="light" onClick={() => { setKindFilter("control"); setPage(1); }}>
+            Show control accounts
+          </Button>
+        </div>
+      )}
 
       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div className="d-flex gap-2 flex-wrap">
@@ -223,6 +261,21 @@ const LedgerList = ({ onAdd, onEdit }) => {
                 {s.name}
               </option>
             ))}
+          </Input>
+          <Input
+            type="select"
+            style={{ maxWidth: 230 }}
+            value={kindFilter}
+            onChange={(e) => {
+              setKindFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All kinds</option>
+            <option value="group">Groups only</option>
+            <option value="posting">Posting ledgers only</option>
+            <option value="control">Control accounts (all)</option>
+            <option value="vendor_control">Vendor control account</option>
           </Input>
           <Input
             type="select"
