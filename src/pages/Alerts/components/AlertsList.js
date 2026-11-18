@@ -37,7 +37,7 @@ const RC = { "data-tag": "allowRowEvents" };
 const RESOLUTION_COLUMN_ID = "resolution";
 
 // The names in one role column: the patient's assigned Doctor / Psychologist /
-// MSW / RMO / Nurse, or the managers the alert reaches. Long lists scroll inside
+// MSW / RMO / Nurse, or the centre's Centre Managers. Long lists scroll inside
 // the cell, like the notes. Suspended and deleted users are left out by the
 // server (owner decision, 2026-11-16).
 const RecipientNames = ({ list }) => {
