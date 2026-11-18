@@ -39,9 +39,9 @@ const sectionLabel = (icon, text) => (
 
 // The same names as the table's Doctor … Center Manager columns (the server's
 // `recipients`, services/sop/alertRecipients.js): the patient's assigned
-// Doctor / Psychologist / MSW / RMO / Nurse, and the managers the alert
-// reaches. An alert pushed live since the page loaded has no `recipients` yet
-// and shows dashes, as it does in the table.
+// Doctor / Psychologist / MSW / RMO / Nurse, and the centre's Centre Managers
+// (or its fallback manager). An alert pushed live since the page loaded has no
+// `recipients` yet and shows dashes, as it does in the table.
 const RoleWiseUsers = ({ recipients }) => (
   <div className="mb-3">
     {sectionLabel("bx bx-group", "Role-wise users")}

@@ -2,7 +2,8 @@
 // the date range can be cleared back to "All dates", the Resolution column
 // comes first (pinned by AlertsList.css), and the Doctor / Psychologist / MSW /
 // RMO / Nurse columns show the patient's assigned staff and Center Manager the
-// managers the alert reaches — in the table and in the detail offcanvas.
+// centre's Centre Managers (or its fallback manager) — in the table and in the
+// detail offcanvas.
 //
 //   CI=true npx craco test --watchAll=false src/pages/Alerts/__tests__/AlertsPage.test.js
 
@@ -234,7 +235,7 @@ describe("Alerts table role columns", () => {
         MSW: [],
         RMO: [],
         NURSE: [{ _id: "u4", name: "Nina", via: "ASSIGNED" }],
-        MANAGER: [{ _id: "u6", name: "Max", via: "PICKED" }, { _id: "u7", name: "Mira", via: "ROLE" }],
+        MANAGER: [{ _id: "e6", name: "Steffi Gabriela", via: "CENTRE_MANAGER" }, { _id: "e7", name: "Deepak Karpe", via: "FALLBACK" }],
       },
     },
     // A row from before the server sent recipients (or a live-pushed one).
@@ -288,12 +289,13 @@ describe("Alerts table role columns", () => {
     expect(cellOf(0, "RMO")).toHaveTextContent("—");
   });
 
-  test("Center Manager notes a manager picked by name, not one routed by role", () => {
+  test("Center Manager notes the centre's fallback manager, not a Centre Manager", () => {
     renderList();
     const manager = cellOf(0, "MANAGER");
-    expect(within(manager).getByText("Max")).toBeInTheDocument();
-    expect(within(manager).getAllByText("Picked by name")).toHaveLength(1);
-    expect(within(manager).getByText("Mira")).toBeInTheDocument();
+    expect(within(manager).getByText("Steffi Gabriela")).toBeInTheDocument();
+    expect(within(manager).getByText("Deepak Karpe")).toBeInTheDocument();
+    expect(within(manager).getAllByText("Fallback")).toHaveLength(1);
+    expect(within(manager).queryByText(/picked/i)).not.toBeInTheDocument();
   });
 
   test("no one is marked or greyed as suspended (the server leaves them out)", () => {
@@ -323,7 +325,7 @@ describe("Alert detail offcanvas role-wise users", () => {
       MSW: [],
       RMO: [],
       NURSE: [{ _id: "u4", name: "Nina", via: "ASSIGNED" }],
-      MANAGER: [{ _id: "u6", name: "Max", via: "PICKED" }, { _id: "u7", name: "Mira", via: "ROLE" }],
+      MANAGER: [{ _id: "e6", name: "Steffi Gabriela", via: "CENTRE_MANAGER" }, { _id: "e7", name: "Deepak Karpe", via: "FALLBACK" }],
     },
   };
 
@@ -347,9 +349,9 @@ describe("Alert detail offcanvas role-wise users", () => {
 
     const manager = row("MANAGER");
     expect(within(manager).getByText("Center Manager")).toBeInTheDocument();
-    expect(within(manager).getByText("Max")).toBeInTheDocument();
-    expect(within(manager).getAllByText("Picked by name")).toHaveLength(1);
-    expect(within(manager).getByText("Mira")).toBeInTheDocument();
+    expect(within(manager).getByText("Steffi Gabriela")).toBeInTheDocument();
+    expect(within(manager).getAllByText("Fallback")).toHaveLength(1);
+    expect(within(manager).getByText("Deepak Karpe")).toBeInTheDocument();
   });
 
   test("an alert without recipients (pushed live) shows a dash for every role", () => {
