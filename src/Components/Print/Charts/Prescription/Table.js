@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import React from "react";
+import { format } from "date-fns";
 import { formatDosage } from "../../../../../helpers/prescriptionFrequency";
+import { getMedicineEndDate } from "../../../../../helpers/currentMedicines";
 
 const styles = StyleSheet.create({
   row: {
@@ -37,9 +39,24 @@ const styles = StyleSheet.create({
   },
 });
 
+const formatDate = (d) => {
+  if (!d) return null;
+  const parsed = new Date(d);
+  return Number.isNaN(parsed.getTime()) ? null : format(parsed, "dd MMM yy");
+};
+
 const PrescriptionTable = ({ medicines }) => {
   const safe = (value) =>
     value === null || value === undefined ? "" : String(value);
+
+  const getDateRange = (period, item) => {
+    const from = period?.startDate || item?.startDate;
+    const to =
+      period?.endDate ||
+      item?.endDate ||
+      (from ? getMedicineEndDate(from, period) : null);
+    return { from: formatDate(from) || "-", to: formatDate(to) || "Ongoing" };
+  };
 
   return (
     <React.Fragment>
@@ -53,7 +70,12 @@ const PrescriptionTable = ({ medicines }) => {
         >
           <Text style={styles.col5}>DRUG NAME</Text>
           <Text style={styles.col4}>FREQUENCY</Text>
-          <Text style={styles.col4}>DURATION</Text>
+          <View style={styles.col4}>
+            <Text>DURATION</Text>
+            <Text style={{ fontSize: "8px", marginTop: 2, color: "#555" }}>
+              From - To
+            </Text>
+          </View>
           <Text style={styles.col4}>INSTRUCTIONS</Text>
         </View>
         {(medicines || []).map((item, index) => {
@@ -74,6 +96,8 @@ const PrescriptionTable = ({ medicines }) => {
             </Text>
           );
 
+          const singlePeriodRange = !multiplePeriods ? getDateRange(item, item) : null;
+
           return (
           <View
             key={key}
@@ -89,9 +113,14 @@ const PrescriptionTable = ({ medicines }) => {
                 <Text style={styles.col4}>
                   {safe(formatDosage(freq?.morning, freq?.unit))}-{safe(formatDosage(freq?.evening, freq?.unit))}-{safe(formatDosage(freq?.night, freq?.unit))}
                 </Text>
-                <Text style={styles.col4}>
-                  {safe(item?.duration)} {safe(item?.unit)}
-                </Text>
+                <View style={styles.col4}>
+                  <Text>
+                    {safe(item?.duration)} {safe(item?.unit)}
+                  </Text>
+                  <Text style={{ fontFamily: "Helvetica-Oblique", fontSize: "8px", marginTop: 2 }}>
+                    {singlePeriodRange.from} - {singlePeriodRange.to}
+                  </Text>
+                </View>
                 <Text style={styles.col4}>{safe(item?.intake)}</Text>
               </View>
             ) : (
@@ -113,9 +142,17 @@ const PrescriptionTable = ({ medicines }) => {
                         <Text style={styles.col4}>
                           {safe(formatDosage(periodFreq?.morning, periodFreq?.unit))}-{safe(formatDosage(periodFreq?.evening, periodFreq?.unit))}-{safe(formatDosage(periodFreq?.night, periodFreq?.unit))}
                         </Text>
-                        <Text style={styles.col4}>
-                          {safe(period?.duration)} {safe(period?.unit)}
-                        </Text>
+                        <View style={styles.col4}>
+                          <Text>
+                            {safe(period?.duration)} {safe(period?.unit)}
+                          </Text>
+                          <Text style={{ fontFamily: "Helvetica-Oblique", fontSize: "8px", marginTop: 2 }}>
+                            {(() => {
+                              const { from, to } = getDateRange(period, item);
+                              return `${from} - ${to}`;
+                            })()}
+                          </Text>
+                        </View>
                         <Text style={styles.col4}>{safe(period?.intake)}</Text>
                       </View>
                       {period?.instructions && (

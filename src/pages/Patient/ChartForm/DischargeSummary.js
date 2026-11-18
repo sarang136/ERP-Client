@@ -25,7 +25,16 @@ import {
 } from "../../../store/actions";
 import { setEventChart } from "../../../store/features/booking/bookingSlice";
 import { toast } from "react-toastify";
-import { getAIDischargeSummary, validateAISummary, validateChart } from "../../../helpers/backend_helper";
+import {
+  getAIDischargeSummary,
+  validateAISummary,
+  validateChart,
+  getCurrentMedicines,
+} from "../../../helpers/backend_helper";
+import {
+  getMedicineEndDate,
+  validateSchedulesSequential,
+} from "../../../helpers/currentMedicines";
 import { FaCheck } from "react-icons/fa";
 import ValidateConfirmationModal from "./Components/ValidateConfirmationModal";
 
@@ -60,6 +69,33 @@ const DischargeSummary = ({
       // setTreatment(_.cloneDeep(editSummary.treatment));
     }
   }, [editSummary]);
+
+  useEffect(() => {
+    if (editSummary || !patient?._id) return;
+    getCurrentMedicines(patient._id, type)
+      .then((res) => {
+        const rows = res?.payload || [];
+        const meds = rows
+          .map((row) => row.medicine)
+          .filter(Boolean)
+          .map((entry) => {
+            const {
+              _id,
+              prescribedBy,
+              prescribedByUser,
+              discontinuedAt,
+              discontinuedBy,
+              status,
+              supersededAt,
+              ...medicineFields
+            } = entry;
+            return _.cloneDeep(medicineFields);
+          });
+        if (meds.length) setDischargeAdvise(meds);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editSummary, patient?._id, type]);
 
   const validation = useFormik({
     // enableReinitialize : use this flag when initial values needs to be changed
@@ -160,6 +196,57 @@ const DischargeSummary = ({
     },
     validationSchema: Yup.object({}),
     onSubmit: (values) => {
+      const hasAnyDose = (dosageAndFrequency) =>
+        ["morning", "evening", "night"].some((slot) => {
+          const val = dosageAndFrequency?.[slot];
+          return val !== undefined && val !== null && val !== "" && Number(val) !== 0;
+        });
+
+      for (const med of dischargeAdvise || []) {
+        if (med.locked) continue;
+
+        if (med.schedules?.length > 1) {
+          const missingDateIdx = med.schedules.findIndex(
+            (period) => !period.startDate || !period.endDate,
+          );
+          if (missingDateIdx !== -1) {
+            toast.error(
+              `Enter both From and To date for period ${missingDateIdx + 1} (${med.medicine?.name || "a medicine"})`,
+            );
+            return;
+          }
+
+          const error = validateSchedulesSequential(med.schedules);
+          if (error) {
+            toast.error(`${error} (${med.medicine?.name || "a medicine"})`);
+            return;
+          }
+
+          const emptyPeriodIdx = med.schedules.findIndex(
+            (period) => !hasAnyDose(period.dosageAndFrequency),
+          );
+          if (emptyPeriodIdx !== -1) {
+            toast.error(
+              `Enter at least one of Morning/Afternoon/Evening dose for period ${emptyPeriodIdx + 1} (${med.medicine?.name || "a medicine"})`,
+            );
+            return;
+          }
+        } else {
+          if (!med.startDate || !med.endDate) {
+            toast.error(
+              `Enter both From and To date (${med.medicine?.name || "a medicine"})`,
+            );
+            return;
+          }
+
+          if (!hasAnyDose(med.dosageAndFrequency)) {
+            toast.error(
+              `Enter at least one of Morning/Afternoon/Evening dose (${med.medicine?.name || "a medicine"})`,
+            );
+            return;
+          }
+        }
+      }
 
       const extraFields =
         geminiResponse && Object.keys(geminiResponse).length > 0
@@ -249,6 +336,9 @@ const DischargeSummary = ({
     );
 
     if (!checkMedicine) {
+      const startDate = chartDate ? new Date(chartDate) : new Date();
+      const duration = "10";
+      const unit = "Day (s)";
       const medicine = {
         medicine: {
           _id: med?._id || "",
@@ -264,8 +354,10 @@ const DischargeSummary = ({
         },
         instructions: "",
         intake: "After food",
-        duration: "10",
-        unit: "Day (s)",
+        duration,
+        unit,
+        startDate,
+        endDate: getMedicineEndDate(startDate, { duration, unit }),
       };
 
       setDischargeAdvise((prevMeds) => [medicine, ...prevMeds]);
@@ -314,6 +406,7 @@ const DischargeSummary = ({
         <MedicineForm
           medicines={dischargeAdvise}
           setMedicines={setDischargeAdvise}
+          showDates
         />
       )
     );

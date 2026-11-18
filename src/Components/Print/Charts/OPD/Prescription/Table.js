@@ -1,6 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, Font } from "@react-pdf/renderer";
+import { format } from "date-fns";
 import { getMedicineFrequencyLabel, formatDosage } from "../../../../../helpers/prescriptionFrequency";
+import { getMedicineEndDate } from "../../../../../helpers/currentMedicines";
 
 import RobotoHeavy from "../../../../../assets/fonts/Roboto-Black.ttf";
 import Helvetica from "../../../../../assets/fonts/Helvetica-Neue-Bold.ttf";
@@ -144,7 +146,22 @@ const styles = StyleSheet.create({
   },
 });
 
+const formatDate = (d) => {
+  if (!d) return null;
+  const parsed = new Date(d);
+  return Number.isNaN(parsed.getTime()) ? null : format(parsed, "dd MMM yy");
+};
+
 const PrescriptionTable = ({ medicines }) => {
+  const getDateRange = (period, item) => {
+    const from = period?.startDate || item?.startDate;
+    const to =
+      period?.endDate ||
+      item?.endDate ||
+      (from ? getMedicineEndDate(from, period) : null);
+    return { from: formatDate(from) || "-", to: formatDate(to) || "Ongoing" };
+  };
+
   return (
     <React.Fragment>
       <View style={{ ...styles.fontSm, width: "100%" }}>
@@ -175,7 +192,12 @@ const PrescriptionTable = ({ medicines }) => {
               </View>
             </View>
           </View>
-          <Text style={{ ...styles.col6, textAlign: "right" }}>Timing - Freq. - Duration</Text>
+          <View style={{ ...styles.col6, alignItems: "flex-end" }}>
+            <Text style={{ textAlign: "right" }}>Timing - Freq. - Duration</Text>
+            <Text style={{ textAlign: "right", fontSize: "8px", marginTop: 2, fontFamily: "Helvetica-Oblique" }}>
+              From - To
+            </Text>
+          </View>
           {/* <Text style={styles.col2}>Qty</Text> */}
         </View>
         <View style={{ ...styles.tableBody }}>
@@ -237,6 +259,14 @@ const PrescriptionTable = ({ medicines }) => {
                   >
                     {period.intake}{" - "}{getMedicineFrequencyLabel(period)}{" - "}{period.duration} {period.unit}
                   </Text>
+                  {(() => {
+                    const { from, to } = getDateRange(period, item);
+                    return (
+                      <Text style={{ fontFamily: "Helvetica-Oblique", fontSize: "8px", marginTop: 2 }}>
+                        {from} - {to}
+                      </Text>
+                    );
+                  })()}
                 </View>
 
                 {/* <Text style={{ ...styles.col2, ...styles.fontMd }}>
