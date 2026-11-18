@@ -61,7 +61,7 @@ const labelsMapping = {
   "Total Advance": "total_advance", 
   "Due Amount": "due_amount",
   "Last Advance Date": "last_advance_payment_date",
-  "Due Since": "days_since_last_advance",
+  "Due Since": "days_since_due",
   "Last Advance Amount": "last_advance_amount",
 };
 
