@@ -7162,3 +7162,8 @@ export const uploadLectureEvidence = (sessionId, file) => {
 };
 export const deleteLectureEvidence = (sessionId, evidenceId) =>
   axios.delete(`${TL}/sessions/${sessionId}/evidence/${evidenceId}`, { headers: tlHeaders });
+
+// The vendor's own account (ledger) under the vendor control account
+export const createVendorLedger = (id) =>
+  axios.post(`${url.VENDOR_BASE || "/master/vendor"}/${id}/ledger`, {}, { headers: noCookie });
+
