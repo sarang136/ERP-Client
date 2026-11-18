@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import PrintHeader from "./printheader";
 
 const SeriousnessConsent = ({ register, patient }) => {
-  const [seriousnessApplicability, setSeriousnessApplicability] = useState("applicable");
+  const [seriousnessApplicability, setSeriousnessApplicability] =
+    useState("applicable");
 
   const pageContainer = {
     margin: "0 auto",
@@ -126,9 +127,9 @@ const SeriousnessConsent = ({ register, patient }) => {
       {/* A) Emergency Medication (old B) */}
       <div style={section}>
         <span style={bold}>A) Emergency Medication</span> If my patient gets
-        serious due to any condition I do hereby willfully give my full,
-        complete, and irrevocable written consent to administer any/all
-        Emergency Oral/Injectable Medication (both intramuscular and/or
+        serious due to any condition, existing or new. I do hereby willfully
+        give my full, complete, and irrevocable written consent to administer
+        any/all Emergency Oral/Injectable Medication (both intramuscular and/or
         intravenous) as required to be given to the patient by doctors, nursing,
         and care staffs of{" "}
         <span style={bold}>Jagruti Rehabilitation Centre Pvt. Ltd.</span> I
@@ -180,9 +181,9 @@ const SeriousnessConsent = ({ register, patient }) => {
       {/* D) Disclaimer (old E) */}
       <div style={section}>
         <span style={bold}>D)</span> I will not hold{" "}
-        <span style={bold}>Jagruti Rehab Centre Pvt. Ltd.</span> &amp; its
-        staff responsible for any untoward incidence including death &amp; will
-        bear the expenses of this extraordinary situation.
+        <span style={bold}>Jagruti Rehab Centre Pvt. Ltd.</span> &amp; its staff
+        responsible for any untoward incidence including death &amp; will bear
+        the expenses of this extraordinary situation.
       </div>
 
       <div
@@ -192,20 +193,22 @@ const SeriousnessConsent = ({ register, patient }) => {
       </div>
 
       <div style={section}>
-        <strong>Restraint Constraint</strong> Jagruti has given me clear
-        understanding of my patient's physical and mental health. I understood
-        the same and we give our full consent with regards to his/her treatment.
-        During the course of treatment if patient get violent / aggressive /
-        delirious / disoriented etc., then in that case he/she may need to be
-        restrained temporarily to prevent head injury / fracture / suicidal
-        attempt / injury to self or others.
+        <span style={bold}>Restraint Constraint</span> Jagruti has given me
+        clear understanding of my patient's physical and mental health. I
+        understood the same and we give our full consent with regards to his/her
+        treatment. During the course of treatment if patient get violent /
+        aggressive / delirious / disoriented etc., then in that case he/she may
+        need to be restrained temporarily to prevent head injury / fracture /
+        suicidal attempt / injury to self or others.
       </div>
 
       {/* E) Seriousness — heading always first, radios always second */}
       <div style={{ marginBottom: "5px" }}>
         {/* Heading always visible on screen; data-pdf-hide added only when Not Applicable so captureSection strips it from PDF clone */}
         <span
-          {...(seriousnessApplicability === "not_applicable" ? { "data-pdf-hide": "true" } : {})}
+          {...(seriousnessApplicability === "not_applicable"
+            ? { "data-pdf-hide": "true" }
+            : {})}
           style={bold}
         >
           E) Seriousness
@@ -311,7 +314,11 @@ const SeriousnessConsent = ({ register, patient }) => {
             defaultValue={patient?.guardianName}
             readOnly
             {...register("consent_nokName")}
-            style={inputLine}
+            style={{
+              fontWeight: "bold",
+              textTransform: "uppercase",
+              ...inputLine,
+            }}
           />
         </div>
         <div>
