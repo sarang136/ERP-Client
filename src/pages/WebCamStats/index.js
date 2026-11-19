@@ -6,6 +6,7 @@ import { Routes, Route } from "react-router-dom";
 import Dashboard from "./Dashboard";
 import Apikeys from "./Apikeys";
 import Health from "./Health";
+import Recipients from "./Recipients";
 
 const Webcamstats = () => {
   return (
@@ -20,6 +21,7 @@ const Webcamstats = () => {
                 <Route path={`/health`} element={<Health />} />
                 <Route path={`/stats`} element={<Stats />} />
                 <Route path={`/apikeys`} element={<Apikeys />} />
+                <Route path={`/recipients`} element={<Recipients />} />
               </Routes>
             </div>
           </Container>
