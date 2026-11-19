@@ -118,6 +118,13 @@ const CapacityAssessmentModal = ({ isOpen, toggle, patient, addmissionId }) => {
         updated.nextReviewDate = "";
       }
 
+      if (name === "supportedAdmissionInitiated" && newValue === "Yes") {
+        updated.supportedAdmissionSection = "89";
+        const reviewDate = new Date();
+        reviewDate.setDate(reviewDate.getDate() + 28);
+        updated.nextReviewDate = reviewDate.toISOString().split("T")[0];
+      }
+
       if (name === "supportedAdmissionSection") {
         const days = newValue === "89" ? 28 : newValue === "90" ? 88 : null;
         if (days !== null) {
