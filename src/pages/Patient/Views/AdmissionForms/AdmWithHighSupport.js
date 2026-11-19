@@ -64,8 +64,17 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
     }
   }, [patient]);
 
+  const getDoctorAbbreviated = (name) => {
+    if (!name) return "";
+    const withoutPrefix = name.replace(/^dr\.?\s*/i, "").trim();
+    const parts = withoutPrefix.split(/\s+/).filter(Boolean);
+    if (!parts.length) return name;
+    return `Dr. ${parts[parts.length - 1]}`;
+  };
+
   const [today, setToday] = useState("");
   const [guardianName, setGuardianName] = useState("");
+  const [advanceDirective, setAdvanceDirective] = useState("not_written");
 
   useEffect(() => {
     const localISODate = new Date().toISOString().split("T")[0];
@@ -125,7 +134,7 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
           Unit
           <input
             type="text"
-            value={patient?.doctorData?.unit}
+            value={getDoctorAbbreviated(patient?.doctorData?.name)}
             {...register("Indipendent_Admission_Support_unit")}
             style={{
               fontWeight: "bold",
@@ -214,17 +223,6 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
             textTransform: "uppercase",
           }}
         />{" "}
-        son/daughter of
-        <input
-          type="text"
-          // value={patient?.guardianName}
-          {...register("Indipendent_Admission_Support_parentName")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-          }}
-        />{" "}
         request for his/her admission in your establishment for treatment of
         mental illness.
       </p>
@@ -232,10 +230,45 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
         Mr./Mrs./Ms.
         <input
           type="text"
+          value={patient?.name}
+          readOnly
           {...register("Indipendent_Admission_Support_patientName")}
-          style={inputLine}
+          style={{
+            fontWeight: "bold",
+            textTransform: "uppercase",
+            ...inputLine,
+          }}
         />{" "}
-        has/not written Advance Directive.
+        <span data-pdf-hide="true" style={{ marginRight: "6px" }}>
+          {["has_written", "not_written"].map((opt) => (
+            <label key={opt} style={{ marginRight: "10px", cursor: "pointer" }}>
+              <input
+                type="radio"
+                name="advanceDirective"
+                value={opt}
+                checked={advanceDirective === opt}
+                onChange={() => setAdvanceDirective(opt)}
+                style={{ marginRight: "4px" }}
+              />
+              {opt === "has_written" ? "Has Written" : "Not Written"}
+            </label>
+          ))}
+        </span>
+        <span
+          style={{
+            fontWeight: "bold",
+            borderBottom: "1px solid #000",
+            minWidth: "80px",
+            display: "inline-block",
+          }}
+        >
+          {advanceDirective === "has_written"
+            ? "Has Written"
+            : advanceDirective === "not_written"
+            ? "Not Written"
+            : ""}
+        </span>{" "}
+        Advance Directive.
       </p>
       <p>
         A self-attested copy of my identity Proof is enclosed.
@@ -292,7 +325,7 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
       >
         <div>
           <div style={{ display: "flex" }}>
-            Signature of Guardian:
+            Signature of NR:
             <div
               style={{
                 fontWeight: "bold",
@@ -301,7 +334,6 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
             >
               <input
                 type="text"
-                defaultValue={guardianName}
                 {...register("Indipendent_Admission_adult_guardianName3")}
                 style={{
                   fontWeight: "bold",
@@ -312,11 +344,11 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
             </div>
           </div>
           <br />
-          Name
+          NR Name:
           <input
             type="text"
-            value={patient?.name}
-            {...register("Indipendent_Admission_Support_guardianName")}
+            value={patient?.guardianName}
+            {...register("Indipendent_Admission_Support_newGuardianName")}
             style={{
               fontWeight: "bold",
               textTransform: "uppercase",
@@ -324,7 +356,19 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
             }}
           />
           <br />
-          Date & Time
+          NR Mobile:
+          <input
+            type="text"
+            value={patient?.guardianPhoneNumber}
+            {...register("Indipendent_Admission_Support_newGuardianMobile")}
+            style={{
+              fontWeight: "bold",
+              textTransform: "uppercase",
+              ...fullLine,
+            }}
+          />
+          <br />
+          Date
           <input type="date" defaultValue={today} style={fullLine} />
         </div>
       </div>

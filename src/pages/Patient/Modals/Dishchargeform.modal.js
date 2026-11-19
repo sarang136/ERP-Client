@@ -119,7 +119,12 @@ const DischargeFormModal = ({
               <Input
                 type="select"
                 value={admissiontype}
-                onChange={(e) => setAdmissiontype(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setAdmissiontype(val);
+                  setAdultationtype(val === "INDEPENDENT_ADMISSION" ? "VOLUNTARY_ADULT" : "");
+                  setSupporttype("");
+                }}
               >
                 <option value="">Select Admission Type</option>
                 <option value="INDEPENDENT_ADMISSION">
@@ -130,23 +135,8 @@ const DischargeFormModal = ({
               </Input>
             </div>
           )}
-          {/* Conditional fields */}
-          {admissiontype === "INDEPENDENT_ADMISSION" && (
-            <div className="mt-3">
-              <Label className="text-muted mb-1">Adultation Type</Label>
-              <Input
-                type="select"
-                value={adultationype}
-                onChange={(e) => setAdultationtype(e.target.value)}
-              >
-                <option value="">Select Adultation</option>
-                <option value="VOLUNTARY_ADULT">
-                  Adult (18+)
-                </option>
-                {/* <option value="ADULT">Adult (18+)</option> */}
-              </Input>
-            </div>
-          )}
+          {/* Conditional fields — Independent Discharge has only one valid adultation
+              type (Voluntary Adult), so it is auto-set above and no dropdown is shown. */}
           {admissiontype === "SUPPORTIVE_ADMISSION" && (
             <div className="mt-3">
               <Label className="text-muted mb-1">Support Type</Label>
