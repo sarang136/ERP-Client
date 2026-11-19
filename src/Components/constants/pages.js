@@ -476,6 +476,12 @@ export const WebcamStats = [
     icon: "bx bx-server",
   },
   {
+    id: "webcamstats-recipients",
+    label: "Recipients",
+    link: "/webcamstats/recipients",
+    icon: "bx bx-user-voice",
+  },
+  {
     id: "webcamstats-stats",
     label: "Stats",
     link: "/webcamstats/stats",

@@ -39,6 +39,9 @@ const Sidebar = () => {
     if (page.id === "webcamstats-health" && !hasDashboardPermission) {
       return false;
     }
+    if (page.id === "webcamstats-recipients" && !hasDashboardPermission) {
+      return false;
+    }
     if (page.id === "webcamstats-stats" && !hasStatsPermission) {
       return false;
     }
