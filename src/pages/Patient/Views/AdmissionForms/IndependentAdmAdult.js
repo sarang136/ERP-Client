@@ -61,6 +61,14 @@ const IndependentAdmAdult = ({ register, patient, details, chartData }) => {
     return age;
   };
 
+  const getDoctorAbbreviated = (name) => {
+    if (!name) return "";
+    const withoutPrefix = name.replace(/^dr\.?\s*/i, "").trim();
+    const parts = withoutPrefix.split(/\s+/).filter(Boolean);
+    if (!parts.length) return name;
+    return `Dr. ${parts[parts.length - 1]}`;
+  };
+
   useEffect(() => {
     if (patient?.dateOfBirth) {
       const calculatedAge = calculateAge(patient.dateOfBirth);
@@ -134,7 +142,7 @@ const IndependentAdmAdult = ({ register, patient, details, chartData }) => {
           Unit
           <input
             type="text"
-            value={patient?.doctorData?.unit}
+            value={getDoctorAbbreviated(patient?.doctorData?.name)}
             {...register("Indipendent_Admission_adult_unit")}
             style={{
               fontWeight: "bold",
@@ -176,6 +184,7 @@ const IndependentAdmAdult = ({ register, patient, details, chartData }) => {
             fontWeight: "bold",
             textTransform: "uppercase",
             ...fullLine,
+            width: `${Math.max(10, (patient?.name?.length || 0) + 3)}ch`,
           }}
         />{" "}
         UID No.
@@ -205,17 +214,6 @@ const IndependentAdmAdult = ({ register, patient, details, chartData }) => {
             textTransform: "uppercase",
           }}
         />{" "}
-        son/daughter of
-        <input
-          type="text"
-          // value={patient?.guardianName}
-          {...register("Indipendent_Admission_adult_parentName")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-          }}
-        />
         residing at
         <input
           type="text"
@@ -225,6 +223,7 @@ const IndependentAdmAdult = ({ register, patient, details, chartData }) => {
             fontWeight: "bold",
             textTransform: "uppercase",
             ...fullLine,
+            width: `${Math.max(12, (patient?.address?.length || 0) + 3)}ch`,
           }}
         />{" "}
         have mental illness.
@@ -310,16 +309,6 @@ const IndependentAdmAdult = ({ register, patient, details, chartData }) => {
         </div>
       </p>
 
-      {/* List of Enclosures */}
-      <p>
-        List of enclosures:
-        <input
-          type="text"
-          {...register("Indipendent_Admission_adult_listEnclosures")}
-          style={fullLine}
-        />
-      </p>
-
       {/* Signature Section */}
       <div
         style={{
@@ -329,7 +318,7 @@ const IndependentAdmAdult = ({ register, patient, details, chartData }) => {
         }}
       >
         <div style={{ display: "flex" }}>
-          Signature of Guardian:
+          Signature of Patient:
           <div
             style={{
               fontWeight: "bold",
@@ -338,8 +327,7 @@ const IndependentAdmAdult = ({ register, patient, details, chartData }) => {
           >
             <input
               type="text"
-              defaultValue={guardianName}
-              {...register("Indipendent_Admission_adult_guardianName3")}
+              {...register("Indipendent_Admission_adult_patientSignature")}
               style={{
                 fontWeight: "bold",
                 textTransform: "uppercase",

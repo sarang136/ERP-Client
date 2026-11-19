@@ -22,6 +22,7 @@ const UndertakingDischargeForm = ({ patient, admissions }) => {
     ptDate: "",
     relSign: "",
     relName: "",
+    relMobile: "",
     relDate: "",
   });
 
@@ -49,6 +50,7 @@ const UndertakingDischargeForm = ({ patient, admissions }) => {
         dischargeDate: dischargedate,
         ptDate: localISODate,
         relName: guardianName,
+        relMobile: patient?.guardianPhoneNumber || "",
         relDate: localISODate,
       }));
     }
@@ -271,7 +273,7 @@ const UndertakingDischargeForm = ({ patient, admissions }) => {
           {/* Relative Section */}
           <div style={{ ...styles.signatureRow, marginTop: "30px" }}>
             <label style={styles.signatureLabel}>
-              Pt. relative/guardian sign:
+              Pt. NR sign:
               <input
                 type="text"
                 name="relSign"
@@ -281,11 +283,25 @@ const UndertakingDischargeForm = ({ patient, admissions }) => {
               />
             </label>
             <label style={styles.signatureLabel}>
-              Pt. relative's/guardian's name:
+              Pt. NR Name:
               <input
                 type="text"
                 name="relName"
                 value={formData.relName}
+                onChange={handleChange}
+                style={{
+                  ...styles.inlineInput,
+                  width: "250px",
+                  fontWeight: "bold",
+                }}
+              />
+            </label>
+            <label style={styles.signatureLabel}>
+              Pt. NR Mobile:
+              <input
+                type="text"
+                name="relMobile"
+                value={formData.relMobile}
                 onChange={handleChange}
                 style={{
                   ...styles.inlineInput,

@@ -50,6 +50,7 @@ const CapacityAssessmentModal = ({ isOpen, toggle, patient, addmissionId }) => {
     representativeName: "",
     relationship: "",
     supportedAdmissionInitiated: "",
+    supportedAdmissionSection: "",
     nextReviewDate: "",
     suicideRisk: false,
     violenceRisk: false,
@@ -80,7 +81,16 @@ const CapacityAssessmentModal = ({ isOpen, toggle, patient, addmissionId }) => {
   const loggedIn = JSON.parse(localStorage.getItem("authUser"));
 
   const loggedInUserName = loggedIn?.data.name;
-  const loggedInUserDesignation = loggedIn?.data?.role
+  const loggedInUserDesignation = loggedIn?.data?.role;
+
+  // Produces "Dr. Surname" from any name format, with or without an existing Dr prefix.
+  const getDoctorAbbreviated = (name) => {
+    if (!name) return "";
+    const withoutPrefix = name.replace(/^dr\.?\s*/i, "").trim();
+    const parts = withoutPrefix.split(/\s+/).filter(Boolean);
+    if (!parts.length) return name;
+    return `Dr. ${parts[parts.length - 1]}`;
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -103,11 +113,29 @@ const CapacityAssessmentModal = ({ isOpen, toggle, patient, addmissionId }) => {
             : "";
       }
 
+      if (name === "supportedAdmissionInitiated" && newValue === "No") {
+        updated.supportedAdmissionSection = "";
+        updated.nextReviewDate = "";
+      }
+
+      if (name === "supportedAdmissionSection") {
+        const days = newValue === "89" ? 28 : newValue === "90" ? 88 : null;
+        if (days !== null) {
+          const reviewDate = new Date();
+          reviewDate.setDate(reviewDate.getDate() + days);
+          updated.nextReviewDate = reviewDate.toISOString().split("T")[0];
+        }
+      }
+
       return updated;
     });
   };
 
   const handleSubmit = async () => {
+    if (!formData.languageUsed.trim()) {
+      toast.error("Language Used is required");
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -420,6 +448,7 @@ const CapacityAssessmentModal = ({ isOpen, toggle, patient, addmissionId }) => {
             ? `${patient.id.prefix}${patient.id.value}`
             : "",
         ageSex: age && sex ? `${age} / ${sex}` : "",
+        wardUnit: getDoctorAbbreviated(doctor),
         assessmentDateTime: formatDateTimeLocal(admission),
         nominatedRepresentativeInformed: patient?.guardianName ? "Yes" : "",
         representativeName: patient?.guardianName || "",
@@ -512,7 +541,7 @@ Remarks: ${me?.remarks || ""}
                   </td>
                 </tr>
                 <tr>
-                  <td className="fw-bold">UHID / IPD No.</td>
+                  <td className="fw-bold">UID</td>
                   <td>
                     <Input
                       type="text"
@@ -539,12 +568,13 @@ Remarks: ${me?.remarks || ""}
                   </td>
                 </tr>
                 <tr>
-                  <td className="fw-bold">Ward / Unit</td>
+                  <td className="fw-bold">Unit</td>
                   <td>
                     <Input
                       type="text"
                       plainText
                       name="wardUnit"
+                      value={formData?.wardUnit}
                       onChange={handleChange}
                       className="p-0 ps-2"
                     />
@@ -576,12 +606,15 @@ Remarks: ${me?.remarks || ""}
                   </td>
                 </tr>
                 <tr>
-                  <td className="fw-bold">Language Used</td>
+                  <td className="fw-bold">
+                    Language Used <span style={{ color: "red" }}>*</span>
+                  </td>
                   <td>
                     <Input
                       type="text"
                       plainText
                       name="languageUsed"
+                      value={formData?.languageUsed}
                       onChange={handleChange}
                       className="p-0 ps-2"
                     />
@@ -810,16 +843,39 @@ Remarks: ${me?.remarks || ""}
                 </tr>
                 <tr>
                   <td className="fw-bold">
-                    Supported admission initiated (if applicable)
+                    Supported admission initiated
                   </td>
                   <td>
-                    <Input
-                      type="textarea"
-                      rows="2"
-                      name="supportedAdmissionInitiated"
-                      onChange={handleChange}
-                      className="border-0"
-                    />
+                    <div className="d-flex gap-3 ps-2 py-1">
+                      {["Yes", "No"].map((opt) => (
+                        <FormGroup check key={opt} className="mb-0">
+                          <Input
+                            type="radio"
+                            name="supportedAdmissionInitiated"
+                            value={opt}
+                            checked={formData.supportedAdmissionInitiated === opt}
+                            onChange={handleChange}
+                          />
+                          <Label check className="ms-1">{opt}</Label>
+                        </FormGroup>
+                      ))}
+                    </div>
+                    {formData.supportedAdmissionInitiated === "Yes" && (
+                      <div className="d-flex gap-3 ps-2 py-1">
+                        {[{ value: "89", label: "Section 89" }, { value: "90", label: "Section 90" }].map(({ value: sec, label }) => (
+                          <FormGroup check key={sec} className="mb-0">
+                            <Input
+                              type="radio"
+                              name="supportedAdmissionSection"
+                              value={sec}
+                              checked={formData.supportedAdmissionSection === sec}
+                              onChange={handleChange}
+                            />
+                            <Label check className="ms-1">{label}</Label>
+                          </FormGroup>
+                        ))}
+                      </div>
+                    )}
                   </td>
                 </tr>
                 <tr>
@@ -828,6 +884,7 @@ Remarks: ${me?.remarks || ""}
                     <Input
                       type="date"
                       name="nextReviewDate"
+                      value={formData?.nextReviewDate}
                       onChange={handleChange}
                       className="border-0"
                       style={{ height: "52px" }}
