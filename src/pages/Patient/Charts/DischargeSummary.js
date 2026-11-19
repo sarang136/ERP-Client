@@ -354,7 +354,7 @@ const DischargeSummary = ({ data }) => {
         )}
         {data?.medicine?.length > 0 && (
           <div className="px-3 pb-3">
-            <Medicine medicines={data.medicine} showDates />
+            <Medicine medicines={data.medicine} showDates blankIfNoDate />
           </div>
         )}
         {data?.followUp && (

@@ -119,6 +119,7 @@ const MedicineChart = ({
   currentUserId,
   onDiscontinue,
   showDates = false,
+  blankIfNoDate = false,
   showOwner = false,
   fallbackPrescriber,
   readOnly = false,
@@ -283,9 +284,10 @@ const MedicineChart = ({
           name: "From",
           selector: (row) => {
             const periods = row.schedules?.length ? row.schedules : null;
+            const emptyLabel = blankIfNoDate ? "" : "-";
             if (!periods) {
               const from = row?.startDate || baseDate;
-              return from ? moment(from).format("DD MMM, YYYY") : "-";
+              return from ? moment(from).format("DD MMM, YYYY") : emptyLabel;
             }
             return (
               <div>
@@ -299,7 +301,7 @@ const MedicineChart = ({
                       borderTop: i > 0 ? "1px dashed #dde3ee" : "none",
                     }}
                   >
-                    {p.startDate ? moment(p.startDate).format("DD MMM, YYYY") : "-"}
+                    {p.startDate ? moment(p.startDate).format("DD MMM, YYYY") : emptyLabel}
                   </div>
                 ))}
               </div>
@@ -315,7 +317,9 @@ const MedicineChart = ({
               const from = row?.startDate || baseDate;
               const to =
                 row?.endDate || (from ? getMedicineEndDate(from, row) : null);
-              return to ? moment(to).format("DD MMM, YYYY") : "Ongoing";
+              if (to) return moment(to).format("DD MMM, YYYY");
+              if (from) return "Ongoing";
+              return blankIfNoDate ? "" : "Ongoing";
             }
             return (
               <div>
@@ -329,7 +333,13 @@ const MedicineChart = ({
                       borderTop: i > 0 ? "1px dashed #dde3ee" : "none",
                     }}
                   >
-                    {p.endDate ? moment(p.endDate).format("DD MMM, YYYY") : "Ongoing"}
+                    {p.endDate
+                      ? moment(p.endDate).format("DD MMM, YYYY")
+                      : p.startDate
+                        ? "Ongoing"
+                        : blankIfNoDate
+                          ? ""
+                          : "Ongoing"}
                   </div>
                 ))}
               </div>
@@ -549,6 +559,7 @@ MedicineChart.propTypes = {
   currentUserId: PropTypes.string,
   onDiscontinue: PropTypes.func,
   showDates: PropTypes.bool,
+  blankIfNoDate: PropTypes.bool,
   showOwner: PropTypes.bool,
   fallbackPrescriber: PropTypes.object,
 };

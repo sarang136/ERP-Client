@@ -302,7 +302,7 @@ const SummaryBody = ({ chart, patient }) => {
               <Text style={styles.fontSize13}>GIVEN TREATMENTS:</Text>
             </View>
             <View style={{ marginTop: 10, marginBottom: 15 }}>
-              <PrescriptionTable medicines={data.treatment} />
+              <PrescriptionTable medicines={data.treatment} blankIfNoDate />
             </View>
           </>
         ) : data?.treatment ? (
@@ -353,7 +353,7 @@ const SummaryBody = ({ chart, patient }) => {
         )}
         {Array.isArray(data?.medicine) && data.medicine.length > 0 && (
           <View style={{ marginTop: 10, marginBottom: 15 }}>
-            <PrescriptionTable medicines={data?.medicine || []} />
+            <PrescriptionTable medicines={data?.medicine || []} blankIfNoDate />
           </View>
         )}
         {/* {typeof data?.followUp === "string" && data?.followUp.trim() && (

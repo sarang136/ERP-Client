@@ -152,14 +152,17 @@ const formatDate = (d) => {
   return Number.isNaN(parsed.getTime()) ? null : format(parsed, "dd MMM yy");
 };
 
-const PrescriptionTable = ({ medicines }) => {
+const PrescriptionTable = ({ medicines, blankIfNoDate }) => {
   const getDateRange = (period, item) => {
     const from = period?.startDate || item?.startDate;
     const to =
       period?.endDate ||
       item?.endDate ||
       (from ? getMedicineEndDate(from, period) : null);
-    return { from: formatDate(from) || "-", to: formatDate(to) || "Ongoing" };
+    const fromLabel = formatDate(from);
+    const toLabel = formatDate(to);
+    if (blankIfNoDate && !fromLabel && !toLabel) return { from: "", to: "" };
+    return { from: fromLabel || "-", to: toLabel || "Ongoing" };
   };
 
   return (
@@ -261,6 +264,7 @@ const PrescriptionTable = ({ medicines }) => {
                   </Text>
                   {(() => {
                     const { from, to } = getDateRange(period, item);
+                    if (blankIfNoDate && !from && !to) return null;
                     return (
                       <Text style={{ fontFamily: "Helvetica-Oblique", fontSize: "8px", marginTop: 2 }}>
                         {from} - {to}
