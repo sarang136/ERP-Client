@@ -789,6 +789,7 @@ const EmployeeForm = ({
   const [employeeUploads, setEmployeeUploads] = useState([]);
   const [positionDocsLoading, setPositionDocsLoading] = useState(false);
   const [positionDocFiles, setPositionDocFiles] = useState({});
+  const [existingDocDateEdits, setExistingDocDateEdits] = useState({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedDeleteFile, setSelectedDeleteFile] = useState(null);
 
@@ -807,6 +808,8 @@ const EmployeeForm = ({
       document: doc.document,
       docName: doc.docName,
       markMandatory: doc.markMandatory,
+      hasExpiry: !!doc.hasExpiry,
+      expiryMandatory: !!doc.expiryMandatory,
       legacy: false,
       files: uploadsByDocId.get(doc.document)?.files || [],
     }));
@@ -817,6 +820,8 @@ const EmployeeForm = ({
         document: u.document,
         docName: u.docName,
         markMandatory: false,
+        hasExpiry: false,
+        expiryMandatory: false,
         legacy: true,
         files: u.files || [],
       }));
@@ -890,6 +895,13 @@ const EmployeeForm = ({
           );
           return;
         }
+        const missingExpiryDocs = validatePositionDocExpiry();
+        if (missingExpiryDocs.length > 0) {
+          toast.error(
+            `Please fill in Start Date and Expiry Date for: ${missingExpiryDocs.join(", ")}`,
+          );
+          return;
+        }
       }
 
       try {
@@ -942,12 +954,20 @@ const EmployeeForm = ({
           formData.delete("minimumPresentDays");
           formData.delete("minimumPresentUnit");
         }
-        Object.entries(positionDocFiles).forEach(([documentId, files]) => {
-          files.forEach((file) => {
-            formData.append("positionDocFiles", file);
+        Object.entries(positionDocFiles).forEach(([documentId, items]) => {
+          items.forEach((item) => {
+            formData.append("positionDocFiles", item.file);
             formData.append("positionDocumentIds", documentId);
+            formData.append("positionDocStartDates", item.startDate || "");
+            formData.append("positionDocExpiryDates", item.expiryDate || "");
           });
         });
+        if (Object.keys(existingDocDateEdits).length > 0) {
+          formData.append(
+            "existingDocDateUpdates",
+            JSON.stringify(existingDocDateEdits),
+          );
+        }
         // Amount fields above are yearly; the server splits them into monthly.
         formData.append("salaryUnit", "ANNUAL");
         let panUrl = values.panOld;
@@ -1180,13 +1200,158 @@ const EmployeeForm = ({
     );
   };
 
+  const formatInitialDate = (dateVal) => {
+    if (!dateVal) return "";
+    try {
+      const d = new Date(dateVal);
+      return isNaN(d.getTime()) ? "" : format(d, "yyyy-MM-dd");
+    } catch {
+      return "";
+    }
+  };
+
+  const handlePositionDocSelect = (documentId, file) => {
+    if (!file) return;
+    setPositionDocFiles((prev) => ({
+      ...prev,
+      [documentId]: [
+        ...(prev[documentId] || []),
+        { file, startDate: "", expiryDate: "" },
+      ],
+    }));
+  };
+
+  const handlePositionDocRemove = (documentId, index) => {
+    setPositionDocFiles((prev) => ({
+      ...prev,
+      [documentId]: (prev[documentId] || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handlePositionDocDateChange = (documentId, index, field, value) => {
+    setPositionDocFiles((prev) => {
+      const items = [...(prev[documentId] || [])];
+      items[index] = { ...items[index], [field]: value };
+      return { ...prev, [documentId]: items };
+    });
+  };
+
+  const handleExistingDocDateChange = (fileId, field, value) => {
+    setExistingDocDateEdits((prev) => {
+      let origStartDate = "";
+      let origExpiryDate = "";
+      for (const d of positionDocFields) {
+        const found = (d.files || []).find(
+          (f) => String(f._id) === String(fileId),
+        );
+        if (found) {
+          origStartDate = formatInitialDate(found.startDate);
+          origExpiryDate = formatInitialDate(found.expiryDate);
+          break;
+        }
+      }
+      const current = prev[fileId] || {
+        startDate: origStartDate,
+        expiryDate: origExpiryDate,
+      };
+      const updated = {
+        ...prev,
+        [fileId]: {
+          ...current,
+          [field]: value,
+        },
+      };
+      form.setFieldValue("positionDocuments", updated);
+      return updated;
+    });
+  };
+
+  const validatePositionDocuments = () => {
+    const missing = positionDocFields.filter((doc) => {
+      if (!doc.markMandatory) return false;
+      const hasNewFile = (positionDocFiles[doc.document] || []).length > 0;
+      const hasExistingFile = (doc.files || []).length > 0;
+      return !hasNewFile && !hasExistingFile;
+    });
+    return missing.map((d) => d.docName);
+  };
+
+  const validatePositionDocExpiry = () => {
+    const missing = [];
+    positionDocFields.forEach((doc) => {
+      if (
+        !doc.hasExpiry &&
+        !doc.files?.some((f) => f.startDate || f.expiryDate)
+      ) {
+        return;
+      }
+      (positionDocFiles[doc.document] || []).forEach((item) => {
+        const isMandatory =
+          doc.hasExpiry || item.startDate || item.expiryDate;
+        if (isMandatory) {
+          if (!item.startDate || !item.expiryDate) {
+            missing.push(doc.docName);
+          } else if (new Date(item.startDate) > new Date(item.expiryDate)) {
+            missing.push(
+              `${doc.docName} (Expiry Date must be after Start Date)`,
+            );
+          }
+        }
+      });
+
+      if (isEdit && doc.files) {
+        doc.files.forEach((file) => {
+          const edited = existingDocDateEdits[file._id];
+          if (edited || doc.hasExpiry) {
+            const startDate =
+              edited?.startDate !== undefined
+                ? edited.startDate
+                : formatInitialDate(file.startDate);
+            const expiryDate =
+              edited?.expiryDate !== undefined
+                ? edited.expiryDate
+                : formatInitialDate(file.expiryDate);
+            const isMandatory =
+              doc.hasExpiry || startDate || expiryDate;
+            if (isMandatory) {
+              if (!startDate || !expiryDate) {
+                missing.push(doc.docName);
+              } else if (new Date(startDate) > new Date(expiryDate)) {
+                missing.push(
+                  `${doc.docName} (Expiry Date must be after Start Date)`,
+                );
+              }
+            }
+          }
+        });
+      }
+    });
+    return [...new Set(missing)];
+  };
+
+
+  const missingMandatoryDocs = validatePositionDocuments();
+  const missingExpiryDocs = validatePositionDocExpiry();
+  const hasMissingOtherDocDates =
+    !relaxedValidation && missingExpiryDocs.length > 0;
+
   const activeTabIndex = FORM_TABS.findIndex((tab) => tab.key === activeTab);
 
   // Does this tab have a currently-visible validation error? Uses the same
   // touched+errors check errorText() already uses per field, just scanning a
   // whole tab's field list instead of one field.
-  const tabHasErrors = (tabKey) =>
-    (TAB_FIELDS[tabKey] || []).some((field) => touched[field] && errors[field]);
+  const tabHasErrors = (tabKey) => {
+    if (
+      tabKey === "documents" &&
+      !relaxedValidation &&
+      (missingMandatoryDocs.length > 0 || hasMissingOtherDocDates)
+    ) {
+      return true;
+    }
+    return (TAB_FIELDS[tabKey] || []).some(
+      (field) => touched[field] && errors[field],
+    );
+  };
 
   // "Next" only checks the fields that belong to the tab being left — it does
   // not run/change the overall Yup validationSchema, just reads its result.
@@ -1201,6 +1366,21 @@ const EmployeeForm = ({
 
     const hasBlockingErrors = fieldsToCheck.some((field) => formErrors[field]);
     if (hasBlockingErrors) return;
+
+    if (activeTab === "documents" && !relaxedValidation) {
+      if (missingMandatoryDocs.length > 0) {
+        toast.error(
+          `Please upload required document(s): ${missingMandatoryDocs.join(", ")}`,
+        );
+        return;
+      }
+      if (hasMissingOtherDocDates) {
+        toast.error(
+          `Please fill in valid Start Date and Expiry Date for: ${missingExpiryDocs.join(", ")}`,
+        );
+        return;
+      }
+    }
 
     if (activeTabIndex < FORM_TABS.length - 1) {
       setActiveTab(FORM_TABS[activeTabIndex + 1].key);
@@ -1249,30 +1429,7 @@ const EmployeeForm = ({
     }
   };
 
-  const handlePositionDocSelect = (documentId, file) => {
-    if (!file) return;
-    setPositionDocFiles((prev) => ({
-      ...prev,
-      [documentId]: [...(prev[documentId] || []), file],
-    }));
-  };
 
-  const handlePositionDocRemove = (documentId, index) => {
-    setPositionDocFiles((prev) => ({
-      ...prev,
-      [documentId]: (prev[documentId] || []).filter((_, i) => i !== index),
-    }));
-  };
-
-  const validatePositionDocuments = () => {
-    const missing = positionDocFields.filter((doc) => {
-      if (!doc.markMandatory) return false;
-      const hasNewFile = (positionDocFiles[doc.document] || []).length > 0;
-      const hasExistingFile = (doc.files || []).length > 0;
-      return !hasNewFile && !hasExistingFile;
-    });
-    return missing.map((d) => d.docName);
-  };
 
   const getDocumentDate = (urlField) =>
     uploadedAt[urlField] || initialData?.updatedAt;
@@ -1354,7 +1511,7 @@ const EmployeeForm = ({
 
   let inHandYearly = yearlyValue("inHandSalary");
 
-  const missingMandatoryDocs = validatePositionDocuments();
+
   // const handleCreateDesignation = async (inputValue) => {
   //   if (mode === "NEW_JOINING" && !hasCreatePermission) {
   //     toast.error("You don't have permission to create designation");
@@ -3068,6 +3225,12 @@ const EmployeeForm = ({
               Please upload: {missingMandatoryDocs.join(", ")}
             </p>
           )}
+          {missingExpiryDocs.length > 0 && (
+            <p className="text-danger small mb-2">
+              Please fill in Start Date and Expiry Date for:{" "}
+              {missingExpiryDocs.join(", ")}
+            </p>
+          )}
         </Col>
 
         <Row className="g-3 mx-2">
@@ -3079,7 +3242,7 @@ const EmployeeForm = ({
               </Col>
             ) : (
               positionDocFields.map((doc) => {
-                const files = positionDocFiles[doc.document] || [];
+                const items = positionDocFiles[doc.document] || [];
                 const existingFiles = doc.files || [];
                 const isSatisfied = existingFiles.length > 0;
 
@@ -3108,48 +3271,128 @@ const EmployeeForm = ({
                         {existingFiles.map((file, index) => (
                           <div
                             key={file._id || index}
-                            className="d-flex align-items-center justify-content-between border rounded px-2 py-1"
+                            className="border rounded px-2 py-1"
                           >
-                            <span
-                              className="text-truncate small"
-                              style={{ maxWidth: 180 }}
-                            >
-                              {file.fileName}
-                            </span>
-                            <div className="d-flex gap-1">
-                              <Button
-                                size="sm"
-                                color="info"
-                                onClick={() =>
-                                  handleFilePreview(
+                            <div className="d-flex align-items-center justify-content-between">
+                              <span
+                                className="text-truncate small"
+                                style={{ maxWidth: 180 }}
+                              >
+                                {file.fileName}
+                              </span>
+                              <div className="d-flex gap-1">
+                                <Button
+                                  size="sm"
+                                  color="info"
+                                  onClick={() =>
+                                    handleFilePreview(
+                                      {
+                                        url: file.fileUrl,
+                                        originalName: file.fileName,
+                                      },
+                                      `positionDoc.${doc.document}.${file._id || index}`,
+                                    )
+                                  }
+                                >
+                                  {getFileActionLabel(
                                     {
                                       url: file.fileUrl,
                                       originalName: file.fileName,
                                     },
                                     `positionDoc.${doc.document}.${file._id || index}`,
-                                  )
-                                }
-                              >
-                                {getFileActionLabel(
-                                  {
-                                    url: file.fileUrl,
-                                    originalName: file.fileName,
-                                  },
-                                  `positionDoc.${doc.document}.${file._id || index}`,
-                                )}
-                              </Button>
-                              {!doc.legacy && (
-                                <Button
-                                  size="sm"
-                                  color="outline-danger"
-                                  onClick={() =>
-                                    openDeleteExistingFile(doc.document, file)
-                                  }
-                                >
-                                  <i className="ri-close-line" />
+                                  )}
                                 </Button>
-                              )}
+                                {!doc.legacy && (
+                                  <Button
+                                    size="sm"
+                                    color="outline-danger"
+                                    onClick={() =>
+                                      openDeleteExistingFile(doc.document, file)
+                                    }
+                                  >
+                                    <i className="ri-close-line" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
+                            {(doc.hasExpiry || file.startDate || file.expiryDate) && (
+                              isEdit ? (
+                                <div className="d-flex gap-2 mt-2">
+                                  <div style={{ flex: 1 }}>
+                                    <label className="small text-muted mb-1 d-block">
+                                      Start Date
+                                      {doc.hasExpiry && (
+                                        <span className="text-danger ms-1">*</span>
+                                      )}
+                                    </label>
+                                    <Flatpickr
+                                      value={
+                                        existingDocDateEdits[file._id]?.startDate !== undefined
+                                          ? existingDocDateEdits[file._id]?.startDate
+                                          : formatInitialDate(file.startDate)
+                                      }
+                                      options={{
+                                        dateFormat: "Y-m-d",
+                                        allowInput: true,
+                                      }}
+                                      onChange={([date]) =>
+                                        handleExistingDocDateChange(
+                                          file._id,
+                                          "startDate",
+                                          date
+                                            ? format(date, "yyyy-MM-dd")
+                                            : "",
+                                        )
+                                      }
+                                      className="form-control form-control-sm"
+                                      placeholder="dd/mm/yyyy"
+                                    />
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <label className="small text-muted mb-1 d-block">
+                                      Expiry Date
+                                      {doc.hasExpiry && (
+                                        <span className="text-danger ms-1">*</span>
+                                      )}
+                                    </label>
+                                    <Flatpickr
+                                      value={
+                                        existingDocDateEdits[file._id]?.expiryDate !== undefined
+                                          ? existingDocDateEdits[file._id]?.expiryDate
+                                          : formatInitialDate(file.expiryDate)
+                                      }
+                                      options={{
+                                        dateFormat: "Y-m-d",
+                                        allowInput: true,
+                                      }}
+                                      onChange={([date]) =>
+                                        handleExistingDocDateChange(
+                                          file._id,
+                                          "expiryDate",
+                                          date
+                                            ? format(date, "yyyy-MM-dd")
+                                            : "",
+                                        )
+                                      }
+                                      className="form-control form-control-sm"
+                                      placeholder="dd/mm/yyyy"
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                (file.startDate || file.expiryDate) && (
+                                  <div className="text-muted mt-1" style={{ fontSize: 11 }}>
+                                    {file.startDate
+                                      ? format(new Date(file.startDate), "dd/MM/yyyy")
+                                      : "—"}{" "}
+                                    →{" "}
+                                    {file.expiryDate
+                                      ? format(new Date(file.expiryDate), "dd/MM/yyyy")
+                                      : "—"}
+                                  </div>
+                                )
+                              )
+                            )}
                           </div>
                         ))}
                       </div>
@@ -3172,28 +3415,88 @@ const EmployeeForm = ({
                           }}
                         />
 
-                        {files.length > 0 && (
+                        {items.length > 0 && (
                           <div className="d-flex flex-column gap-2 mb-2">
-                            {files.map((file, index) => (
+                            {items.map((item, index) => (
                               <div
                                 key={index}
-                                className="d-flex align-items-center justify-content-between border rounded px-2 py-1"
+                                className="border rounded px-2 py-2"
                               >
-                                <span
-                                  className="text-truncate small"
-                                  style={{ maxWidth: 220 }}
-                                >
-                                  {file.name}
-                                </span>
-                                <Button
-                                  size="sm"
-                                  color="outline-danger"
-                                  onClick={() =>
-                                    handlePositionDocRemove(doc.document, index)
-                                  }
-                                >
-                                  Remove
-                                </Button>
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span
+                                    className="text-truncate small"
+                                    style={{ maxWidth: 220 }}
+                                  >
+                                    {item.file.name}
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    color="outline-danger"
+                                    onClick={() =>
+                                      handlePositionDocRemove(doc.document, index)
+                                    }
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                                {doc.hasExpiry && (
+                                  <div className="d-flex gap-2 mt-2">
+                                    <div style={{ flex: 1 }}>
+                                      <label className="small text-muted mb-1 d-block">
+                                        Start Date
+                                        {doc.hasExpiry && (
+                                          <span className="text-danger ms-1">*</span>
+                                        )}
+                                      </label>
+                                      <Flatpickr
+                                        value={item.startDate}
+                                        options={{
+                                          dateFormat: "Y-m-d",
+                                          allowInput: true,
+                                        }}
+                                        onChange={([date]) =>
+                                          handlePositionDocDateChange(
+                                            doc.document,
+                                            index,
+                                            "startDate",
+                                            date
+                                              ? format(date, "yyyy-MM-dd")
+                                              : "",
+                                          )
+                                        }
+                                        className="form-control form-control-sm"
+                                        placeholder="dd/mm/yyyy"
+                                      />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                      <label className="small text-muted mb-1 d-block">
+                                        Expiry Date
+                                        {doc.hasExpiry && (
+                                          <span className="text-danger ms-1">*</span>
+                                        )}
+                                      </label>
+                                      <Flatpickr
+                                        value={item.expiryDate}
+                                        options={{
+                                          dateFormat: "Y-m-d",
+                                          allowInput: true,
+                                        }}
+                                        onChange={([date]) =>
+                                          handlePositionDocDateChange(
+                                            doc.document,
+                                            index,
+                                            "expiryDate",
+                                            date
+                                              ? format(date, "yyyy-MM-dd")
+                                              : "",
+                                          )
+                                        }
+                                        className="form-control form-control-sm"
+                                        placeholder="dd/mm/yyyy"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -3205,7 +3508,7 @@ const EmployeeForm = ({
                             positionDocFileRefs.current[doc.document]?.click()
                           }
                         >
-                          {files.length > 0 || existingFiles.length > 0
+                          {items.length > 0 || existingFiles.length > 0
                             ? "Upload Another File"
                             : "Upload File"}
                         </Button>
@@ -4234,7 +4537,15 @@ const EmployeeForm = ({
                 isSubmitting ||
                 !isValid ||
                 (isEdit && !initialData?._id) ||
-                missingMandatoryDocs.length > 0
+                missingMandatoryDocs.length > 0 ||
+                hasMissingOtherDocDates
+              }
+              title={
+                hasMissingOtherDocDates
+                  ? `Please fill in valid Start Date and Expiry Date for: ${missingExpiryDocs.join(", ")}`
+                  : missingMandatoryDocs.length > 0
+                    ? `Please upload required document(s): ${missingMandatoryDocs.join(", ")}`
+                    : undefined
               }
             >
               {isSubmitting ? (
@@ -5547,6 +5858,12 @@ const EmployeeForm = ({
               Please upload: {missingMandatoryDocs.join(", ")}
             </p>
           )}
+          {missingExpiryDocs.length > 0 && (
+            <p className="text-danger small mb-2">
+              Please fill in Start Date and Expiry Date for:{" "}
+              {missingExpiryDocs.join(", ")}
+            </p>
+          )}
         </Col>
 
         <Row className="g-3 mx-2">
@@ -5558,7 +5875,7 @@ const EmployeeForm = ({
               </Col>
             ) : (
               positionDocFields.map((doc) => {
-                const files = positionDocFiles[doc.document] || [];
+                const items = positionDocFiles[doc.document] || [];
                 const existingFiles = doc.files || [];
                 const isSatisfied = existingFiles.length > 0;
 
@@ -5587,48 +5904,128 @@ const EmployeeForm = ({
                         {existingFiles.map((file, index) => (
                           <div
                             key={file._id || index}
-                            className="d-flex align-items-center justify-content-between border rounded px-2 py-1"
+                            className="border rounded px-2 py-1"
                           >
-                            <span
-                              className="text-truncate small"
-                              style={{ maxWidth: 180 }}
-                            >
-                              {file.fileName}
-                            </span>
-                            <div className="d-flex gap-1">
-                              <Button
-                                size="sm"
-                                color="info"
-                                onClick={() =>
-                                  handleFilePreview(
+                            <div className="d-flex align-items-center justify-content-between">
+                              <span
+                                className="text-truncate small"
+                                style={{ maxWidth: 180 }}
+                              >
+                                {file.fileName}
+                              </span>
+                              <div className="d-flex gap-1">
+                                <Button
+                                  size="sm"
+                                  color="info"
+                                  onClick={() =>
+                                    handleFilePreview(
+                                      {
+                                        url: file.fileUrl,
+                                        originalName: file.fileName,
+                                      },
+                                      `positionDoc.${doc.document}.${file._id || index}`,
+                                    )
+                                  }
+                                >
+                                  {getFileActionLabel(
                                     {
                                       url: file.fileUrl,
                                       originalName: file.fileName,
                                     },
                                     `positionDoc.${doc.document}.${file._id || index}`,
-                                  )
-                                }
-                              >
-                                {getFileActionLabel(
-                                  {
-                                    url: file.fileUrl,
-                                    originalName: file.fileName,
-                                  },
-                                  `positionDoc.${doc.document}.${file._id || index}`,
-                                )}
-                              </Button>
-                              {!doc.legacy && (
-                                <Button
-                                  size="sm"
-                                  color="outline-danger"
-                                  onClick={() =>
-                                    openDeleteExistingFile(doc.document, file)
-                                  }
-                                >
-                                  <i className="ri-close-line" />
+                                  )}
                                 </Button>
-                              )}
+                                {!doc.legacy && (
+                                  <Button
+                                    size="sm"
+                                    color="outline-danger"
+                                    onClick={() =>
+                                      openDeleteExistingFile(doc.document, file)
+                                    }
+                                  >
+                                    <i className="ri-close-line" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
+                            {(doc.hasExpiry || file.startDate || file.expiryDate) && (
+                              isEdit ? (
+                                <div className="d-flex gap-2 mt-2">
+                                  <div style={{ flex: 1 }}>
+                                    <label className="small text-muted mb-1 d-block">
+                                      Start Date
+                                      {doc.hasExpiry && (
+                                        <span className="text-danger ms-1">*</span>
+                                      )}
+                                    </label>
+                                    <Flatpickr
+                                      value={
+                                        existingDocDateEdits[file._id]?.startDate !== undefined
+                                          ? existingDocDateEdits[file._id]?.startDate
+                                          : formatInitialDate(file.startDate)
+                                      }
+                                      options={{
+                                        dateFormat: "Y-m-d",
+                                        allowInput: true,
+                                      }}
+                                      onChange={([date]) =>
+                                        handleExistingDocDateChange(
+                                          file._id,
+                                          "startDate",
+                                          date
+                                            ? format(date, "yyyy-MM-dd")
+                                            : "",
+                                        )
+                                      }
+                                      className="form-control form-control-sm"
+                                      placeholder="dd/mm/yyyy"
+                                    />
+                                  </div>
+                                  <div style={{ flex: 1 }}>
+                                    <label className="small text-muted mb-1 d-block">
+                                      Expiry Date
+                                      {doc.hasExpiry && (
+                                        <span className="text-danger ms-1">*</span>
+                                      )}
+                                    </label>
+                                    <Flatpickr
+                                      value={
+                                        existingDocDateEdits[file._id]?.expiryDate !== undefined
+                                          ? existingDocDateEdits[file._id]?.expiryDate
+                                          : formatInitialDate(file.expiryDate)
+                                      }
+                                      options={{
+                                        dateFormat: "Y-m-d",
+                                        allowInput: true,
+                                      }}
+                                      onChange={([date]) =>
+                                        handleExistingDocDateChange(
+                                          file._id,
+                                          "expiryDate",
+                                          date
+                                            ? format(date, "yyyy-MM-dd")
+                                            : "",
+                                        )
+                                      }
+                                      className="form-control form-control-sm"
+                                      placeholder="dd/mm/yyyy"
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                (file.startDate || file.expiryDate) && (
+                                  <div className="text-muted mt-1" style={{ fontSize: 11 }}>
+                                    {file.startDate
+                                      ? format(new Date(file.startDate), "dd/MM/yyyy")
+                                      : "—"}{" "}
+                                    →{" "}
+                                    {file.expiryDate
+                                      ? format(new Date(file.expiryDate), "dd/MM/yyyy")
+                                      : "—"}
+                                  </div>
+                                )
+                              )
+                            )}
                           </div>
                         ))}
                       </div>
@@ -5651,28 +6048,88 @@ const EmployeeForm = ({
                           }}
                         />
 
-                        {files.length > 0 && (
+                        {items.length > 0 && (
                           <div className="d-flex flex-column gap-2 mb-2">
-                            {files.map((file, index) => (
+                            {items.map((item, index) => (
                               <div
                                 key={index}
-                                className="d-flex align-items-center justify-content-between border rounded px-2 py-1"
+                                className="border rounded px-2 py-2"
                               >
-                                <span
-                                  className="text-truncate small"
-                                  style={{ maxWidth: 220 }}
-                                >
-                                  {file.name}
-                                </span>
-                                <Button
-                                  size="sm"
-                                  color="outline-danger"
-                                  onClick={() =>
-                                    handlePositionDocRemove(doc.document, index)
-                                  }
-                                >
-                                  Remove
-                                </Button>
+                                <div className="d-flex align-items-center justify-content-between">
+                                  <span
+                                    className="text-truncate small"
+                                    style={{ maxWidth: 220 }}
+                                  >
+                                    {item.file.name}
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    color="outline-danger"
+                                    onClick={() =>
+                                      handlePositionDocRemove(doc.document, index)
+                                    }
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
+                                {doc.hasExpiry && (
+                                  <div className="d-flex gap-2 mt-2">
+                                    <div style={{ flex: 1 }}>
+                                      <label className="small text-muted mb-1 d-block">
+                                        Start Date
+                                        {doc.hasExpiry && (
+                                          <span className="text-danger ms-1">*</span>
+                                        )}
+                                      </label>
+                                      <Flatpickr
+                                        value={item.startDate}
+                                        options={{
+                                          dateFormat: "Y-m-d",
+                                          allowInput: true,
+                                        }}
+                                        onChange={([date]) =>
+                                          handlePositionDocDateChange(
+                                            doc.document,
+                                            index,
+                                            "startDate",
+                                            date
+                                              ? format(date, "yyyy-MM-dd")
+                                              : "",
+                                          )
+                                        }
+                                        className="form-control form-control-sm"
+                                        placeholder="dd/mm/yyyy"
+                                      />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                      <label className="small text-muted mb-1 d-block">
+                                        Expiry Date
+                                        {doc.hasExpiry && (
+                                          <span className="text-danger ms-1">*</span>
+                                        )}
+                                      </label>
+                                      <Flatpickr
+                                        value={item.expiryDate}
+                                        options={{
+                                          dateFormat: "Y-m-d",
+                                          allowInput: true,
+                                        }}
+                                        onChange={([date]) =>
+                                          handlePositionDocDateChange(
+                                            doc.document,
+                                            index,
+                                            "expiryDate",
+                                            date
+                                              ? format(date, "yyyy-MM-dd")
+                                              : "",
+                                          )
+                                        }
+                                        className="form-control form-control-sm"
+                                        placeholder="dd/mm/yyyy"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -5684,7 +6141,7 @@ const EmployeeForm = ({
                             positionDocFileRefs.current[doc.document]?.click()
                           }
                         >
-                          {files.length > 0 || existingFiles.length > 0
+                          {items.length > 0 || existingFiles.length > 0
                             ? "Upload Another File"
                             : "Upload File"}
                         </Button>
@@ -6717,7 +7174,21 @@ const EmployeeForm = ({
                 </Button>
               )}
               {activeTabIndex < FORM_TABS.length - 1 && (
-                <Button color="primary" className="text-white" onClick={handleNextTab}>
+                <Button
+                  color="primary"
+                  className="text-white"
+                  onClick={handleNextTab}
+                  disabled={
+                    activeTab === "documents" &&
+                    (missingMandatoryDocs.length > 0 || hasMissingOtherDocDates)
+                  }
+                  title={
+                    activeTab === "documents" &&
+                    (missingMandatoryDocs.length > 0 || hasMissingOtherDocDates)
+                      ? "Please complete all required documents and dates before proceeding"
+                      : undefined
+                  }
+                >
                   Next
                 </Button>
               )}
@@ -6731,7 +7202,15 @@ const EmployeeForm = ({
                     isSubmitting ||
                     !isValid ||
                     (isEdit && !initialData?._id) ||
-                    missingMandatoryDocs.length > 0
+                    missingMandatoryDocs.length > 0 ||
+                    hasMissingOtherDocDates
+                  }
+                  title={
+                    hasMissingOtherDocDates
+                      ? `Please fill in valid Start Date and Expiry Date for: ${missingExpiryDocs.join(", ")}`
+                      : missingMandatoryDocs.length > 0
+                        ? `Please upload required document(s): ${missingMandatoryDocs.join(", ")}`
+                        : undefined
                   }
                 >
                   {isSubmitting ? (
