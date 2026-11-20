@@ -130,6 +130,7 @@ const VendorInvoiceView = ({ invoiceId, canWrite, onClose, onChanged, onEdit }) 
               <Col md={4}>
                 <Fact label="Supplier invoice date" value={dateText(inv.vendorInvoiceDate)} />
                 <Fact label="Due date" value={dateText(inv.dueDate)} />
+                <Fact label="Payment term" value={inv.paymentTermId?.code ? `${inv.paymentTermId.code} · ${inv.paymentTermId.paymentType}${inv.paymentTermId.dueDays ? `, ${inv.paymentTermId.dueDays} days` : ""}` : ""} />
                 <Fact label="Department" value={inv.departmentId?.name} />
                 <Fact label="Purpose" value={inv.purpose} />
               </Col>

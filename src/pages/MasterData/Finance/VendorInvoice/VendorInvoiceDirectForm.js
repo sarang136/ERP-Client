@@ -5,12 +5,13 @@ import { toast } from "react-toastify";
 import {
   getPOs,
   getPoBillingSummary,
+  getBillPaymentTerm,
   createDirectVendorInvoice,
   updateDirectVendorInvoice,
 } from "../../../../helpers/backend_helper";
 import { useAuthError } from "../../../../Components/Hooks/useAuthError";
 import { useReferenceList } from "../../../../Components/Hooks/useReferenceData";
-import { INVOICE_TYPES, TYPE_LABELS, fetchPostingLedgers, money, errText, dateInput, todayInput, fileSize, newRequestId, supplierName } from "./viUi";
+import { INVOICE_TYPES, TYPE_LABELS, fetchPostingLedgers, money, errText, dateText, dateInput, todayInput, fileSize, newRequestId, supplierName } from "./viUi";
 import "../../UnitOfMeasurement/uom.scss";
 
 const num = (v) => {
@@ -54,6 +55,7 @@ const VendorInvoiceDirectForm = ({ editing, onSaved, onCancel }) => {
   const [taxable, setTaxable] = useState(editing ? String(editing.subtotal ?? "") : "");
   const [tax, setTax] = useState(editing ? String(editing.taxAmount ?? "") : "");
   const [taxTouched, setTaxTouched] = useState(!!editing); // once the person keys or picks a tax, the PO rate no longer overwrites it
+  const [termInfo, setTermInfo] = useState(null); // the payment term this bill would take: { term, source }
   const [poInfo, setPoInfo] = useState(null); // what the chosen PO has been billed so far
   const [purpose, setPurpose] = useState(editing?.purpose || "");
   const [departmentId, setDepartmentId] = useState(editing?.departmentId?._id || "");
@@ -118,6 +120,28 @@ const VendorInvoiceDirectForm = ({ editing, onSaved, onCancel }) => {
     if (editing?.poId?._id) loadPo(editing.poId._id, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // The payment term: the PO's, or the supplier's when there is no PO
+  useEffect(() => {
+    const ready = needsPo ? !!poId : !!vendorId;
+    if (!ready) return setTermInfo(null);
+    let cancelled = false;
+    getBillPaymentTerm(needsPo ? { poId } : { vendorId })
+      .then((res) => !cancelled && setTermInfo(res?.data || null))
+      .catch(() => !cancelled && setTermInfo(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [needsPo, poId, vendorId]);
+
+  const term = termInfo?.term || null;
+  const termDue = (() => {
+    if (!term || !invoiceDate || type === "proforma") return "";
+    const d = new Date(`${invoiceDate}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + Number(term.dueDays || 0));
+    return d.toISOString().slice(0, 10);
+  })();
+  const TERM_TYPE = { net: "Net", advance: "Advance", cod: "Cash on delivery", partial: "Partial" };
 
   const changeTaxable = (v) => {
     setTaxable(v);
@@ -305,7 +329,16 @@ const VendorInvoiceDirectForm = ({ editing, onSaved, onCancel }) => {
               <Label>Buyer GSTIN <span className="text-muted small">(optional)</span></Label>
               <Input value={buyerGstin} onChange={(e) => setBuyerGstin(e.target.value.toUpperCase())} maxLength={20} placeholder="Our GSTIN as written on the bill" />
             </div>
-          </Step>
+            {term && (
+              <div className="border rounded p-3 mt-3 bg-light small">
+                <div className="fw-semibold mb-1">Payment term: {term.code} · {TERM_TYPE[term.paymentType] || term.paymentType}{term.dueDays ? `, ${term.dueDays} days` : ""} <span className="text-muted">({termInfo.source === "po" ? "from the PO" : "from the supplier"})</span></div>
+                <div className="text-muted">{term.description}</div>
+                {term.gracePeriodDays > 0 && <div>Grace: {term.gracePeriodDays} days</div>}
+                {term.discountPercentage > 0 && <div>Discount: {term.discountPercentage}% if paid within {term.discountDays} days of the invoice date</div>}
+                {term.paymentType === "advance" && type !== "advance" && <div className="text-danger mt-1">This supplier is on an advance term: it was meant to be paid before delivery.</div>}
+              </div>
+            )}
+            </Step>
 
           <Step no="3" title="Bill details" hint="Key these exactly as they appear on the supplier's invoice.">
             <Row className="g-3">
@@ -320,6 +353,8 @@ const VendorInvoiceDirectForm = ({ editing, onSaved, onCancel }) => {
               <Col md={3}>
                 <Label>Due date <span className="text-muted small">(optional)</span></Label>
                 <Input type="date" value={dueDate} min={invoiceDate || undefined} onChange={(e) => setDueDate(e.target.value)} />
+                {!dueDate && termDue && <FormText>Left empty, the due date will be <strong>{dateText(termDue)}</strong> ({term.code}: invoice date + {term.dueDays} days).</FormText>}
+                {!dueDate && !termDue && <FormText>Left empty, the next payment run (Payment Schedule) is used, if one is set.</FormText>}
               </Col>
               <Col md={4}>
                 <Label>Currency</Label>
