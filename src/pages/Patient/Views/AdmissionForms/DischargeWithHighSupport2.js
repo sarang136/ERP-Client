@@ -73,7 +73,7 @@ const DischargeWithHighSupport2 = ({
           input { border: none; border-bottom: 1px solid #000; font-size: 12px; background: transparent; }
         }
         @media (max-width: 768px) {
-          input { width: 100% !important; margin: 5px 0 !important; display: block; }
+          input:not([type='radio']):not([type='checkbox']) { width: 100% !important; min-width: 0 !important; margin: 5px 0 !important; display: block; }
         }
       `}</style>
 
