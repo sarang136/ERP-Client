@@ -32,6 +32,7 @@ const MediactionConcent = ({ register, patient }) => {
   const medicineList = {
     display: "flex",
     justifyContent: "space-between",
+    flexWrap: "wrap",
     marginBottom: "15px",
   };
 
@@ -84,8 +85,9 @@ const MediactionConcent = ({ register, patient }) => {
         {`
           /* Responsive adjustments */
           @media (max-width: 768px) {
-            input {
+            input:not([type='radio']):not([type='checkbox']) {
               width: 100% !important;
+              min-width: 0 !important;
               margin: 5px 0 !important;
               display: block;
             }

@@ -48,8 +48,9 @@ const AudioVideoConsentForm = ({ register, patient }) => {
       <style>
         {`
           @media (max-width: 768px) {
-            input {
+            input:not([type='radio']):not([type='checkbox']) {
               width: 100% !important;
+              min-width: 0 !important;
               margin: 5px 0 !important;
               display: block;
             }
