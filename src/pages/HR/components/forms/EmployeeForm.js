@@ -809,7 +809,6 @@ const EmployeeForm = ({
       docName: doc.docName,
       markMandatory: doc.markMandatory,
       hasExpiry: !!doc.hasExpiry,
-      expiryMandatory: !!doc.expiryMandatory,
       legacy: false,
       files: uploadsByDocId.get(doc.document)?.files || [],
     }));
@@ -821,7 +820,6 @@ const EmployeeForm = ({
         docName: u.docName,
         markMandatory: false,
         hasExpiry: false,
-        expiryMandatory: false,
         legacy: true,
         files: u.files || [],
       }));

@@ -134,7 +134,6 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
         docName: d.docName,
         markMandatory: !!selections[d._id]?.markMandatory,
         hasExpiry: !!selections[d._id]?.hasExpiry,
-        expiryMandatory: !!selections[d._id]?.hasExpiry,
       }));
 
     if (requiredDocs.length === 0) {
