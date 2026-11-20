@@ -75,12 +75,24 @@ const IndependentAdmMinor = ({ register, patient, details, chartData }) => {
 
   const [today, setToday] = useState("");
   const [guardianName, setGuardianName] = useState("");
+  const [staffName, setStaffName] = useState("");
+  const [staffPhone, setStaffPhone] = useState("");
 
   useEffect(() => {
     const localISODate = new Date().toISOString().split("T")[0];
     setToday(localISODate);
     setGuardianName(patient?.guardianName);
   }, [patient]);
+
+  useEffect(() => {
+    try {
+      const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
+      setStaffName(authUser?.data?.name || "");
+      setStaffPhone(authUser?.data?.phoneNumber || "");
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
 
   return (
     <div style={pageContainer}>
@@ -132,7 +144,6 @@ const IndependentAdmMinor = ({ register, patient, details, chartData }) => {
           To, <br />
           The Psychiatrist, <br />
           The Department of Psychiatry, <br />
-          Raha (Child Psychiatry Unit), <br />
           Jagruti Rehabilitation Centre.
         </div>
         <div>
@@ -160,7 +171,7 @@ const IndependentAdmMinor = ({ register, patient, details, chartData }) => {
         I, Mr./Mrs./Ms.
         <input
           type="text"
-          value={patient?.name}
+          value={patient?.guardianName}
           {...register("Indipendent_Admission_minor_name")}
           style={{
             fontWeight: "bold",
@@ -217,17 +228,6 @@ const IndependentAdmMinor = ({ register, patient, details, chartData }) => {
             textTransform: "uppercase",
           }}
         />{" "}
-        son/daughter of
-        <input
-          type="text"
-          // value={patient?.guardianName}
-          {...register("Indipendent_Admission_minor_parentName")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-          }}
-        />{" "}
         request for his/her admission in your establishment for treatment of
         mental illness.
       </p>
@@ -282,65 +282,80 @@ const IndependentAdmMinor = ({ register, patient, details, chartData }) => {
           display: "flex",
           justifyContent: "space-between",
           marginTop: "20px",
+          gap: "20px",
         }}
       >
-        <div>
-          Signature of Staff:
-          <br />
-          Witness Name
+        {/* LEFT — Staff */}
+        <div style={{ flex: 1 }}>
+          Name of Staff:
           <input
             type="text"
-            {...register("Indipendent_Admission_minor_witnessName")}
+            value={staffName}
+            {...register("Indipendent_Admission_minor_staffName")}
+            style={{ fontWeight: "bold", textTransform: "uppercase", ...fullLine }}
+          />
+          <br />
+          Contact of Staff:
+          <input
+            type="text"
+            value={staffPhone}
+            {...register("Indipendent_Admission_minor_staffContact")}
+            style={{ fontWeight: "bold", ...fullLine }}
+          />
+          <br />
+          Signature of Staff:
+          <input
+            type="text"
+            {...register("Indipendent_Admission_minor_staffSignature")}
             style={fullLine}
           />
           <br />
-          Date & Time
+          Date:
           <input
             type="date"
             defaultValue={today}
-            {...register("Indipendent_Admission_minor_staffDateTime")}
+            {...register("Indipendent_Admission_minor_staffDate")}
             style={fullLine}
           />
         </div>
-        <div>
-          <div style={{ display: "flex" }}>
-            Signature of Guardian:
-            <div
-              style={{
-                fontWeight: "bold",
-                textTransform: "uppercase",
-              }}
-            >
-              <input
-                type="text"
-                defaultValue={guardianName}
-                {...register("Indipendent_Admission_adult_guardianName3")}
-                style={{
-                  fontWeight: "bold",
-                  textTransform: "uppercase",
-                  ...fullLine,
-                }}
-              />
-            </div>
-          </div>
-          <br />
-          Name
+        {/* RIGHT — NR */}
+        <div style={{ flex: 1 }}>
+          Name of NR:
           <input
             type="text"
-            value={patient?.name}
-            {...register("Indipendent_Admission_minor_guardianName")}
-            style={{
-              fontWeight: "bold",
-              textTransform: "uppercase",
-              ...fullLine,
-            }}
+            value={patient?.guardianName}
+            {...register("Indipendent_Admission_minor_nrName")}
+            style={{ fontWeight: "bold", textTransform: "uppercase", ...fullLine }}
           />
           <br />
-          Date & Time
+          Signature of NR:
+          <input
+            type="text"
+            {...register("Indipendent_Admission_minor_nrSignature")}
+            style={fullLine}
+          />
+          <br />
+          Relation with NR:
+          <input
+            type="text"
+            value={patient?.guardianRelation}
+            {...register("Indipendent_Admission_minor_nrRelation")}
+            style={{ fontWeight: "bold", ...fullLine }}
+          />
+          <br />
+          Contact of NR:
+          <input
+            type="text"
+            value={patient?.guardianPhoneNumber}
+            {...register("Indipendent_Admission_minor_nrContact")}
+            style={{ fontWeight: "bold", ...fullLine }}
+          />
+          <br />
+          Date:
           <input
             type="date"
             defaultValue={today}
-            {...register("Indipendent_Admission_minor_guardianDateTime")}
+            {...register("Indipendent_Admission_minor_nrDate")}
             style={fullLine}
           />
         </div>

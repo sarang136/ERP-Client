@@ -105,11 +105,23 @@ const EmergencyAdmissionForm = ({
   }, [patient]);
 
   const [today, setToday] = useState("");
+  const [staffName, setStaffName] = useState("");
+  const [staffPhone, setStaffPhone] = useState("");
 
   useEffect(() => {
     const now = new Date();
     const localISODate = now.toISOString().split("T")[0];
     setToday(localISODate);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
+      setStaffName(authUser?.data?.name || "");
+      setStaffPhone(authUser?.data?.phoneNumber || "");
+    } catch {
+      // ignore parse errors
+    }
   }, []);
 
   useEffect(() => {
@@ -132,6 +144,12 @@ const EmergencyAdmissionForm = ({
       }
     }
   }, [setValue, emergencyType, emergencyRestraint, age, patient]);
+
+  useEffect(() => {
+    if (setValue) {
+      setValue("Emergency_Admission_monitoring", "Yes");
+    }
+  }, [setValue]);
 
   return (
     <div style={pageContainer}>
@@ -306,82 +324,35 @@ const EmergencyAdmissionForm = ({
         />
       </div>
 
-      {/* Diagnosis & Capacity */}
-      <div style={sectionHeading}>Diagnosis &amp; Capacity</div>
-      <div style={{ marginBottom: "8px" }}>
-        <span>Provisional Diagnosis: </span>
-        <input
-          type="text"
-          defaultValue={
-            patient?.addmission?.provisional_diagnosis?.length
-              ? patient.addmission.provisional_diagnosis
-                  .map((d) => d.code)
-                  .join(", ")
-              : patient?.addmission?.provisionalDiagnosis ||
-                patient?.provisionalDiagnosis ||
-                ""
-          }
-          {...register("Emergency_Admission_provisionalDiagnosis")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-            minWidth: "300px",
-          }}
-        />
-      </div>
-      <div style={{ marginBottom: "15px" }}>
-        <span>Capacity: Unable to </span>
-        <label style={{ marginLeft: "5px", marginRight: "10px" }}>
-          <input
-            type="radio"
-            value="understand"
-            {...register("Emergency_Admission_capacity")}
-            style={{ marginRight: "4px" }}
-          />
-          understand
-        </label>
-        <label style={{ marginRight: "10px" }}>
-          <input
-            type="radio"
-            value="appreciate"
-            {...register("Emergency_Admission_capacity")}
-            style={{ marginRight: "4px" }}
-          />
-          appreciate
-        </label>
-        <label>
-          <input
-            type="radio"
-            value="communicate"
-            {...register("Emergency_Admission_capacity")}
-            style={{ marginRight: "4px" }}
-          />
-          communicate
-        </label>
-      </div>
-
       {/* Justification */}
       <div style={sectionHeading}>Justification</div>
       <p style={{ marginBottom: "15px" }}>
         Immediate risk of harm to self/others or deterioration &ndash; admission
-        under Section 98 required.
+        under Section 94 required.
       </p>
 
       {/* Treatment */}
       <div style={sectionHeading}>Treatment</div>
       <div style={{ marginBottom: "8px" }}>
         <span>Medication: </span>
-        <input
-          type="text"
-          {...register("Emergency_Admission_medication")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-            minWidth: "300px",
-          }}
-        />
+        <label style={{ marginLeft: "10px", marginRight: "15px" }}>
+          <input
+            type="radio"
+            value="Yes"
+            {...register("Emergency_Admission_medication")}
+            style={{ marginRight: "4px" }}
+          />
+          Yes
+        </label>
+        <label>
+          <input
+            type="radio"
+            value="No"
+            {...register("Emergency_Admission_medication")}
+            style={{ marginRight: "4px" }}
+          />
+          No
+        </label>
       </div>
       <div style={{ marginBottom: "8px" }}>
         <span>Restraint: </span>
@@ -406,57 +377,23 @@ const EmergencyAdmissionForm = ({
       </div>
       <div style={{ marginBottom: "15px" }}>
         <span>Monitoring: </span>
-        <input
-          type="text"
-          {...register("Emergency_Admission_monitoring")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-            minWidth: "300px",
-          }}
-        />
-      </div>
-
-      {/* NR & Consent */}
-      <div style={sectionHeading}>NR &amp; Consent</div>
-      <div style={{ marginBottom: "8px" }}>
-        <span>NR Name/Contact: </span>
-        <input
-          type="text"
-          defaultValue={
-            patient?.guardianName
-              ? `${patient.guardianName}${patient?.guardianPhone ? " / " + patient.guardianPhone : ""}`
-              : ""
-          }
-          {...register("Emergency_Admission_nrNameContact")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-            minWidth: "300px",
-          }}
-        />
-      </div>
-      <div style={{ marginBottom: "15px" }}>
-        <span>Consent: </span>
         <label style={{ marginLeft: "10px", marginRight: "15px" }}>
           <input
             type="radio"
-            value="Patient"
-            {...register("Emergency_Admission_consent")}
+            value="Yes"
+            {...register("Emergency_Admission_monitoring")}
             style={{ marginRight: "4px" }}
           />
-          Patient
+          Yes
         </label>
         <label>
           <input
             type="radio"
-            value="NR"
-            {...register("Emergency_Admission_consent")}
+            value="No"
+            {...register("Emergency_Admission_monitoring")}
             style={{ marginRight: "4px" }}
           />
-          NR
+          No
         </label>
       </div>
 
@@ -494,6 +431,31 @@ const EmergencyAdmissionForm = ({
           />
         </div>
         <div>
+          Staff Name:
+          <input
+            type="text"
+            value={staffName}
+            readOnly
+            {...register("Emergency_Admission_staffName")}
+            style={{ fontWeight: "bold", textTransform: "uppercase", ...inputLine }}
+          />
+          <br />
+          Staff Contact:
+          <input
+            type="text"
+            value={staffPhone}
+            readOnly
+            {...register("Emergency_Admission_staffContact")}
+            style={{ fontWeight: "bold", ...inputLine }}
+          />
+          <br />
+          Staff Signature:
+          <input
+            type="text"
+            {...register("Emergency_Admission_staffSignature")}
+            style={inputLine}
+          />
+          <br />
           <span>Date/Time: </span>
           <input
             type="datetime-local"

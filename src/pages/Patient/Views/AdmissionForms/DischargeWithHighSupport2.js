@@ -94,25 +94,7 @@ const DischargeWithHighSupport2 = ({
           Form Dis-Sec90-F | EMR | Version 1.0 | Effective: 1st June 2026
         </span>
       </div>
-      <div style={{ fontSize: "12px", marginBottom: "8px" }}>
-        MHCA 2017 Section 90 | NABH COP | One-page discharge order — see
-        Discharge Summary (Dis-F-01) for full clinical record
-      </div>
 
-      {/* Warning Banner */}
-      <div
-        style={{
-          border: "1px solid #c8a900",
-          backgroundColor: "#fffbe6",
-          padding: "6px 10px",
-          fontWeight: "bold",
-          fontSize: "13px",
-          marginBottom: "4px",
-          color: "#7a5f00",
-        }}
-      >
-        ⚠ MHRB NOTIFICATION MANDATORY — MAXIMUM PERIOD 180 DAYS
-      </div>
       <div
         style={{
           textAlign: "center",
@@ -142,7 +124,7 @@ const DischargeWithHighSupport2 = ({
             fontWeight: "bold",
           }}
         />
-        <span style={{ marginLeft: "16px" }}>MRD Number:</span>
+        <span style={{ marginLeft: "16px" }}>UID:</span>
         <input
           type="text"
           defaultValue={patient?.mrdNumber || admissions?.Ipdnum || ""}
@@ -375,90 +357,33 @@ const DischargeWithHighSupport2 = ({
         </div>
       </div>
 
-      {/* SECTION E */}
-      <div style={sectionHeader}>SECTION E — MHRB &amp; NR NOTIFICATION</div>
-      <div style={{ padding: "0 4px" }}>
+
+      <div style={{ padding: "0 4px", marginTop: "14px" }}>
         <div style={fieldRow}>
-          <span>NR informed:</span>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              marginLeft: "8px",
-            }}
-          >
-            <input
-              type="checkbox"
-              {...register("sec90_nrInformed")}
-              style={{ width: "13px", height: "13px" }}
-            />
-            Yes
-          </label>
-          <span style={{ marginLeft: "20px" }}>NR response:</span>
-          {["Agrees", "Objects"].map((opt) => (
-            <label
-              key={opt}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                marginLeft: "10px",
-              }}
-            >
-              <input
-                type="checkbox"
-                {...register(`sec90_nrResponse_${opt}`)}
-                style={{ width: "13px", height: "13px" }}
-              />
-              {opt}
-            </label>
-          ))}
-        </div>
-        <div style={fieldRow}>
-          <span>MHRB notified of discharge:</span>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              marginLeft: "8px",
-            }}
-          >
-            <input
-              type="checkbox"
-              {...register("sec90_mhrbNotified")}
-              style={{ width: "13px", height: "13px" }}
-            />
-            Yes
-          </label>
-          <span style={{ marginLeft: "16px" }}>Date:</span>
-          <input
-            type="date"
-            {...register("sec90_mhrbDate", {
-              setValueAs: (val) => {
-                if (!val) return "";
-                const [year, month, day] = val.split("-");
-                return `${day}/${month}/${year}`;
-              },
-            })}
-            style={{ ...inputLine, maxWidth: "130px" }}
-          />
-          <span style={{ marginLeft: "16px" }}>Reference No.:</span>
+          <span>NR Name:</span>
           <input
             type="text"
-            {...register("sec90_mhrbRef")}
-            style={{ ...inputLine, maxWidth: "140px" }}
+            value={patient?.guardianName || ""}
+            readOnly
+            {...register("sec90_nrName")}
+            style={{
+              ...inputLine,
+              maxWidth: "220px",
+              fontWeight: "bold",
+              textTransform: "uppercase",
+            }}
           />
         </div>
-        <div style={{ fontSize: "12px", color: "#555", marginTop: "2px" }}>
-          (Full compliance record: Dis-F-10)
+        <div style={fieldRow}>
+          <span>NR Contact:</span>
+          <input
+            type="text"
+            value={patient?.guardianPhoneNumber || ""}
+            readOnly
+            {...register("sec90_nrContact")}
+            style={{ ...inputLine, maxWidth: "180px", fontWeight: "bold" }}
+          />
         </div>
-      </div>
-
-      {/* SECTION F */}
-      <div style={sectionHeader}>SECTION F — SIGN-OFF</div>
-      <div style={{ padding: "0 4px" }}>
         <div style={fieldRow}>
           <span>NR Signature:</span>
           <input
@@ -466,7 +391,9 @@ const DischargeWithHighSupport2 = ({
             {...register("sec90_nrSignature")}
             style={{ ...inputLine, maxWidth: "200px" }}
           />
-          <span style={{ marginLeft: "24px" }}>Date:</span>
+        </div>
+        <div style={fieldRow}>
+          <span>Date:</span>
           <input
             type="date"
             defaultValue={today}
@@ -479,50 +406,6 @@ const DischargeWithHighSupport2 = ({
             })}
             style={{ ...inputLine, maxWidth: "130px" }}
           />
-        </div>
-        <div style={fieldRow}>
-          <span>Treating Psychiatrist:</span>
-          <input
-            type="text"
-            value={admissions?.doctor?.name || ""}
-            {...register("sec90_psych")}
-            style={{
-              ...inputLine,
-              maxWidth: "180px",
-              textTransform: "uppercase",
-              fontWeight: "bold",
-            }}
-          />
-          <span style={{ marginLeft: "12px" }}>Reg. No.:</span>
-          <input
-            type="text"
-            {...register("sec90_regNo")}
-            style={{ ...inputLine, maxWidth: "120px" }}
-          />
-          <span style={{ marginLeft: "12px" }}>Signature:</span>
-          <input
-            type="text"
-            {...register("sec90_psychSignature")}
-            style={{ ...inputLine, maxWidth: "180px" }}
-          />
-        </div>
-        <div style={{ ...fieldRow, marginTop: "6px" }}>
-          <span>Clinical Director informed:</span>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              marginLeft: "8px",
-            }}
-          >
-            <input
-              type="checkbox"
-              {...register("sec90_clinicalDirectorInformed")}
-              style={{ width: "13px", height: "13px" }}
-            />
-            Yes
-          </label>
         </div>
       </div>
 
