@@ -730,6 +730,8 @@ export const permissionList = [
       { name: "DELIVERY_INTIMATION", label: "Delivery Intimation" },
       { name: "GRN", label: "Goods Receipt Note" },
       { name: "VENDOR_INVOICE", label: "Vendor Invoice" },
+      { name: "VENDOR_PAYMENT", label: "Vendor Payment" },
+      { name: "PAYMENT_SCHEDULE", label: "Payment Schedule (payment run days)" },
       { name: "STORAGE_LOCATION", label: "Storage Location" },
       { name: "PUTAWAY", label: "Putaway" },
       { name: "STOCK", label: "Stock Management" },
