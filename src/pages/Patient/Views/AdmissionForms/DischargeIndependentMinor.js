@@ -228,7 +228,7 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
         Email
         <input
           type="text"
-          value={patient?.email}
+          defaultValue={patient?.email || ""}
           {...register("page11_email")}
           style={{
             fontWeight: "bold",
