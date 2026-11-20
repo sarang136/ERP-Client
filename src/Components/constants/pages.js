@@ -2165,6 +2165,18 @@ export const MASTER_DATA = [
         link: "/vendor-management/vendor-invoice",
         permissionModule: "VENDOR_INVOICE",
       },
+      {
+        id: "finance-vendor-payment",
+        label: "Vendor Payments",
+        link: "/vendor-management/vendor-payment",
+        permissionModule: "VENDOR_PAYMENT",
+      },
+      {
+        id: "finance-payment-schedule",
+        label: "Payment Schedule",
+        link: "/vendor-management/payment-schedule",
+        permissionModule: "PAYMENT_SCHEDULE",
+      },
     ],
   },
   {

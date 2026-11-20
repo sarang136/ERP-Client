@@ -44,6 +44,8 @@ import AddScan from "./AssetLifecycle/AddScan";
 import LocationStock from "./Inventory/LocationStock";
 import AssetTransferRequest from "./AssetLifecycle/AssetTransfer";
 import VendorInvoice from "./Finance/VendorInvoice";
+import VendorPayment from "./Finance/VendorPayment";
+import PaymentSchedule from "./Finance/PaymentSchedule";
 import ChartOfAccounts from "./Finance/Accounting/ChartOfAccounts";
 import Ledgers from "./Finance/Accounting/Ledgers";
 import LedgerTypes from "./Finance/Accounting/LedgerTypes";
@@ -103,6 +105,16 @@ const ROUTES = [
     path: "vendor-invoice/*",
     perm: "VENDOR_INVOICE",
     element: <VendorInvoice />,
+  },
+  {
+    path: "vendor-payment/*",
+    perm: "VENDOR_PAYMENT",
+    element: <VendorPayment />,
+  },
+  {
+    path: "payment-schedule/*",
+    perm: "PAYMENT_SCHEDULE",
+    element: <PaymentSchedule />,
   },
   {
     path: "storage-location/*",

@@ -6557,6 +6557,35 @@ export const markVendorInvoicePaid = (id) => {
     { headers: { "X-No-Cookie-Token": "true" } },
   );
 };
+// Direct bills (tax invoice / proforma / advance) with approval
+const viMultipart = { "X-No-Cookie-Token": "true", "Content-Type": "multipart/form-data" };
+export const createDirectVendorInvoice = (formData) =>
+  axios.post(`${url.VI_BASE}/direct`, formData, { headers: viMultipart });
+export const updateDirectVendorInvoice = (id, formData) =>
+  axios.put(`${url.VI_BASE}/${id}/direct`, formData, { headers: viMultipart });
+export const submitVendorInvoice = (id) =>
+  axios.patch(`${url.VI_BASE}/${id}/submit`, {}, { headers: { "X-No-Cookie-Token": "true" } });
+export const approveVendorInvoice = (id, body = {}) =>
+  axios.patch(`${url.VI_BASE}/${id}/approve`, body, { headers: { "X-No-Cookie-Token": "true" } });
+export const rejectVendorInvoice = (id, reason) =>
+  axios.patch(`${url.VI_BASE}/${id}/reject`, { reason }, { headers: { "X-No-Cookie-Token": "true" } });
+export const getPoBillingSummary = (poId, exclude) =>
+  axios.get(`${url.VI_BASE}/po-summary/${poId}`, { params: exclude ? { exclude } : {}, headers: { "X-No-Cookie-Token": "true" } });
+export const getVendorInvoiceSummary = (params = {}) =>
+  axios.get(`${url.VI_BASE}/summary`, { params, headers: { "X-No-Cookie-Token": "true" } });
+
+// Vendor payments
+const vpHeaders = { "X-No-Cookie-Token": "true" };
+const VP = "/master/vendor-payment";
+export const getPayableInvoices = () => axios.get(`${VP}/payable-invoices`, { headers: vpHeaders });
+export const createVendorPayment = (data) => axios.post(VP, data, { headers: vpHeaders });
+export const getVendorPayments = (params = {}) => axios.get(VP, { params, headers: vpHeaders });
+export const getVendorPaymentSummary = () => axios.get(`${VP}/summary`, { headers: vpHeaders });
+export const getVendorPaymentById = (id) => axios.get(`${VP}/${id}`, { headers: vpHeaders });
+export const cancelVendorPayment = (id, reason = "") => axios.patch(`${VP}/${id}/cancel`, { reason }, { headers: vpHeaders });
+// Payment schedule (the days vendors are paid)
+export const getVendorPaymentSchedule = () => axios.get("/master/vendor-payment-schedule", { headers: vpHeaders });
+export const saveVendorPaymentSchedule = (data) => axios.put("/master/vendor-payment-schedule", data, { headers: vpHeaders });
 // Storage Location
 export const getStorageLocations = (params = {}) => {
   return axios.get(url.STORAGE_LOCATION_BASE, {

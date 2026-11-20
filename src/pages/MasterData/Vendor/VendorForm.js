@@ -747,6 +747,8 @@ const VendorForm = ({ vendorId, onSaved, onCancel }) => {
         delete payload.updatedAt;
         delete payload.documents;
         delete payload.ledgerId;
+        // set by the system (the HiSYNC import, Central Payment requests): the server does not accept them back
+        ["hisyncId", "hisyncVendorCode", "postedFrom", "requestedBy", "requestedFromCenter"].forEach((k) => delete payload[k]);
         if (!payload.udyamNumber) delete payload.udyamNumber;
         if (!payload.cin) delete payload.cin;
         if (payload.tdsRate === "") delete payload.tdsRate;
