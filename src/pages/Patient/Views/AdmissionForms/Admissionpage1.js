@@ -27,6 +27,7 @@ const Admissionpage1 = ({ register, admissions, patient, details, chartData }) =
   const formRow = {
     display: "flex",
     justifyContent: "space-between",
+    flexWrap: "wrap",
     marginBottom: "5px",
   };
 
@@ -113,8 +114,9 @@ const Admissionpage1 = ({ register, admissions, patient, details, chartData }) =
         {`
           /* Responsive adjustments */
           @media (max-width: 768px) {
-            input {
+            input:not([type='radio']):not([type='checkbox']) {
               width: 100% !important;
+              min-width: 0 !important;
               margin: 5px 0 !important;
               display: block;
             }
