@@ -249,7 +249,6 @@ const DischargeIndependentAdult = ({ register, patient, admissions }) => {
           {...register("page10_email")}
           style={{
             fontWeight: "bold",
-            textTransform: "uppercase",
             ...inputLine,
           }}
         />

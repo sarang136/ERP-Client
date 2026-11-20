@@ -307,14 +307,12 @@ const AdmWithHighSupport = ({ register, patient, details, chartData }) => {
           {...register("Indipendent_Admission_Support_altMobile")}
           style={inputLine}
         />{" "}
-        <div>
-          Email
-          <input
-            type="text"
-            {...register("Indipendent_Admission_Support_email")}
-            style={inputLine}
-          />
-        </div>
+        Email
+        <input
+          type="text"
+          {...register("Indipendent_Admission_Support_email")}
+          style={{ ...inputLine, textTransform: "none" }}
+        />
       </p>
       <div
         style={{
