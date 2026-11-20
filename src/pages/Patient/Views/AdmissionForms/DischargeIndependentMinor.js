@@ -45,12 +45,24 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
 
   const [today, setToday] = useState("");
   const [guardianName, setGuardianName] = useState("");
+  const [staffName, setStaffName] = useState("");
+  const [staffPhone, setStaffPhone] = useState("");
 
   useEffect(() => {
     const localISODate = new Date().toISOString().split("T")[0];
     setToday(localISODate);
     setGuardianName(patient?.guardianName);
   }, [patient]);
+
+  useEffect(() => {
+    try {
+      const authUser = JSON.parse(localStorage.getItem("authUser") || "{}");
+      setStaffName(authUser?.data?.name || "");
+      setStaffPhone(authUser?.data?.phoneNumber || "");
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
 
   return (
     <div style={pageContainer}>
@@ -95,7 +107,6 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
           To, <br />
           The Psychiatrist, <br />
           The Department of Psychiatry, <br />
-          Raha (Child Psychiatry Unit), <br />
           Jagruti Rehabilitation Centre.
         </div>
         <div>
@@ -120,10 +131,10 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
       </div>
       <p>Sir/Madam : Request for Discharge.</p>
       <p>
-        I, Mr./Mrs.
+        I, Mr./Mrs./Ms.
         <input
           type="text"
-          value={patient?.name}
+          value={patient?.guardianName}
           {...register("page11_name")}
           style={{
             fontWeight: "bold",
@@ -131,10 +142,32 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
             ...fullLine,
           }}
         />{" "}
-        IPD No.
+        residing at
         <input
           type="text"
-          value={admissions?.Ipdnum}
+          value={patient?.address}
+          {...register("page11_address")}
+          style={{
+            fontWeight: "bold",
+            textTransform: "uppercase",
+            ...fullLine,
+          }}
+        />{" "}
+        who is the Parent/Care taker being legal guardian of Master/Ms.
+        <input
+          type="text"
+          value={patient?.name}
+          {...register("page11_patientName")}
+          style={{
+            fontWeight: "bold",
+            textTransform: "uppercase",
+            ...inputLine,
+          }}
+        />{" "}
+        UID No.
+        <input
+          type="text"
+          value={patient?.id?.value}
           {...register("page11_ipd")}
           style={{
             fontWeight: "bold",
@@ -142,7 +175,7 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
             ...inputLine,
           }}
         />{" "}
-        aged
+        age
         <input
           type="text"
           value={patient?.age}
@@ -157,53 +190,9 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
             textTransform: "uppercase",
           }}
         />{" "}
-        son/daughter of
-        <input
-          type="text"
-          {...register("page11_parentName")}
-          style={inputLine}
-        />{" "}
-        residing at
-        <input
-          type="text"
-          value={patient?.address}
-          {...register("page11_address")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...fullLine,
-          }}
-        />{" "}
-        was admitted in your mental health establishment as an Minor admission
-        on
-        <input
-          type="text"
-          value={
-            admissions?.addmissionDate
-              ? new Date(admissions.addmissionDate).toLocaleDateString("en-GB")
-              : ""
-          }
-          {...register("page11_admissionDate")}
-          style={{
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            ...inputLine,
-          }}
-        />{" "}
-        Now he/she feel better and wish to be discharged. If any other reason's
-        for discharge, please mention below :
+        request for his/her discharge from your establishment under the
+        treatment of mental illness.
       </p>
-      <ol style={{ marginLeft: "20px", marginBottom: "10px" }}>
-        <li>
-          <input type="text" {...register("page11_reason1")} style={fullLine} />
-        </li>
-        <li>
-          <input type="text" {...register("page11_reason2")} style={fullLine} />
-        </li>
-        <li>
-          <input type="text" {...register("page11_reason3")} style={fullLine} />
-        </li>
-      </ol>
       <p>Kindly arrange to discharge him/her immediately.</p>
       <p>
         Address
@@ -253,9 +242,27 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
           display: "flex",
           justifyContent: "space-between",
           marginTop: "20px",
+          gap: "20px",
         }}
       >
-        <div>
+        {/* LEFT — Staff */}
+        <div style={{ flex: 1 }}>
+          Name of Staff:
+          <input
+            type="text"
+            value={staffName}
+            {...register("page11_staffName")}
+            style={{ fontWeight: "bold", textTransform: "uppercase", ...fullLine }}
+          />
+          <br />
+          Contact of Staff:
+          <input
+            type="text"
+            value={staffPhone}
+            {...register("page11_staffContact")}
+            style={{ fontWeight: "bold", ...fullLine }}
+          />
+          <br />
           Signature of Staff:
           <input
             type="text"
@@ -263,67 +270,65 @@ const DischargeIndependentMinor = ({ register, patient, admissions }) => {
             style={fullLine}
           />
           <br />
-          Witness Name
-          <input
-            type="text"
-            {...register("page11_witnessName")}
-            style={fullLine}
-          />
-          <br />
-          Date & Time
+          Date:
           <input
             type="date"
             defaultValue={today}
-            {...register("page11_staffDateTime", {
+            {...register("page11_staffDate", {
               setValueAs: (val) => {
                 if (!val) return "";
                 const [year, month, day] = val.split("-");
                 return `${day}/${month}/${year}`;
               },
             })}
-            style={{
-              fontWeight: "bold",
-              textTransform: "uppercase",
-              ...fullLine,
-            }}
+            style={{ fontWeight: "bold", textTransform: "uppercase", ...fullLine }}
           />
         </div>
-        <div>
-          Signature of Guardian:
+        {/* RIGHT — NR */}
+        <div style={{ flex: 1 }}>
+          Name of NR:
           <input
             type="text"
-            {...register("page11_guardianSignature")}
+            value={patient?.guardianName}
+            {...register("page11_nrName")}
+            style={{ fontWeight: "bold", textTransform: "uppercase", ...fullLine }}
+          />
+          <br />
+          Signature of NR:
+          <input
+            type="text"
+            {...register("page11_nrSignature")}
             style={fullLine}
           />
           <br />
-          Name
+          Relation with NR:
           <input
             type="text"
-            defaultValue={guardianName}
-            {...register("page11_guardianName")}
-            style={{
-              fontWeight: "bold",
-              textTransform: "uppercase",
-              ...fullLine,
-            }}
+            value={patient?.guardianRelation}
+            {...register("page11_nrRelation")}
+            style={{ fontWeight: "bold", ...fullLine }}
           />
           <br />
-          Date & Time
+          Contact of NR:
+          <input
+            type="text"
+            value={patient?.guardianPhoneNumber}
+            {...register("page11_nrContact")}
+            style={{ fontWeight: "bold", ...fullLine }}
+          />
+          <br />
+          Date:
           <input
             type="date"
             defaultValue={today}
-            {...register("page11_guardianDateTime", {
+            {...register("page11_nrDate", {
               setValueAs: (val) => {
                 if (!val) return "";
                 const [year, month, day] = val.split("-");
                 return `${day}/${month}/${year}`;
               },
             })}
-            style={{
-              fontWeight: "bold",
-              textTransform: "uppercase",
-              ...fullLine,
-            }}
+            style={{ fontWeight: "bold", textTransform: "uppercase", ...fullLine }}
           />
         </div>
       </div>

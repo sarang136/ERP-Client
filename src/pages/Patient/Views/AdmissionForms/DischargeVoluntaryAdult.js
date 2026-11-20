@@ -94,10 +94,7 @@ const DischargeVoluntaryAdult = ({
           Form Dis-Sec86-F | EMR | Version 1.0 | Effective: 1st June 2026
         </span>
       </div>
-      <div style={{ fontSize: "12px", marginBottom: "8px" }}>
-        MHCA 2017 Section 86 | NABH COP | One-page discharge order — see
-        Discharge Summary (Dis-F-01) for full clinical record
-      </div>
+
 
       <div
         style={{
@@ -128,7 +125,7 @@ const DischargeVoluntaryAdult = ({
             fontWeight: "bold",
           }}
         />
-        <span style={{ marginLeft: "16px" }}>MRD Number:</span>
+        <span style={{ marginLeft: "16px" }}>UID:</span>
         <input
           type="text"
           defaultValue={admissions?.Ipdnum || ""}
@@ -317,57 +314,32 @@ const DischargeVoluntaryAdult = ({
         </div>
       </div>
 
-      {/* SECTION E */}
-      <div style={sectionHeader}>SECTION E — DISCHARGE INSTRUCTIONS ISSUED</div>
-      <div style={{ padding: "0 4px" }}>
-        <div style={checkboxRow}>
+      <div style={{ padding: "0 4px", marginTop: "14px" }}>
+        <div style={fieldRow}>
+          <span>Patient Name:</span>
           <input
-            type="checkbox"
-            {...register("sec86_instr1")}
-            style={{ width: "14px", height: "14px" }}
-          />
-          <span>Discharge summary (Dis-F-01) filed in EMR</span>
-        </div>
-        <div style={checkboxRow}>
-          <input
-            type="checkbox"
-            {...register("sec86_instr2")}
-            style={{ width: "14px", height: "14px" }}
-          />
-          <span>Medication Discharge Sheet (Dis-F-13) issued</span>
-        </div>
-        <div style={checkboxRow}>
-          <input
-            type="checkbox"
-            {...register("sec86_instr3")}
-            style={{ width: "14px", height: "14px" }}
-          />
-          <span>Continuation of Care Plan (Dis-F-12) issued</span>
-        </div>
-        <div style={checkboxRow}>
-          <input
-            type="checkbox"
-            {...register("sec86_instr4")}
-            style={{ width: "14px", height: "14px" }}
-          />
-          <span>First follow-up appointment confirmed — Date:</span>
-          <input
-            type="date"
-            {...register("sec86_followupDate", {
-              setValueAs: (val) => {
-                if (!val) return "";
-                const [year, month, day] = val.split("-");
-                return `${day}/${month}/${year}`;
-              },
-            })}
-            style={{ ...inputLine, maxWidth: "140px" }}
+            type="text"
+            value={patient?.name || ""}
+            readOnly
+            {...register("sec86_signPatientName")}
+            style={{
+              ...inputLine,
+              maxWidth: "220px",
+              fontWeight: "bold",
+              textTransform: "uppercase",
+            }}
           />
         </div>
-      </div>
-
-      {/* SECTION F */}
-      <div style={sectionHeader}>SECTION F — SIGN-OFF</div>
-      <div style={{ padding: "0 4px" }}>
+        <div style={fieldRow}>
+          <span>Patient Contact:</span>
+          <input
+            type="text"
+            value={patient?.phoneNumber || ""}
+            readOnly
+            {...register("sec86_signPatientContact")}
+            style={{ ...inputLine, maxWidth: "180px", fontWeight: "bold" }}
+          />
+        </div>
         <div style={fieldRow}>
           <span>Patient Signature:</span>
           <input
@@ -375,7 +347,9 @@ const DischargeVoluntaryAdult = ({
             {...register("sec86_patientSignature")}
             style={{ ...inputLine, maxWidth: "200px" }}
           />
-          <span style={{ marginLeft: "24px" }}>Date:</span>
+        </div>
+        <div style={fieldRow}>
+          <span>Date:</span>
           <input
             type="date"
             defaultValue={today}
@@ -387,32 +361,6 @@ const DischargeVoluntaryAdult = ({
               },
             })}
             style={{ ...inputLine, maxWidth: "130px" }}
-          />
-        </div>
-        <div style={fieldRow}>
-          <span>Treating Psychiatrist:</span>
-          <input
-            type="text"
-            value={admissions?.doctor?.name || ""}
-            {...register("sec86_psych")}
-            style={{
-              ...inputLine,
-              maxWidth: "180px",
-              textTransform: "uppercase",
-              fontWeight: "bold",
-            }}
-          />
-          <span style={{ marginLeft: "12px" }}>Reg. No.:</span>
-          <input
-            type="text"
-            {...register("sec86_regNo")}
-            style={{ ...inputLine, maxWidth: "120px" }}
-          />
-          <span style={{ marginLeft: "12px" }}>Signature:</span>
-          <input
-            type="text"
-            {...register("sec86_psychSignature")}
-            style={{ ...inputLine, maxWidth: "180px" }}
           />
         </div>
       </div>
