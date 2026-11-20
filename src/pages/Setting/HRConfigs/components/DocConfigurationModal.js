@@ -40,7 +40,7 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
         const existingDocs = configRes?.data || [];
 
         const existingMap = existingDocs.reduce(
-          (acc, d) => ({ ...acc, [d.document]: d.markMandatory }),
+          (acc, d) => ({ ...acc, [d.document]: d }),
           {},
         );
 
@@ -51,11 +51,13 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
               existingMap,
               d._id,
             );
+            const cfg = existingMap[d._id];
             return {
               ...acc,
               [d._id]: {
                 selected: isExisting,
-                markMandatory: isExisting ? !!existingMap[d._id] : false,
+                markMandatory: isExisting ? !!cfg?.markMandatory : false,
+                hasExpiry: isExisting ? !!cfg?.hasExpiry : false,
               },
             };
           }, {}),
@@ -80,6 +82,7 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
       [id]: {
         selected: checked,
         markMandatory: checked ? prev[id]?.markMandatory : false,
+        hasExpiry: checked ? prev[id]?.hasExpiry : false,
       },
     }));
   };
@@ -91,6 +94,16 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
     }));
   };
 
+  const handleHasExpiryChange = (id, checked) => {
+    setSelections((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        hasExpiry: checked,
+      },
+    }));
+  };
+
   const handleSelectAll = (checked) => {
     setSelections((prev) => {
       const updated = {};
@@ -98,6 +111,7 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
         updated[d._id] = {
           selected: checked,
           markMandatory: checked ? prev[d._id]?.markMandatory || false : false,
+          hasExpiry: checked ? prev[d._id]?.hasExpiry || false : false,
         };
       });
       return updated;
@@ -119,6 +133,8 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
         document: d._id,
         docName: d.docName,
         markMandatory: !!selections[d._id]?.markMandatory,
+        hasExpiry: !!selections[d._id]?.hasExpiry,
+        expiryMandatory: !!selections[d._id]?.hasExpiry,
       }));
 
     if (requiredDocs.length === 0) {
@@ -162,37 +178,39 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
   ).length;
 
   return (
-    <Modal isOpen={isOpen} toggle={resetAndClose} centered size="lg">
+    <Modal isOpen={isOpen} toggle={resetAndClose} centered size="xl">
       <style>{`
         .doc-toggle {
           position: relative;
           display: inline-block;
-          width: 42px;
-          height: 22px;
+          width: 38px;
+          height: 20px;
           flex-shrink: 0;
+          margin-bottom: 0;
         }
         .doc-toggle input {
           opacity: 0;
           width: 0;
           height: 0;
+          position: absolute;
         }
         .doc-toggle-slider {
           position: absolute;
           inset: 0;
           background-color: #dee2e6;
-          transition: background-color 0.25s ease;
+          transition: background-color 0.2s ease;
           border-radius: 34px;
           cursor: pointer;
         }
         .doc-toggle-slider:before {
           position: absolute;
           content: "";
-          height: 16px;
-          width: 16px;
+          height: 14px;
+          width: 14px;
           left: 3px;
           bottom: 3px;
           background-color: #fff;
-          transition: transform 0.25s ease;
+          transition: transform 0.2s ease;
           border-radius: 50%;
           box-shadow: 0 1px 3px rgba(0,0,0,0.25);
         }
@@ -200,19 +218,24 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
           background-color: #0d6efd;
         }
         .doc-toggle input:checked + .doc-toggle-slider:before {
-          transform: translateX(20px);
+          transform: translateX(18px);
         }
         .doc-toggle input:disabled + .doc-toggle-slider {
-          opacity: 0.4;
+          opacity: 0.35;
           cursor: not-allowed;
         }
         .doc-row {
           display: grid;
-          grid-template-columns: 24px 1fr 76px 42px;
+          grid-template-columns: 24px 1fr 130px 120px;
           align-items: center;
-          gap: 14px;
-          padding: 10px 4px;
+          gap: 16px;
+          padding: 8px 10px;
           border-bottom: 1px solid #f1f3f5;
+          border-radius: 4px;
+          transition: background-color 0.15s ease;
+        }
+        .doc-row:hover:not(.doc-row-header) {
+          background-color: #f8f9fa;
         }
         .doc-row:last-child {
           border-bottom: none;
@@ -269,8 +292,8 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
             </div>
 
             <div
-              className="doc-row"
-              style={{ borderBottom: "2px solid #e9ecef" }}
+              className="doc-row doc-row-header"
+              style={{ borderBottom: "2px solid #e9ecef", paddingBottom: 10 }}
             >
               <Input
                 type="checkbox"
@@ -279,10 +302,10 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
               />
               <span className="fw-semibold small text-muted">Document</span>
               <span className="fw-semibold small text-muted">Mandatory</span>
-              <span />
+              <span className="fw-semibold small text-muted">Expiry</span>
             </div>
 
-            <div style={{ maxHeight: 340, overflowY: "auto" }}>
+            <div style={{ maxHeight: 340, overflowY: "auto", paddingRight: 6 }}>
               {filteredDocs.length === 0 ? (
                 <p className="text-muted small text-center py-3 mb-0">
                   No documents match "{search}"
@@ -292,6 +315,7 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
                   const sel = selections[doc._id] || {
                     selected: false,
                     markMandatory: false,
+                    hasExpiry: false,
                   };
                   return (
                     <div className="doc-row" key={doc._id}>
@@ -303,31 +327,77 @@ const DocConfigurationModal = ({ isOpen, toggle, position, onSuccess }) => {
                         }
                       />
                       <span
-                        className="small"
-                        style={{ opacity: sel.selected ? 1 : 0.6 }}
+                        className="small text-truncate"
+                        title={doc.docName}
+                        style={{
+                          opacity: sel.selected ? 1 : 0.6,
+                          fontWeight: sel.selected ? 500 : 400,
+                        }}
                       >
                         {doc.docName}
                       </span>
-                      <span
-                        className="text-muted"
-                        style={{
-                          fontSize: 11,
-                          opacity: sel.selected ? 1 : 0.4,
-                        }}
-                      >
-                        {sel.markMandatory ? "Required" : "Optional"}
-                      </span>
-                      <label className="doc-toggle">
-                        <input
-                          type="checkbox"
-                          checked={sel.markMandatory}
-                          disabled={!sel.selected}
-                          onChange={(e) =>
-                            handleMandatoryChange(doc._id, e.target.checked)
-                          }
-                        />
-                        <span className="doc-toggle-slider" />
-                      </label>
+                      <div className="d-flex align-items-center gap-2">
+                        <label
+                          className="doc-toggle"
+                          title={sel.markMandatory ? "Mandatory" : "Optional"}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={sel.markMandatory}
+                            disabled={!sel.selected}
+                            onChange={(e) =>
+                              handleMandatoryChange(doc._id, e.target.checked)
+                            }
+                          />
+                          <span className="doc-toggle-slider" />
+                        </label>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: !sel.selected
+                              ? "#adb5bd"
+                              : sel.markMandatory
+                                ? "#0d6efd"
+                                : "#6c757d",
+                            fontWeight:
+                              sel.markMandatory && sel.selected ? 600 : 400,
+                            userSelect: "none",
+                          }}
+                        >
+                          {sel.markMandatory ? "Mandatory" : "Optional"}
+                        </span>
+                      </div>
+                      <div className="d-flex align-items-center gap-2">
+                        <label
+                          className="doc-toggle"
+                          title={sel.hasExpiry ? "Expiry Active" : "No Expiry"}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={sel.hasExpiry}
+                            disabled={!sel.selected}
+                            onChange={(e) =>
+                              handleHasExpiryChange(doc._id, e.target.checked)
+                            }
+                          />
+                          <span className="doc-toggle-slider" />
+                        </label>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: !sel.selected
+                              ? "#adb5bd"
+                              : sel.hasExpiry
+                                ? "#0d6efd"
+                                : "#6c757d",
+                            fontWeight:
+                              sel.hasExpiry && sel.selected ? 600 : 400,
+                            userSelect: "none",
+                          }}
+                        >
+                          {sel.hasExpiry ? "Active" : "Off"}
+                        </span>
+                      </div>
                     </div>
                   );
                 })
