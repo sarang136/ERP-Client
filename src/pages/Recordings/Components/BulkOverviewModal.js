@@ -37,6 +37,10 @@ const BulkOverviewModal = ({
 
   const [page, setPage] = useState(1);
   const [totalDocs, setTotalDocs] = useState(0);
+  // The filters the current list was fetched with. "Generate All" uses these,
+  // not whatever is typed in the inputs but not yet applied with Filter, so it
+  // always queues exactly the total on screen.
+  const [appliedFilters, setAppliedFilters] = useState(null);
   const LIMIT = 200;
 
   const isQueueRunning = Boolean(queueStatus?.running);
@@ -69,6 +73,7 @@ const BulkOverviewModal = ({
     setSelectedIds([]);
     setPage(1);
     setTotalDocs(0);
+    setAppliedFilters(null);
     setLoading(false);
     setIsSubmitting(false);
   }, [currentFilters]);
@@ -83,7 +88,8 @@ const BulkOverviewModal = ({
     const talkTime =
       override.talkTime !== undefined ? override.talkTime : talkTimeFilter;
 
-    if (!from && !to && !talkTime) return;
+    // No dates and no talk time is a valid request: every pending recording,
+    // still paged LIMIT at a time.
     if (validateDateRange(from, to)) return;
 
     if (isAppend) setLoadingMore(true);
@@ -113,6 +119,7 @@ const BulkOverviewModal = ({
         setRecordings(rawData);
         setSelectedIds(rawData.map((r) => r._id));
         setPage(1);
+        setAppliedFilters({ fromDate: from, toDate: to, talkTime });
       }
 
       setTotalDocs(total);
@@ -175,7 +182,39 @@ const BulkOverviewModal = ({
     }
   };
 
-  const canFilter = (fromDate || toDate || talkTimeFilter) && !dateError;
+  const handleGenerateAll = async () => {
+    if (!appliedFilters || totalDocs === 0) return;
+
+    const { fromDate: from, toDate: to } = appliedFilters;
+    const range =
+      from || to
+        ? `from ${from || "the beginning"} to ${to || "today"}`
+        : "across all dates";
+
+    const ok = window.confirm(
+      `Generate overviews for all ${totalDocs.toLocaleString()} pending recordings ${range}?\n\n` +
+        "They are processed one at a time in the background, so a large run can take many hours.",
+    );
+    if (!ok) return;
+
+    setIsSubmitting(true);
+    try {
+      const queued = await onGenerate({ all: true, filters: appliedFilters });
+      if (queued) {
+        await fetchRecordings(1, false, appliedFilters);
+      }
+    } catch (error) {
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const canFilter = !dateError;
+  const noFilterApplied =
+    appliedFilters &&
+    !appliedFilters.fromDate &&
+    !appliedFilters.toDate &&
+    !appliedFilters.talkTime;
 
   return (
     <Modal
@@ -399,8 +438,8 @@ const BulkOverviewModal = ({
                 : !loading && (
                     <tr>
                       <td colSpan="5" className="text-center p-4 text-muted">
-                        {!canFilter
-                          ? "Apply a filter to view pending recordings."
+                        {!appliedFilters
+                          ? "Click Filter to view pending recordings."
                           : "No pending recordings found for this selection."}
                       </td>
                     </tr>
@@ -431,12 +470,19 @@ const BulkOverviewModal = ({
             )}
         </div>
 
-        <div className="mt-3 p-2 bg-light border rounded d-flex justify-content-between align-items-center">
+        <div className="mt-3 p-2 bg-light border rounded d-flex justify-content-between align-items-center flex-wrap gap-2">
           <span className="fw-bold text-primary">
             Pending Selection: {selectedIds.length}
           </span>
-          <span className="text-muted small italic">
-            Processing restricted to eligible records.
+          <span className="fw-bold">
+            Total Records: {totalDocs.toLocaleString()}
+            {appliedFilters && (
+              <span className="text-muted small fw-normal ms-1">
+                {noFilterApplied
+                  ? "(all dates)"
+                  : `(showing ${recordings.length.toLocaleString()})`}
+              </span>
+            )}
           </span>
         </div>
       </ModalBody>
@@ -476,6 +522,15 @@ const BulkOverviewModal = ({
         <div className="d-flex gap-2">
           <Button color="secondary" onClick={toggle} disabled={isSubmitting}>
             {isQueueRunning ? "Close" : "Cancel"}
+          </Button>
+          <Button
+            color="primary"
+            outline
+            onClick={handleGenerateAll}
+            disabled={loading || busy || !appliedFilters || totalDocs === 0}
+            title="Queue every pending recording matching the applied filters, not just the ones loaded below"
+          >
+            {`Generate All (${totalDocs.toLocaleString()})`}
           </Button>
           <Button
             color="success"
