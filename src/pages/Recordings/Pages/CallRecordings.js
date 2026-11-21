@@ -220,9 +220,13 @@ const CallRecordings = () => {
     };
   }, []);
 
-  const handleGenerateBulkOverview = async (allIds) => {
+  // `selection` is either an array of recording IDs, or
+  // { all: true, filters: { fromDate, toDate, talkTime } } to queue every
+  // pending recording matching those filters (no dates = all dates).
+  const handleGenerateBulkOverview = async (selection) => {
     try {
-      const response = await bulkGenerateOverviewRecording({ ids: allIds });
+      const payload = Array.isArray(selection) ? { ids: selection } : selection;
+      const response = await bulkGenerateOverviewRecording(payload);
 
       if (response?.queueStatus) setQueueStatus(response.queueStatus);
 
